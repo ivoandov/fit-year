@@ -1,14 +1,10 @@
 import { WorkoutHistoryCard } from "@/components/WorkoutHistoryCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Calendar, Flame } from "lucide-react";
+import { TrendingUp, Calendar, Flame, Activity } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { startOfWeek, startOfMonth, isWithinInterval } from "date-fns";
 
 export default function HistoryPage() {
-  const mockStats = [
-    { label: "Total Workouts", value: "24", icon: Calendar },
-    { label: "This Month", value: "8", icon: Flame },
-    { label: "Total Volume", value: "48.5K lbs", icon: TrendingUp },
-  ];
-
   const mockHistory = [
     {
       id: "1",
@@ -20,6 +16,7 @@ export default function HistoryPage() {
       exercises: [
         {
           name: "Bench Press",
+          muscleGroup: "Chest",
           sets: [
             { weight: 135, reps: 10 },
             { weight: 185, reps: 8 },
@@ -28,6 +25,7 @@ export default function HistoryPage() {
         },
         {
           name: "Barbell Row",
+          muscleGroup: "Back",
           sets: [
             { weight: 135, reps: 10 },
             { weight: 155, reps: 8 },
@@ -46,6 +44,7 @@ export default function HistoryPage() {
       exercises: [
         {
           name: "Barbell Squat",
+          muscleGroup: "Core",
           sets: [
             { weight: 185, reps: 10 },
             { weight: 225, reps: 8 },
@@ -61,7 +60,62 @@ export default function HistoryPage() {
       duration: 60,
       exerciseCount: 8,
       totalVolume: 2850,
+      exercises: [
+        {
+          name: "Shoulder Press",
+          muscleGroup: "Shoulders",
+          sets: [
+            { weight: 95, reps: 12 },
+            { weight: 115, reps: 10 },
+          ],
+        },
+      ],
     },
+  ];
+
+  const now = new Date();
+  const weekStart = startOfWeek(now);
+  const monthStart = startOfMonth(now);
+
+  const workoutsThisWeek = mockHistory.filter((w) =>
+    isWithinInterval(w.date, { start: weekStart, end: now })
+  ).length;
+
+  const workoutsThisMonth = mockHistory.filter((w) =>
+    isWithinInterval(w.date, { start: monthStart, end: now })
+  ).length;
+
+  const totalWorkouts = mockHistory.length;
+
+  const totalVolume = mockHistory.reduce((sum, w) => sum + w.totalVolume, 0);
+
+  const calculateWeeklySetsByMuscle = () => {
+    const muscleGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Core"];
+    const setsByMuscle: { [key: string]: number } = {};
+
+    mockHistory.forEach((workout) => {
+      if (isWithinInterval(workout.date, { start: weekStart, end: now })) {
+        workout.exercises?.forEach((exercise) => {
+          const muscle = exercise.muscleGroup || "Other";
+          setsByMuscle[muscle] = (setsByMuscle[muscle] || 0) + (exercise.sets?.length || 0);
+        });
+      }
+    });
+
+    return muscleGroups.map((muscle) => ({
+      muscleGroup: muscle,
+      sets: setsByMuscle[muscle] || 0,
+      maxSets: 20,
+    }));
+  };
+
+  const weeklySetsByMuscleGroup = calculateWeeklySetsByMuscle();
+
+  const mockStats = [
+    { label: "Total Workouts", value: totalWorkouts.toString(), icon: Calendar, testId: "total-workouts" },
+    { label: "This Week", value: workoutsThisWeek.toString(), icon: Flame, testId: "this-week" },
+    { label: "This Month", value: workoutsThisMonth.toString(), icon: Activity, testId: "this-month" },
+    { label: "Total Volume", value: `${(totalVolume / 1000).toFixed(1)}K lbs`, icon: TrendingUp, testId: "total-volume" },
   ];
 
   return (
@@ -76,9 +130,9 @@ export default function HistoryPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {mockStats.map((stat) => (
-            <Card key={stat.label} data-testid={`card-stat-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}>
+            <Card key={stat.label} data-testid={`card-stat-${stat.testId}`}>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.label}
@@ -86,13 +140,42 @@ export default function HistoryPage() {
                 <stat.icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold" data-testid={`text-stat-value-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}>
+                <div className="text-2xl font-bold" data-testid={`text-stat-value-${stat.testId}`}>
                   {stat.value}
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Weekly Sets by Muscle Group</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Track your training volume across different muscle groups this week
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {weeklySetsByMuscleGroup.map((group) => (
+                <div key={group.muscleGroup} className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium" data-testid={`text-muscle-${group.muscleGroup.toLowerCase()}`}>
+                      {group.muscleGroup}
+                    </span>
+                    <span className="text-muted-foreground" data-testid={`text-sets-${group.muscleGroup.toLowerCase()}`}>
+                      {group.sets} / {group.maxSets} sets
+                    </span>
+                  </div>
+                  <Progress
+                    value={(group.sets / group.maxSets) * 100}
+                    data-testid={`progress-${group.muscleGroup.toLowerCase()}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Recent Workouts</h2>

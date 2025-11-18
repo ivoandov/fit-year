@@ -14,13 +14,13 @@ export default function ExercisesPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const categories = ["All", "Strength", "Cardio", "Flexibility"];
+  const categories = ["All", "Shoulders", "Chest", "Biceps", "Triceps", "Back", "Core", "Cardio", "PT", "Flexibility", "Mobility"];
 
   const mockExercises = [
     {
       id: "1",
       name: "Barbell Squat",
-      category: "Strength",
+      category: "Core",
       muscleGroup: "Legs",
       description: "Compound lower body exercise targeting quads, glutes, and hamstrings. Stand with barbell on upper back, squat down keeping chest up.",
       imageUrl: squatImage,
@@ -28,7 +28,7 @@ export default function ExercisesPage() {
     {
       id: "2",
       name: "Bench Press",
-      category: "Strength",
+      category: "Chest",
       muscleGroup: "Chest",
       description: "Upper body pressing movement for chest, shoulders, and triceps. Lie on bench and press barbell from chest to full extension.",
       imageUrl: benchImage,
@@ -36,7 +36,7 @@ export default function ExercisesPage() {
     {
       id: "3",
       name: "Deadlift",
-      category: "Strength",
+      category: "Back",
       muscleGroup: "Back",
       description: "Full body compound exercise emphasizing posterior chain. Lift barbell from floor to standing position with proper hip hinge.",
       imageUrl: deadliftImage,
@@ -52,7 +52,7 @@ export default function ExercisesPage() {
     {
       id: "5",
       name: "Pull-ups",
-      category: "Strength",
+      category: "Back",
       muscleGroup: "Back",
       description: "Bodyweight exercise for back and biceps. Hang from bar and pull body up until chin clears the bar.",
       imageUrl: pullupImage,
@@ -60,7 +60,7 @@ export default function ExercisesPage() {
     {
       id: "6",
       name: "Plank",
-      category: "Flexibility",
+      category: "Core",
       muscleGroup: "Core",
       description: "Isometric core strengthening exercise. Hold body in straight line position supported by forearms and toes.",
       imageUrl: plankImage,

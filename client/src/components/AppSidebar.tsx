@@ -46,7 +46,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-lg font-bold px-4 py-6">
-            FitTrack
+            Fit Year
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>

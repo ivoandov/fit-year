@@ -17,6 +17,9 @@ interface SetData {
 export default function TrackPage() {
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [showRestTimer, setShowRestTimer] = useState(false);
+  const [currentSetIndex, setCurrentSetIndex] = useState(0);
+  const [restTimerDuration, setRestTimerDuration] = useState(90);
+  const [waitingForNextSet, setWaitingForNextSet] = useState(false);
   const [sets, setSets] = useState<SetData[]>([
     { setNumber: 1, weight: 135, reps: 10, completed: false },
     { setNumber: 2, weight: 185, reps: 8, completed: false },
@@ -36,18 +39,39 @@ export default function TrackPage() {
   const progress = ((currentExerciseIndex + 1) / mockWorkout.exercises.length) * 100;
 
   const handleSetComplete = (setNumber: number) => {
-    setSets(sets.map(set =>
-      set.setNumber === setNumber
-        ? { ...set, completed: !set.completed }
-        : set
-    ));
+    const setIndex = sets.findIndex(s => s.setNumber === setNumber);
+    
+    if (setIndex !== currentSetIndex || sets[setIndex].completed) {
+      return;
+    }
+
+    const newSets = [...sets];
+    newSets[setIndex].completed = true;
+    setSets(newSets);
     setShowRestTimer(true);
+    
     console.log("Set completed:", setNumber);
+  };
+
+  const handleRestTimerClose = () => {
+    setShowRestTimer(false);
+    if (currentSetIndex < sets.length - 1) {
+      setWaitingForNextSet(true);
+    }
+  };
+
+  const handleStartNextSet = () => {
+    if (currentSetIndex < sets.length - 1) {
+      setCurrentSetIndex(currentSetIndex + 1);
+      setWaitingForNextSet(false);
+    }
   };
 
   const handleNextExercise = () => {
     if (currentExerciseIndex < mockWorkout.exercises.length - 1) {
       setCurrentExerciseIndex(currentExerciseIndex + 1);
+      setCurrentSetIndex(0);
+      setWaitingForNextSet(false);
       setSets([
         { setNumber: 1, weight: 135, reps: 10, completed: false },
         { setNumber: 2, weight: 185, reps: 8, completed: false },
@@ -59,6 +83,13 @@ export default function TrackPage() {
   const handlePreviousExercise = () => {
     if (currentExerciseIndex > 0) {
       setCurrentExerciseIndex(currentExerciseIndex - 1);
+      setCurrentSetIndex(0);
+      setWaitingForNextSet(false);
+      setSets([
+        { setNumber: 1, weight: 135, reps: 10, completed: false },
+        { setNumber: 2, weight: 185, reps: 8, completed: false },
+        { setNumber: 3, weight: 225, reps: 6, completed: false },
+      ]);
     }
   };
 
@@ -114,57 +145,87 @@ export default function TrackPage() {
                 <div>Reps</div>
                 <div className="text-center">Done</div>
               </div>
-              {sets.map((set) => (
-                <div
-                  key={set.setNumber}
-                  className={`grid grid-cols-4 gap-4 items-center py-2 rounded-md px-2 ${
-                    set.completed ? 'bg-accent' : ''
-                  }`}
-                  data-testid={`row-set-${set.setNumber}`}
-                >
-                  <div className="font-medium">{set.setNumber}</div>
-                  <Input
-                    type="number"
-                    value={set.weight}
-                    onChange={(e) => {
-                      const newSets = [...sets];
-                      newSets[set.setNumber - 1].weight = parseInt(e.target.value) || 0;
-                      setSets(newSets);
-                    }}
-                    className="text-center"
-                    data-testid={`input-weight-${set.setNumber}`}
-                  />
-                  <Input
-                    type="number"
-                    value={set.reps}
-                    onChange={(e) => {
-                      const newSets = [...sets];
-                      newSets[set.setNumber - 1].reps = parseInt(e.target.value) || 0;
-                      setSets(newSets);
-                    }}
-                    className="text-center"
-                    data-testid={`input-reps-${set.setNumber}`}
-                  />
-                  <div className="flex justify-center">
-                    <Checkbox
-                      checked={set.completed}
-                      onCheckedChange={() => handleSetComplete(set.setNumber)}
-                      data-testid={`checkbox-complete-${set.setNumber}`}
+              {sets.map((set, index) => (
+                <div key={set.setNumber}>
+                  <div
+                    className={`grid grid-cols-4 gap-4 items-center py-2 rounded-md px-2 ${
+                      set.completed ? 'bg-accent' : ''
+                    } ${index === currentSetIndex && !set.completed ? 'border-2 border-primary' : ''}`}
+                    data-testid={`row-set-${set.setNumber}`}
+                  >
+                    <div className="font-medium">{set.setNumber}</div>
+                    <Input
+                      type="number"
+                      value={set.weight}
+                      onChange={(e) => {
+                        const newSets = [...sets];
+                        newSets[index].weight = parseInt(e.target.value) || 0;
+                        setSets(newSets);
+                      }}
+                      className="text-center"
+                      data-testid={`input-weight-${set.setNumber}`}
+                      disabled={index !== currentSetIndex || set.completed}
                     />
+                    <Input
+                      type="number"
+                      value={set.reps}
+                      onChange={(e) => {
+                        const newSets = [...sets];
+                        newSets[index].reps = parseInt(e.target.value) || 0;
+                        setSets(newSets);
+                      }}
+                      className="text-center"
+                      data-testid={`input-reps-${set.setNumber}`}
+                      disabled={index !== currentSetIndex || set.completed}
+                    />
+                    <div className="flex justify-center">
+                      <Checkbox
+                        checked={set.completed}
+                        onCheckedChange={() => handleSetComplete(set.setNumber)}
+                        data-testid={`checkbox-complete-${set.setNumber}`}
+                        disabled={index !== currentSetIndex || set.completed}
+                      />
+                    </div>
                   </div>
+                  
+                  {waitingForNextSet && index === currentSetIndex && set.completed && (
+                    <div className="mt-2">
+                      <Button
+                        className="w-full"
+                        onClick={handleStartNextSet}
+                        data-testid={`button-start-set-${set.setNumber + 1}`}
+                      >
+                        Start Set {set.setNumber + 1}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
-            <Button
-              className="w-full mt-6"
-              variant="outline"
-              onClick={() => setShowRestTimer(true)}
-              data-testid="button-start-rest"
-            >
-              <Timer className="h-4 w-4 mr-2" />
-              Start Rest Timer
-            </Button>
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-medium whitespace-nowrap">Rest Timer:</label>
+                <Input
+                  type="number"
+                  value={restTimerDuration}
+                  onChange={(e) => setRestTimerDuration(parseInt(e.target.value) || 90)}
+                  className="w-24 text-center"
+                  data-testid="input-rest-timer"
+                />
+                <span className="text-sm text-muted-foreground">seconds</span>
+              </div>
+
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => setShowRestTimer(true)}
+                data-testid="button-start-rest"
+              >
+                <Timer className="h-4 w-4 mr-2" />
+                Start Rest Timer Manually
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -179,8 +240,8 @@ export default function TrackPage() {
 
         <RestTimer
           isOpen={showRestTimer}
-          onClose={() => setShowRestTimer(false)}
-          initialSeconds={90}
+          onClose={handleRestTimerClose}
+          initialSeconds={restTimerDuration}
         />
       </div>
     </div>
