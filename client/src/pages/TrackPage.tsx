@@ -19,7 +19,6 @@ export default function TrackPage() {
   const [showRestTimer, setShowRestTimer] = useState(false);
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [restTimerDuration, setRestTimerDuration] = useState(90);
-  const [waitingForNextSet, setWaitingForNextSet] = useState(false);
   const [sets, setSets] = useState<SetData[]>([
     { setNumber: 1, weight: 135, reps: 10, completed: false },
     { setNumber: 2, weight: 185, reps: 8, completed: false },
@@ -56,14 +55,7 @@ export default function TrackPage() {
   const handleRestTimerClose = () => {
     setShowRestTimer(false);
     if (currentSetIndex < sets.length - 1) {
-      setWaitingForNextSet(true);
-    }
-  };
-
-  const handleStartNextSet = () => {
-    if (currentSetIndex < sets.length - 1) {
       setCurrentSetIndex(currentSetIndex + 1);
-      setWaitingForNextSet(false);
     }
   };
 
@@ -71,7 +63,6 @@ export default function TrackPage() {
     if (currentExerciseIndex < mockWorkout.exercises.length - 1) {
       setCurrentExerciseIndex(currentExerciseIndex + 1);
       setCurrentSetIndex(0);
-      setWaitingForNextSet(false);
       setSets([
         { setNumber: 1, weight: 135, reps: 10, completed: false },
         { setNumber: 2, weight: 185, reps: 8, completed: false },
@@ -84,7 +75,6 @@ export default function TrackPage() {
     if (currentExerciseIndex > 0) {
       setCurrentExerciseIndex(currentExerciseIndex - 1);
       setCurrentSetIndex(0);
-      setWaitingForNextSet(false);
       setSets([
         { setNumber: 1, weight: 135, reps: 10, completed: false },
         { setNumber: 2, weight: 185, reps: 8, completed: false },
@@ -146,59 +136,46 @@ export default function TrackPage() {
                 <div className="text-center">Done</div>
               </div>
               {sets.map((set, index) => (
-                <div key={set.setNumber}>
-                  <div
-                    className={`grid grid-cols-4 gap-4 items-center py-2 rounded-md px-2 ${
-                      set.completed ? 'bg-accent' : ''
-                    } ${index === currentSetIndex && !set.completed ? 'border-2 border-primary' : ''}`}
-                    data-testid={`row-set-${set.setNumber}`}
-                  >
-                    <div className="font-medium">{set.setNumber}</div>
-                    <Input
-                      type="number"
-                      value={set.weight}
-                      onChange={(e) => {
-                        const newSets = [...sets];
-                        newSets[index].weight = parseInt(e.target.value) || 0;
-                        setSets(newSets);
-                      }}
-                      className="text-center"
-                      data-testid={`input-weight-${set.setNumber}`}
+                <div
+                  key={set.setNumber}
+                  className={`grid grid-cols-4 gap-4 items-center py-2 rounded-md px-2 ${
+                    set.completed ? 'bg-accent' : ''
+                  } ${index === currentSetIndex && !set.completed ? 'border-2 border-primary' : ''}`}
+                  data-testid={`row-set-${set.setNumber}`}
+                >
+                  <div className="font-medium">{set.setNumber}</div>
+                  <Input
+                    type="number"
+                    value={set.weight}
+                    onChange={(e) => {
+                      const newSets = [...sets];
+                      newSets[index].weight = parseInt(e.target.value) || 0;
+                      setSets(newSets);
+                    }}
+                    className="text-center"
+                    data-testid={`input-weight-${set.setNumber}`}
+                    disabled={index !== currentSetIndex || set.completed}
+                  />
+                  <Input
+                    type="number"
+                    value={set.reps}
+                    onChange={(e) => {
+                      const newSets = [...sets];
+                      newSets[index].reps = parseInt(e.target.value) || 0;
+                      setSets(newSets);
+                    }}
+                    className="text-center"
+                    data-testid={`input-reps-${set.setNumber}`}
+                    disabled={index !== currentSetIndex || set.completed}
+                  />
+                  <div className="flex justify-center">
+                    <Checkbox
+                      checked={set.completed}
+                      onCheckedChange={() => handleSetComplete(set.setNumber)}
+                      data-testid={`checkbox-complete-${set.setNumber}`}
                       disabled={index !== currentSetIndex || set.completed}
                     />
-                    <Input
-                      type="number"
-                      value={set.reps}
-                      onChange={(e) => {
-                        const newSets = [...sets];
-                        newSets[index].reps = parseInt(e.target.value) || 0;
-                        setSets(newSets);
-                      }}
-                      className="text-center"
-                      data-testid={`input-reps-${set.setNumber}`}
-                      disabled={index !== currentSetIndex || set.completed}
-                    />
-                    <div className="flex justify-center">
-                      <Checkbox
-                        checked={set.completed}
-                        onCheckedChange={() => handleSetComplete(set.setNumber)}
-                        data-testid={`checkbox-complete-${set.setNumber}`}
-                        disabled={index !== currentSetIndex || set.completed}
-                      />
-                    </div>
                   </div>
-                  
-                  {waitingForNextSet && index === currentSetIndex && set.completed && (
-                    <div className="mt-2">
-                      <Button
-                        className="w-full"
-                        onClick={handleStartNextSet}
-                        data-testid={`button-start-set-${set.setNumber + 1}`}
-                      >
-                        Start Set {set.setNumber + 1}
-                      </Button>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
