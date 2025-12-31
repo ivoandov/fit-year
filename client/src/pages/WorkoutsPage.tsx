@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { WorkoutEditorDialog, type WorkoutData } from "@/components/WorkoutEditorDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, RotateCcw, Clock } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, Clock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays } from "date-fns";
@@ -316,11 +316,10 @@ export default function WorkoutsPage() {
                     </div>
                     <Button
                       size="icon"
-                      variant="outline"
                       onClick={() => handleRestartWorkout(workout)}
                       data-testid={`button-restart-workout-${index}`}
                     >
-                      <RotateCcw className="h-4 w-4" />
+                      <Play className="h-4 w-4" />
                     </Button>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
