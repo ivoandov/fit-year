@@ -10,6 +10,7 @@ interface ExerciseCardProps {
   description: string;
   imageUrl?: string;
   exerciseType?: string;
+  isEditable?: boolean;
   onAdd?: (id: string) => void;
   onEdit?: (id: string) => void;
 }
@@ -20,6 +21,7 @@ export function ExerciseCard({
   muscleGroups,
   description,
   imageUrl,
+  isEditable = false,
   onEdit,
   onAdd,
 }: ExerciseCardProps) {
@@ -52,15 +54,17 @@ export function ExerciseCard({
         </p>
       </CardContent>
       <CardFooter className="p-4 sm:p-6 pt-0 sm:pt-0 gap-2">
-        <Button
-          onClick={() => onEdit?.(id)}
-          variant="outline"
-          size="sm"
-          data-testid={`button-edit-exercise-${id}`}
-        >
-          <Pencil className="h-4 w-4 mr-2" />
-          Edit
-        </Button>
+        {isEditable && (
+          <Button
+            onClick={() => onEdit?.(id)}
+            variant="outline"
+            size="sm"
+            data-testid={`button-edit-exercise-${id}`}
+          >
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit
+          </Button>
+        )}
         <Button
           onClick={() => onAdd?.(id)}
           className="flex-1"

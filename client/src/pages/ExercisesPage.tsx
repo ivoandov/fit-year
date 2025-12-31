@@ -41,6 +41,8 @@ export default function ExercisesPage() {
     }
   }, [isError, toast]);
 
+  const customExerciseIds = new Set(dbExercises.map(ex => ex.id));
+
   const customExercises: Exercise[] = dbExercises.map((ex) => ({
     id: ex.id,
     name: ex.name,
@@ -204,6 +206,7 @@ export default function ExercisesPage() {
             <ExerciseCard
               key={exercise.id}
               {...exercise}
+              isEditable={customExerciseIds.has(exercise.id)}
               onAdd={handleAddExercise}
               onEdit={handleEditExercise}
             />
