@@ -78,13 +78,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/scheduled-workouts", async (req, res) => {
     try {
-      const parsed = insertScheduledWorkoutSchema.safeParse(req.body);
+      const body = {
+        ...req.body,
+        date: new Date(req.body.date),
+      };
+      const parsed = insertScheduledWorkoutSchema.safeParse(body);
       if (!parsed.success) {
+        console.error("Scheduled workout validation error:", parsed.error.message);
         return res.status(400).json({ error: parsed.error.message });
       }
       const workout = await storage.createScheduledWorkout(parsed.data);
       res.status(201).json(workout);
     } catch (error) {
+      console.error("Failed to create scheduled workout:", error);
       res.status(500).json({ error: "Failed to create scheduled workout" });
     }
   });
@@ -92,7 +98,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/scheduled-workouts/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      const parsed = insertScheduledWorkoutSchema.partial().safeParse(req.body);
+      const body = {
+        ...req.body,
+        date: req.body.date ? new Date(req.body.date) : undefined,
+      };
+      const parsed = insertScheduledWorkoutSchema.partial().safeParse(body);
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
