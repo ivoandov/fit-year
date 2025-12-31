@@ -50,19 +50,25 @@ export class DatabaseStorage implements IStorage {
 
   async createExercise(exercise: InsertExercise): Promise<Exercise> {
     try {
-      const results = await db.insert(exercises).values({
+      const id = crypto.randomUUID();
+      const muscleGroupsJson = JSON.stringify(exercise.muscleGroups || []);
+      
+      await neonClient`
+        INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type)
+        VALUES (${id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"})
+      `;
+      
+      const newExercise: Exercise = {
+        id,
         name: exercise.name,
         muscleGroups: exercise.muscleGroups || [],
         description: exercise.description,
         imageUrl: exercise.imageUrl || null,
         exerciseType: exercise.exerciseType || "weight_reps",
-      }).returning();
+      };
       
-      console.log("Create exercise results:", results);
-      if (!results || results.length === 0) {
-        throw new Error("No results returned from insert");
-      }
-      return results[0];
+      console.log("Created exercise:", newExercise);
+      return newExercise;
     } catch (error) {
       console.error("Error in createExercise:", error);
       throw error;
