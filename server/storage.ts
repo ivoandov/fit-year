@@ -99,8 +99,12 @@ export class DatabaseStorage implements IStorage {
 
   async getScheduledWorkouts(): Promise<ScheduledWorkout[]> {
     try {
-      const results = await db.select().from(scheduledWorkouts).orderBy(scheduledWorkouts.date);
-      return results || [];
+      const results = await neonClient`
+        SELECT id, name, date, exercises 
+        FROM scheduled_workouts 
+        ORDER BY date
+      `;
+      return (results || []) as ScheduledWorkout[];
     } catch (error: any) {
       if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
         console.warn("Known Neon empty result issue, returning empty array");
