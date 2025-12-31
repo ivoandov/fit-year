@@ -280,7 +280,7 @@ export default function WorkoutsPage() {
               data-testid="button-create-first"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Your First Workout
+              Create Workout
             </Button>
           </div>
         )}
