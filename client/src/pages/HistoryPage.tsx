@@ -4,9 +4,11 @@ import { TrendingUp, Calendar, Flame, Activity } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { startOfWeek, startOfMonth, isWithinInterval } from "date-fns";
 import { useWorkout } from "@/context/WorkoutContext";
+import { useSettings } from "@/components/SettingsProvider";
 
 export default function HistoryPage() {
   const { completedWorkouts } = useWorkout();
+  const { weekStart: weekStartDay } = useSettings();
 
   const historyData = completedWorkouts.map((workout, index) => ({
     id: `${workout.displayId}-${index}`,
@@ -23,7 +25,8 @@ export default function HistoryPage() {
   }));
 
   const now = new Date();
-  const weekStart = startOfWeek(now);
+  const weekStartsOn = weekStartDay === "monday" ? 1 : 0;
+  const weekStart = startOfWeek(now, { weekStartsOn });
   const monthStart = startOfMonth(now);
 
   const workoutsThisWeek = historyData.filter((w) =>
