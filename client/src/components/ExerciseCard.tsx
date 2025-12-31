@@ -92,11 +92,11 @@ export function ExerciseCard({
             <Button
               variant="secondary"
               size="icon"
-              className="absolute top-2 right-2 z-10 rounded-full bg-background/80 backdrop-blur-sm"
+              className="absolute top-4 right-4 z-10 rounded-full bg-background/80 backdrop-blur-sm h-12 w-12"
               onClick={() => setShowImageDialog(false)}
               data-testid={`button-close-image-${id}`}
             >
-              <X className="h-4 w-4" />
+              <X className="h-8 w-8" />
             </Button>
             {imageUrl && (
               <img
