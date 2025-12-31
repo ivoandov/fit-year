@@ -3,6 +3,15 @@ import { pgTable, text, varchar, integer, timestamp, jsonb } from "drizzle-orm/p
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const exercises = pgTable("exercises", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  muscleGroup: text("muscle_group").notNull(),
+  description: text("description").notNull(),
+  imageUrl: text("image_url"),
+});
+
 export const scheduledWorkouts = pgTable("scheduled_workouts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -18,10 +27,13 @@ export const completedWorkouts = pgTable("completed_workouts", {
   completedAt: timestamp("completed_at").notNull().default(sql`now()`),
 });
 
+export const insertExerciseSchema = createInsertSchema(exercises).omit({ id: true });
 export const insertScheduledWorkoutSchema = createInsertSchema(scheduledWorkouts).omit({ id: true });
 export const insertCompletedWorkoutSchema = createInsertSchema(completedWorkouts).omit({ id: true });
 
+export type Exercise = typeof exercises.$inferSelect;
 export type ScheduledWorkout = typeof scheduledWorkouts.$inferSelect;
 export type CompletedWorkout = typeof completedWorkouts.$inferSelect;
+export type InsertExercise = z.infer<typeof insertExerciseSchema>;
 export type InsertScheduledWorkout = z.infer<typeof insertScheduledWorkoutSchema>;
 export type InsertCompletedWorkout = z.infer<typeof insertCompletedWorkoutSchema>;

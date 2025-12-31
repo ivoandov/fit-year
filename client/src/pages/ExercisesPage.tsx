@@ -1,16 +1,98 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { ExerciseCard } from "@/components/ExerciseCard";
+import { AddExerciseDialog } from "@/components/AddExerciseDialog";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { exerciseLibrary, exerciseCategories } from "@/data/exercises";
+import { exerciseLibrary, exerciseCategories, type Exercise } from "@/data/exercises";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+
+interface DBExercise {
+  id: string;
+  name: string;
+  category: string;
+  muscleGroup: string;
+  description: string;
+  imageUrl: string | null;
+}
 
 export default function ExercisesPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const { toast } = useToast();
 
-  const filteredExercises = exerciseLibrary.filter((exercise) => {
+  const { data: dbExercises = [], isError } = useQuery<DBExercise[]>({
+    queryKey: ["/api/exercises"],
+  });
+
+  useEffect(() => {
+    if (isError) {
+      toast({
+        title: "Error loading exercises",
+        description: "There was a problem loading custom exercises from the database.",
+        variant: "destructive",
+      });
+    }
+  }, [isError, toast]);
+
+  const customExercises: Exercise[] = dbExercises.map((ex) => ({
+    id: ex.id,
+    name: ex.name,
+    category: ex.category,
+    muscleGroup: ex.muscleGroup,
+    description: ex.description,
+    imageUrl: ex.imageUrl || undefined,
+  }));
+
+  const allExercises = [...exerciseLibrary, ...customExercises];
+
+  const createMutation = useMutation({
+    mutationFn: async (exercise: { name: string; category: string; muscleGroup: string; description: string }) => {
+      const imageUrl = getCategoryPlaceholderImage(exercise.category);
+      return apiRequest("POST", "/api/exercises", {
+        ...exercise,
+        imageUrl,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
+      setShowAddDialog(false);
+      toast({
+        title: "Exercise Created",
+        description: "Your custom exercise has been added to the library.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create exercise. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const getCategoryPlaceholderImage = (category: string): string => {
+    const categoryImages: Record<string, string> = {
+      Chest: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop",
+      Back: "https://images.unsplash.com/photo-1603287681836-b174ce5074c2?w=400&h=300&fit=crop",
+      Shoulders: "https://images.unsplash.com/photo-1581009146145-b5ef050c149a?w=400&h=300&fit=crop",
+      Biceps: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&h=300&fit=crop",
+      Triceps: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&h=300&fit=crop",
+      Core: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
+      Cardio: "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?w=400&h=300&fit=crop",
+      PT: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop",
+      Flexibility: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop",
+      Mobility: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop",
+    };
+    return categoryImages[category] || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=300&fit=crop";
+  };
+
+  const filteredExercises = allExercises.filter((exercise) => {
     const matchesCategory = selectedCategory === "All" || exercise.category === selectedCategory;
     const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           exercise.muscleGroup.toLowerCase().includes(searchQuery.toLowerCase());
@@ -21,16 +103,26 @@ export default function ExercisesPage() {
     console.log("Adding exercise to workout:", id);
   };
 
+  const handleCreateExercise = (data: { name: string; category: string; muscleGroup: string; description: string }) => {
+    createMutation.mutate(data);
+  };
+
   return (
     <div className="flex-1 overflow-auto h-full">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 pb-8 sm:pb-12 space-y-4 sm:space-y-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-page-title">
-            Exercise Library
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Browse and add exercises to your workouts
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-page-title">
+              Exercise Library
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Browse and add exercises to your workouts
+            </p>
+          </div>
+          <Button onClick={() => setShowAddDialog(true)} data-testid="button-add-exercise">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Exercise
+          </Button>
         </div>
 
         <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-4">
@@ -77,6 +169,13 @@ export default function ExercisesPage() {
             <p className="text-muted-foreground">No exercises found</p>
           </div>
         )}
+
+        <AddExerciseDialog
+          isOpen={showAddDialog}
+          onClose={() => setShowAddDialog(false)}
+          onSave={handleCreateExercise}
+          isPending={createMutation.isPending}
+        />
       </div>
     </div>
   );

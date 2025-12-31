@@ -1,9 +1,46 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertScheduledWorkoutSchema, insertCompletedWorkoutSchema } from "@shared/schema";
+import { insertExerciseSchema, insertScheduledWorkoutSchema, insertCompletedWorkoutSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Exercises
+  app.get("/api/exercises", async (req, res) => {
+    try {
+      const exerciseList = await storage.getExercises();
+      res.json(exerciseList);
+    } catch (error) {
+      console.error("Error fetching exercises:", error);
+      res.status(500).json({ error: "Failed to fetch exercises" });
+    }
+  });
+
+  app.post("/api/exercises", async (req, res) => {
+    try {
+      const parsed = insertExerciseSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.message });
+      }
+      const exercise = await storage.createExercise(parsed.data);
+      res.status(201).json(exercise);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create exercise" });
+    }
+  });
+
+  app.delete("/api/exercises/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteExercise(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Exercise not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete exercise" });
+    }
+  });
+
   // Scheduled Workouts
   app.get("/api/scheduled-workouts", async (req, res) => {
     try {
