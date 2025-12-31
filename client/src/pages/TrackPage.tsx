@@ -241,7 +241,6 @@ export default function TrackPage() {
                       }}
                       className="text-center text-sm h-9 sm:h-10"
                       data-testid={`input-weight-${set.setNumber}`}
-                      disabled={set.completed || (!isCurrentSet && trackingState !== "not_started")}
                     />
                     <Input
                       type="number"
@@ -253,7 +252,6 @@ export default function TrackPage() {
                       }}
                       className="text-center text-sm h-9 sm:h-10"
                       data-testid={`input-reps-${set.setNumber}`}
-                      disabled={set.completed || (!isCurrentSet && trackingState !== "not_started")}
                     />
                     <div className="flex justify-center">
                       <Checkbox
