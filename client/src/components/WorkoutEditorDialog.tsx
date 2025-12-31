@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { Plus, X, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, X, GripVertical, ChevronUp, ChevronDown, Calendar as CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -55,6 +55,7 @@ export function WorkoutEditorDialog({
   const [repeatInterval, setRepeatInterval] = useState(1);
   const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
   const [activeTab, setActiveTab] = useState("details");
+  const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
     if (initialData) {
@@ -71,6 +72,7 @@ export function WorkoutEditorDialog({
       setSelectedExercises([]);
     }
     setActiveTab("details");
+    setShowCalendar(false);
   }, [initialData, isOpen]);
 
   const handleSave = () => {
@@ -141,15 +143,36 @@ export function WorkoutEditorDialog({
 
               <div className="space-y-2">
                 <Label className="text-sm">Start Date</Label>
-                <div className="flex justify-center overflow-x-auto">
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={(newDate) => newDate && setDate(newDate)}
-                    className="rounded-md border"
-                    data-testid="calendar-start-date"
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 px-3 py-2 border rounded-md text-sm">
+                    {format(date, "PPP")}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowCalendar(!showCalendar)}
+                    data-testid="button-toggle-calendar"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                  </Button>
                 </div>
+                {showCalendar && (
+                  <div className="flex justify-center overflow-x-auto mt-2">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={(newDate) => {
+                        if (newDate) {
+                          setDate(newDate);
+                          setShowCalendar(false);
+                        }
+                      }}
+                      className="rounded-md border"
+                      data-testid="calendar-start-date"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
