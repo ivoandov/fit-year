@@ -162,20 +162,13 @@ export default function WorkoutsPage() {
 
   const getDisplayedWorkouts = () => {
     const workouts: (ScheduledWorkout & { displayId: string })[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const thirtyDaysFromNow = addDays(today, 30);
 
     scheduledWorkouts.forEach((workout) => {
       const workoutDate = new Date(workout.date);
-      workoutDate.setHours(0, 0, 0, 0);
-      
-      if (workoutDate >= today && workoutDate <= thirtyDaysFromNow) {
-        workouts.push({
-          ...workout,
-          displayId: `${workout.id}-${workoutDate.getTime()}`,
-        });
-      }
+      workouts.push({
+        ...workout,
+        displayId: `${workout.id}-${workoutDate.getTime()}`,
+      });
     });
 
     return workouts.sort((a, b) => a.date.getTime() - b.date.getTime());
