@@ -105,8 +105,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteExercise(id: string): Promise<boolean> {
-    const results = await db.delete(exercises).where(eq(exercises.id, id)).returning();
-    return results.length > 0;
+    try {
+      const results = await neonClient`
+        DELETE FROM exercises WHERE id = ${id} RETURNING id
+      `;
+      return results.length > 0;
+    } catch (error) {
+      console.error("Error deleting exercise:", error);
+      return false;
+    }
   }
 
   async getScheduledWorkouts(): Promise<ScheduledWorkout[]> {
