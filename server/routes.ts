@@ -24,6 +24,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: parsed.error.message });
       }
       const exercise = await storage.createExercise(parsed.data);
+      
+      if (!exercise) {
+        console.error("Error creating exercise: no exercise returned from storage");
+        return res.status(500).json({ error: "Failed to create exercise" });
+      }
+      
       res.status(201).json(exercise);
       
       // Generate image in background after responding

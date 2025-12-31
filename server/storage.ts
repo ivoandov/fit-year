@@ -49,12 +49,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createExercise(exercise: InsertExercise): Promise<Exercise> {
-    const results = await neonClient`
-      INSERT INTO exercises (name, muscle_groups, description, image_url, exercise_type)
-      VALUES (${exercise.name}, ${JSON.stringify(exercise.muscleGroups)}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"})
-      RETURNING id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType"
-    `;
-    return results[0] as Exercise;
+    try {
+      const muscleGroupsJson = JSON.stringify(exercise.muscleGroups || []);
+      const results = await neonClient`
+        INSERT INTO exercises (name, muscle_groups, description, image_url, exercise_type)
+        VALUES (${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"})
+        RETURNING id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType"
+      `;
+      console.log("Create exercise results:", results);
+      if (!results || results.length === 0) {
+        throw new Error("No results returned from insert");
+      }
+      return results[0] as Exercise;
+    } catch (error) {
+      console.error("Error in createExercise:", error);
+      throw error;
+    }
   }
 
   async updateExercise(id: string, exercise: Partial<InsertExercise>): Promise<Exercise | undefined> {
