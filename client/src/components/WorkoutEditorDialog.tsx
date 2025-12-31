@@ -318,7 +318,7 @@ export function WorkoutEditorDialog({
           </p>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0 mt-4">
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 mt-4">
           <Button variant="outline" onClick={onClose} className="w-full sm:w-auto" data-testid="button-cancel">
             Cancel
           </Button>
