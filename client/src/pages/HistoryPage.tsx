@@ -3,97 +3,51 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Calendar, Flame, Activity } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { startOfWeek, startOfMonth, isWithinInterval } from "date-fns";
+import { useWorkout } from "@/context/WorkoutContext";
 
 export default function HistoryPage() {
-  const mockHistory = [
-    {
-      id: "1",
-      workoutName: "Upper Body Strength",
-      date: new Date(Date.now() - 86400000),
-      duration: 45,
-      exerciseCount: 6,
-      totalVolume: 3250,
-      exercises: [
-        {
-          name: "Bench Press",
-          muscleGroup: "Chest",
-          sets: [
-            { weight: 135, reps: 10 },
-            { weight: 185, reps: 8 },
-            { weight: 225, reps: 6 },
-          ],
-        },
-        {
-          name: "Barbell Row",
-          muscleGroup: "Back",
-          sets: [
-            { weight: 135, reps: 10 },
-            { weight: 155, reps: 8 },
-            { weight: 175, reps: 6 },
-          ],
-        },
-      ],
-    },
-    {
-      id: "2",
-      workoutName: "Lower Body Power",
-      date: new Date(Date.now() - 86400000 * 3),
-      duration: 50,
-      exerciseCount: 5,
-      totalVolume: 4100,
-      exercises: [
-        {
-          name: "Barbell Squat",
-          muscleGroup: "Core",
-          sets: [
-            { weight: 185, reps: 10 },
-            { weight: 225, reps: 8 },
-            { weight: 275, reps: 6 },
-          ],
-        },
-      ],
-    },
-    {
-      id: "3",
-      workoutName: "Full Body Circuit",
-      date: new Date(Date.now() - 86400000 * 5),
-      duration: 60,
-      exerciseCount: 8,
-      totalVolume: 2850,
-      exercises: [
-        {
-          name: "Shoulder Press",
-          muscleGroup: "Shoulders",
-          sets: [
-            { weight: 95, reps: 12 },
-            { weight: 115, reps: 10 },
-          ],
-        },
-      ],
-    },
-  ];
+  const { completedWorkouts } = useWorkout();
+
+  const historyData = completedWorkouts.map((workout, index) => ({
+    id: `${workout.displayId}-${index}`,
+    workoutName: workout.name,
+    date: workout.completedAt,
+    duration: Math.floor(Math.random() * 30 + 30),
+    exerciseCount: workout.exercises.length,
+    totalVolume: workout.exercises.reduce((sum, ex) => {
+      return sum + ex.sets.reduce((setSum, set) => setSum + (set.weight * set.reps), 0);
+    }, 0),
+    exercises: workout.exercises.map((ex) => ({
+      name: ex.name,
+      muscleGroup: ex.category,
+      sets: ex.sets.map((set) => ({
+        weight: set.weight,
+        reps: set.reps,
+      })),
+    })),
+  }));
 
   const now = new Date();
   const weekStart = startOfWeek(now);
   const monthStart = startOfMonth(now);
 
-  const workoutsThisWeek = mockHistory.filter((w) =>
+  const workoutsThisWeek = historyData.filter((w) =>
     isWithinInterval(w.date, { start: weekStart, end: now })
   ).length;
 
-  const workoutsThisMonth = mockHistory.filter((w) =>
+  const workoutsThisMonth = historyData.filter((w) =>
     isWithinInterval(w.date, { start: monthStart, end: now })
   ).length;
 
-  const totalWorkouts = mockHistory.length;
+  const totalWorkouts = historyData.length;
 
-  const totalVolume = mockHistory.reduce((sum, w) => sum + w.totalVolume, 0);
+  const totalVolume = historyData.reduce((sum, w) => sum + w.totalVolume, 0);
 
   const calculateWeeklySetsByMuscle = () => {
     const muscleGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Core"];
     const setsByMuscle: { [key: string]: number } = {};
 
-    mockHistory.forEach((workout) => {
+    historyData.forEach((workout) => {
       if (isWithinInterval(workout.date, { start: weekStart, end: now })) {
         workout.exercises?.forEach((exercise) => {
           const muscle = exercise.muscleGroup || "Other";
@@ -111,11 +65,11 @@ export default function HistoryPage() {
 
   const weeklySetsByMuscleGroup = calculateWeeklySetsByMuscle();
 
-  const mockStats = [
+  const stats = [
     { label: "Total Workouts", value: totalWorkouts.toString(), icon: Calendar, testId: "total-workouts" },
     { label: "This Week", value: workoutsThisWeek.toString(), icon: Flame, testId: "this-week" },
     { label: "This Month", value: workoutsThisMonth.toString(), icon: Activity, testId: "this-month" },
-    { label: "Total Volume", value: `${(totalVolume / 1000).toFixed(1)}K`, icon: TrendingUp, testId: "total-volume" },
+    { label: "Total Volume", value: totalVolume > 0 ? `${(totalVolume / 1000).toFixed(1)}K` : "0", icon: TrendingUp, testId: "total-volume" },
   ];
 
   return (
@@ -131,7 +85,7 @@ export default function HistoryPage() {
         </div>
 
         <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
-          {mockStats.map((stat) => (
+          {stats.map((stat) => (
             <Card key={stat.label} data-testid={`card-stat-${stat.testId}`}>
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
                 <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
@@ -177,14 +131,16 @@ export default function HistoryPage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-3 sm:space-y-4">
-          <h2 className="text-lg sm:text-xl font-semibold">Recent Workouts</h2>
-          {mockHistory.map((session) => (
-            <WorkoutHistoryCard key={session.id} {...session} />
-          ))}
-        </div>
+        {historyData.length > 0 && (
+          <div className="space-y-3 sm:space-y-4">
+            <h2 className="text-lg sm:text-xl font-semibold">Recent Workouts</h2>
+            {historyData.map((session) => (
+              <WorkoutHistoryCard key={session.id} {...session} />
+            ))}
+          </div>
+        )}
 
-        {mockHistory.length === 0 && (
+        {historyData.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No workout history yet</p>
             <p className="text-sm text-muted-foreground mt-2">
