@@ -113,6 +113,8 @@ export default function TrackPage() {
       completed: false,
     };
     setCurrentSets([...sets, newSet]);
+    setCurrentSetIndex(sets.length);
+    setTrackingState("not_started");
   };
 
   const handleRestTimerClose = () => {
