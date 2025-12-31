@@ -1,102 +1,112 @@
 import { useState } from "react";
-import { WorkoutCard } from "@/components/WorkoutCard";
-import { ScheduleWorkoutDialog, type ScheduleData } from "@/components/ScheduleWorkoutDialog";
+import { WorkoutEditorDialog, type WorkoutData } from "@/components/WorkoutEditorDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
+import { exerciseLibrary, type Exercise } from "@/data/exercises";
 
 interface ScheduledWorkout {
   id: string;
   name: string;
   date: Date;
-  exerciseCount: number;
-  duration: number;
   repeatType: "none" | "daily" | "weekly" | "custom";
   repeatInterval?: number;
+  exercises: Exercise[];
 }
 
 export default function WorkoutsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
-  const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([
-    {
-      id: "1",
-      name: "Upper Body Strength",
-      date: new Date(),
-      exerciseCount: 6,
-      duration: 45,
-      repeatType: "weekly",
-    },
-    {
-      id: "2",
-      name: "Lower Body Power",
-      date: new Date(Date.now() + 86400000),
-      exerciseCount: 5,
-      duration: 50,
-      repeatType: "weekly",
-    },
-    {
-      id: "3",
-      name: "Full Body Circuit",
-      date: new Date(Date.now() + 86400000 * 2),
-      exerciseCount: 8,
-      duration: 60,
-      repeatType: "custom",
-      repeatInterval: 3,
-    },
-  ]);
+  const [showEditorDialog, setShowEditorDialog] = useState(false);
+  const [editingWorkout, setEditingWorkout] = useState<ScheduledWorkout | null>(null);
+  const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([]);
   const { toast } = useToast();
 
   const handleStartWorkout = (id: string) => {
     console.log("Starting workout:", id);
   };
 
-  const handleScheduleWorkout = (data: ScheduleData) => {
-    const newWorkout: ScheduledWorkout = {
-      id: Date.now().toString(),
-      name: data.workoutName,
-      date: data.date,
-      exerciseCount: 0,
-      duration: 0,
-      repeatType: data.repeatType,
-      repeatInterval: data.repeatInterval,
-    };
+  const handleSaveWorkout = (data: WorkoutData) => {
+    if (data.id) {
+      setScheduledWorkouts(workouts =>
+        workouts.map(w => w.id === data.id ? { ...data, id: data.id } as ScheduledWorkout : w)
+      );
+      toast({
+        title: "Workout Updated",
+        description: `${data.name} has been updated successfully.`,
+      });
+    } else {
+      const newWorkout: ScheduledWorkout = {
+        ...data,
+        id: Date.now().toString(),
+      };
+      setScheduledWorkouts([...scheduledWorkouts, newWorkout]);
 
-    setScheduledWorkouts([...scheduledWorkouts, newWorkout]);
+      const repeatText =
+        data.repeatType === "daily"
+          ? " (repeating daily)"
+          : data.repeatType === "weekly"
+          ? " (repeating weekly)"
+          : data.repeatType === "custom"
+          ? ` (repeating every ${data.repeatInterval} days)`
+          : "";
 
-    const repeatText =
-      data.repeatType === "daily"
-        ? " (repeating daily)"
-        : data.repeatType === "weekly"
-        ? " (repeating weekly)"
-        : data.repeatType === "custom"
-        ? ` (repeating every ${data.repeatInterval} days)`
-        : "";
+      toast({
+        title: "Workout Created",
+        description: `${data.name} scheduled for ${format(data.date, "PPP")}${repeatText}`,
+      });
+    }
+    setEditingWorkout(null);
+  };
 
+  const handleEditWorkout = (workoutId: string) => {
+    const baseId = workoutId.split("-")[0];
+    const workout = scheduledWorkouts.find(w => w.id === baseId);
+    if (workout) {
+      setEditingWorkout(workout);
+      setShowEditorDialog(true);
+    }
+  };
+
+  const handleDeleteWorkout = (workoutId: string) => {
+    const baseId = workoutId.split("-")[0];
+    setScheduledWorkouts(workouts => workouts.filter(w => w.id !== baseId));
     toast({
-      title: "Workout Scheduled",
-      description: `${data.workoutName} scheduled for ${format(data.date, "PPP")}${repeatText}`,
+      title: "Workout Deleted",
+      description: "The workout has been removed from your schedule.",
     });
+  };
 
-    console.log("Scheduling workout:", data);
+  const handleNewWorkout = () => {
+    setEditingWorkout(null);
+    setShowEditorDialog(true);
   };
 
   const getDisplayedWorkouts = () => {
-    const workouts: ScheduledWorkout[] = [];
+    const workouts: (ScheduledWorkout & { displayId: string })[] = [];
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const thirtyDaysFromNow = addDays(today, 30);
 
     scheduledWorkouts.forEach((workout) => {
       let currentDate = new Date(workout.date);
+      currentDate.setHours(0, 0, 0, 0);
       
       while (currentDate <= thirtyDaysFromNow) {
         if (currentDate >= today) {
           workouts.push({
             ...workout,
-            id: `${workout.id}-${currentDate.toISOString()}`,
+            displayId: `${workout.id}-${currentDate.toISOString()}`,
             date: new Date(currentDate),
           });
         }
@@ -150,7 +160,7 @@ export default function WorkoutsPage() {
               </PopoverContent>
             </Popover>
             <Button
-              onClick={() => setShowScheduleDialog(true)}
+              onClick={handleNewWorkout}
               size="sm"
               className="sm:size-default"
               data-testid="button-add-workout"
@@ -163,11 +173,65 @@ export default function WorkoutsPage() {
 
         <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {displayedWorkouts.map((workout) => (
-            <WorkoutCard
-              key={workout.id}
-              {...workout}
-              onStart={handleStartWorkout}
-            />
+            <Card key={workout.displayId} className="hover-elevate" data-testid={`card-workout-${workout.displayId}`}>
+              <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-base sm:text-lg font-semibold truncate" data-testid={`text-workout-name-${workout.displayId}`}>
+                    {workout.name}
+                  </CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                    {format(workout.date, "PP")}
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    size="icon"
+                    onClick={() => handleStartWorkout(workout.displayId)}
+                    data-testid={`button-start-workout-${workout.displayId}`}
+                  >
+                    <Play className="h-4 w-4" />
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" data-testid={`button-menu-${workout.displayId}`}>
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEditWorkout(workout.displayId)} data-testid={`button-edit-${workout.displayId}`}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleDeleteWorkout(workout.displayId)}
+                        className="text-destructive"
+                        data-testid={`button-delete-${workout.displayId}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+                <div className="text-xs sm:text-sm text-muted-foreground">
+                  {workout.exercises.length} exercises
+                </div>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {workout.exercises.slice(0, 3).map((ex) => (
+                    <span key={ex.id} className="text-xs bg-accent px-2 py-0.5 rounded">
+                      {ex.name}
+                    </span>
+                  ))}
+                  {workout.exercises.length > 3 && (
+                    <span className="text-xs text-muted-foreground">
+                      +{workout.exercises.length - 3} more
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
@@ -175,7 +239,7 @@ export default function WorkoutsPage() {
           <div className="text-center py-12">
             <p className="text-muted-foreground mb-4">No workouts scheduled</p>
             <Button
-              onClick={() => setShowScheduleDialog(true)}
+              onClick={handleNewWorkout}
               data-testid="button-create-first"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -184,10 +248,15 @@ export default function WorkoutsPage() {
           </div>
         )}
 
-        <ScheduleWorkoutDialog
-          isOpen={showScheduleDialog}
-          onClose={() => setShowScheduleDialog(false)}
-          onSchedule={handleScheduleWorkout}
+        <WorkoutEditorDialog
+          isOpen={showEditorDialog}
+          onClose={() => {
+            setShowEditorDialog(false);
+            setEditingWorkout(null);
+          }}
+          onSave={handleSaveWorkout}
+          initialData={editingWorkout}
+          availableExercises={exerciseLibrary}
         />
       </div>
     </div>

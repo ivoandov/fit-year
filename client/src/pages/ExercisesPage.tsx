@@ -4,71 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import squatImage from "@assets/generated_images/Barbell_squat_exercise_photo_39428c05.png";
-import benchImage from "@assets/generated_images/Bench_press_exercise_photo_6f5085c2.png";
-import deadliftImage from "@assets/generated_images/Deadlift_exercise_photo_0ef501a3.png";
-import treadmillImage from "@assets/generated_images/Treadmill_running_exercise_photo_b0cf7ff7.png";
-import pullupImage from "@assets/generated_images/Pull-ups_exercise_photo_303dd425.png";
-import plankImage from "@assets/generated_images/Plank_exercise_photo_3a52c638.png";
+import { exerciseLibrary, exerciseCategories } from "@/data/exercises";
 
 export default function ExercisesPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const categories = ["All", "Shoulders", "Chest", "Biceps", "Triceps", "Back", "Core", "Cardio", "PT", "Flexibility", "Mobility"];
-
-  const mockExercises = [
-    {
-      id: "1",
-      name: "Barbell Squat",
-      category: "Core",
-      muscleGroup: "Legs",
-      description: "Compound lower body exercise targeting quads, glutes, and hamstrings. Stand with barbell on upper back, squat down keeping chest up.",
-      imageUrl: squatImage,
-    },
-    {
-      id: "2",
-      name: "Bench Press",
-      category: "Chest",
-      muscleGroup: "Chest",
-      description: "Upper body pressing movement for chest, shoulders, and triceps. Lie on bench and press barbell from chest to full extension.",
-      imageUrl: benchImage,
-    },
-    {
-      id: "3",
-      name: "Deadlift",
-      category: "Back",
-      muscleGroup: "Back",
-      description: "Full body compound exercise emphasizing posterior chain. Lift barbell from floor to standing position with proper hip hinge.",
-      imageUrl: deadliftImage,
-    },
-    {
-      id: "4",
-      name: "Treadmill Run",
-      category: "Cardio",
-      muscleGroup: "Full Body",
-      description: "Cardiovascular endurance training on treadmill. Adjust speed and incline for varying intensity levels.",
-      imageUrl: treadmillImage,
-    },
-    {
-      id: "5",
-      name: "Pull-ups",
-      category: "Back",
-      muscleGroup: "Back",
-      description: "Bodyweight exercise for back and biceps. Hang from bar and pull body up until chin clears the bar.",
-      imageUrl: pullupImage,
-    },
-    {
-      id: "6",
-      name: "Plank",
-      category: "Core",
-      muscleGroup: "Core",
-      description: "Isometric core strengthening exercise. Hold body in straight line position supported by forearms and toes.",
-      imageUrl: plankImage,
-    },
-  ];
-
-  const filteredExercises = mockExercises.filter((exercise) => {
+  const filteredExercises = exerciseLibrary.filter((exercise) => {
     const matchesCategory = selectedCategory === "All" || exercise.category === selectedCategory;
     const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           exercise.muscleGroup.toLowerCase().includes(searchQuery.toLowerCase());
@@ -104,7 +46,7 @@ export default function ExercisesPage() {
           </div>
           <ScrollArea className="w-full sm:w-auto whitespace-nowrap">
             <div className="flex gap-2 pb-2 sm:pb-0">
-              {categories.map((category) => (
+              {exerciseCategories.map((category) => (
                 <Badge
                   key={category}
                   variant={selectedCategory === category ? "default" : "outline"}
