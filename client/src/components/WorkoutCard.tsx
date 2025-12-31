@@ -22,8 +22,8 @@ export function WorkoutCard({
 }: WorkoutCardProps) {
   return (
     <Card className="hover-elevate" data-testid={`card-workout-${id}`}>
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-        <CardTitle className="text-lg font-semibold" data-testid={`text-workout-name-${id}`}>
+      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
+        <CardTitle className="text-base sm:text-lg font-semibold truncate" data-testid={`text-workout-name-${id}`}>
           {name}
         </CardTitle>
         <Button
@@ -34,11 +34,11 @@ export function WorkoutCard({
           <Play className="h-4 w-4" />
         </Button>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col gap-2 text-sm text-muted-foreground">
+      <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+        <div className="flex flex-col gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            <span data-testid={`text-date-${id}`}>{format(date, "PPP")}</span>
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span data-testid={`text-date-${id}`}>{format(date, "PP")}</span>
           </div>
           <div className="flex items-center gap-2">
             <span data-testid={`text-exercise-count-${id}`}>
@@ -47,7 +47,7 @@ export function WorkoutCard({
           </div>
           {duration && (
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
+              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
               <span data-testid={`text-duration-${id}`}>{duration} min</span>
             </div>
           )}

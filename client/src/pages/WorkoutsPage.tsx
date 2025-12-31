@@ -122,22 +122,22 @@ export default function WorkoutsPage() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold" data-testid="text-page-title">
+            <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-page-title">
               Scheduled Workouts
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Your upcoming fitness sessions
             </p>
           </div>
           <div className="flex gap-2">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" data-testid="button-calendar">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  {format(selectedDate, "PPP")}
+                <Button variant="outline" size="sm" className="sm:size-default" data-testid="button-calendar">
+                  <CalendarIcon className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{format(selectedDate, "PPP")}</span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -151,15 +151,17 @@ export default function WorkoutsPage() {
             </Popover>
             <Button
               onClick={() => setShowScheduleDialog(true)}
+              size="sm"
+              className="sm:size-default"
               data-testid="button-add-workout"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              New Workout
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Workout</span>
             </Button>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {displayedWorkouts.map((workout) => (
             <WorkoutCard
               key={workout.id}

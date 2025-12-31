@@ -85,20 +85,20 @@ export default function TrackPage() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
+          <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-page-title">
             {mockWorkout.name}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Exercise {currentExerciseIndex + 1} of {mockWorkout.exercises.length}
           </p>
-          <Progress value={progress} className="mt-4" data-testid="progress-workout" />
+          <Progress value={progress} className="mt-3 sm:mt-4" data-testid="progress-workout" />
         </div>
 
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex items-center justify-between gap-2 sm:gap-4">
               <Button
                 variant="outline"
                 size="icon"
@@ -108,11 +108,11 @@ export default function TrackPage() {
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <div className="flex-1 text-center">
-                <CardTitle className="text-2xl font-bold" data-testid="text-current-exercise">
+              <div className="flex-1 text-center min-w-0">
+                <CardTitle className="text-lg sm:text-2xl font-bold truncate" data-testid="text-current-exercise">
                   {currentExercise.name}
                 </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   {currentExercise.muscleGroup}
                 </p>
               </div>
@@ -127,23 +127,23 @@ export default function TrackPage() {
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-4 gap-4 font-semibold text-sm pb-2 border-b">
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="grid grid-cols-4 gap-2 sm:gap-4 font-semibold text-xs sm:text-sm pb-2 border-b">
                 <div>Set</div>
-                <div>Weight (lbs)</div>
-                <div>Reps</div>
+                <div className="text-center">Weight</div>
+                <div className="text-center">Reps</div>
                 <div className="text-center">Done</div>
               </div>
               {sets.map((set, index) => (
                 <div
                   key={set.setNumber}
-                  className={`grid grid-cols-4 gap-4 items-center py-2 rounded-md px-2 ${
+                  className={`grid grid-cols-4 gap-2 sm:gap-4 items-center py-2 rounded-md px-1 sm:px-2 ${
                     set.completed ? 'bg-accent' : ''
                   } ${index === currentSetIndex && !set.completed ? 'border-2 border-primary' : ''}`}
                   data-testid={`row-set-${set.setNumber}`}
                 >
-                  <div className="font-medium">{set.setNumber}</div>
+                  <div className="font-medium text-sm sm:text-base">{set.setNumber}</div>
                   <Input
                     type="number"
                     value={set.weight}
@@ -152,7 +152,7 @@ export default function TrackPage() {
                       newSets[index].weight = parseInt(e.target.value) || 0;
                       setSets(newSets);
                     }}
-                    className="text-center"
+                    className="text-center text-sm h-9 sm:h-10"
                     data-testid={`input-weight-${set.setNumber}`}
                     disabled={index !== currentSetIndex || set.completed}
                   />
@@ -164,7 +164,7 @@ export default function TrackPage() {
                       newSets[index].reps = parseInt(e.target.value) || 0;
                       setSets(newSets);
                     }}
-                    className="text-center"
+                    className="text-center text-sm h-9 sm:h-10"
                     data-testid={`input-reps-${set.setNumber}`}
                     disabled={index !== currentSetIndex || set.completed}
                   />
@@ -174,23 +174,24 @@ export default function TrackPage() {
                       onCheckedChange={() => handleSetComplete(set.setNumber)}
                       data-testid={`checkbox-complete-${set.setNumber}`}
                       disabled={index !== currentSetIndex || set.completed}
+                      className="h-5 w-5 sm:h-6 sm:w-6"
                     />
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-6 space-y-4">
-              <div className="flex items-center gap-4">
-                <label className="text-sm font-medium whitespace-nowrap">Rest Timer:</label>
+            <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-2 sm:gap-4">
+                <label className="text-xs sm:text-sm font-medium whitespace-nowrap">Rest:</label>
                 <Input
                   type="number"
                   value={restTimerDuration}
                   onChange={(e) => setRestTimerDuration(parseInt(e.target.value) || 90)}
-                  className="w-24 text-center"
+                  className="w-16 sm:w-24 text-center h-9 sm:h-10"
                   data-testid="input-rest-timer"
                 />
-                <span className="text-sm text-muted-foreground">seconds</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">sec</span>
               </div>
 
               <Button
@@ -200,18 +201,18 @@ export default function TrackPage() {
                 data-testid="button-start-rest"
               >
                 <Timer className="h-4 w-4 mr-2" />
-                Start Rest Timer Manually
+                <span className="text-sm">Start Rest Timer</span>
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <div className="flex gap-4">
-          <Button variant="outline" className="flex-1" data-testid="button-pause-workout">
-            Pause Workout
+        <div className="flex gap-2 sm:gap-4">
+          <Button variant="outline" className="flex-1 text-sm" data-testid="button-pause-workout">
+            Pause
           </Button>
-          <Button className="flex-1" data-testid="button-finish-workout">
-            Finish Workout
+          <Button className="flex-1 text-sm" data-testid="button-finish-workout">
+            Finish
           </Button>
         </div>
 

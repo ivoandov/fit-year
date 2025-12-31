@@ -115,32 +115,32 @@ export default function HistoryPage() {
     { label: "Total Workouts", value: totalWorkouts.toString(), icon: Calendar, testId: "total-workouts" },
     { label: "This Week", value: workoutsThisWeek.toString(), icon: Flame, testId: "this-week" },
     { label: "This Month", value: workoutsThisMonth.toString(), icon: Activity, testId: "this-month" },
-    { label: "Total Volume", value: `${(totalVolume / 1000).toFixed(1)}K lbs`, icon: TrendingUp, testId: "total-volume" },
+    { label: "Total Volume", value: `${(totalVolume / 1000).toFixed(1)}K`, icon: TrendingUp, testId: "total-volume" },
   ];
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
+          <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-page-title">
             Workout History
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Track your progress and review past sessions
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
           {mockStats.map((stat) => (
             <Card key={stat.label} data-testid={`card-stat-${stat.testId}`}>
-              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                   {stat.label}
                 </CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
+                <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold" data-testid={`text-stat-value-${stat.testId}`}>
+              <CardContent className="p-3 sm:p-4 pt-0">
+                <div className="text-xl sm:text-2xl font-bold" data-testid={`text-stat-value-${stat.testId}`}>
                   {stat.value}
                 </div>
               </CardContent>
@@ -149,22 +149,22 @@ export default function HistoryPage() {
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Weekly Sets by Muscle Group</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Track your training volume across different muscle groups this week
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Weekly Sets by Muscle Group</CardTitle>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Track your training volume across different muscle groups
             </p>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="space-y-3 sm:space-y-4">
               {weeklySetsByMuscleGroup.map((group) => (
-                <div key={group.muscleGroup} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
+                <div key={group.muscleGroup} className="space-y-1.5 sm:space-y-2">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="font-medium" data-testid={`text-muscle-${group.muscleGroup.toLowerCase()}`}>
                       {group.muscleGroup}
                     </span>
                     <span className="text-muted-foreground" data-testid={`text-sets-${group.muscleGroup.toLowerCase()}`}>
-                      {group.sets} / {group.maxSets} sets
+                      {group.sets}/{group.maxSets}
                     </span>
                   </div>
                   <Progress
@@ -177,8 +177,8 @@ export default function HistoryPage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Recent Workouts</h2>
+        <div className="space-y-3 sm:space-y-4">
+          <h2 className="text-lg sm:text-xl font-semibold">Recent Workouts</h2>
           {mockHistory.map((session) => (
             <WorkoutHistoryCard key={session.id} {...session} />
           ))}

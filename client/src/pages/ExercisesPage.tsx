@@ -3,6 +3,7 @@ import { ExerciseCard } from "@/components/ExerciseCard";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import squatImage from "@assets/generated_images/Barbell_squat_exercise_photo_39428c05.png";
 import benchImage from "@assets/generated_images/Bench_press_exercise_photo_6f5085c2.png";
 import deadliftImage from "@assets/generated_images/Deadlift_exercise_photo_0ef501a3.png";
@@ -80,17 +81,17 @@ export default function ExercisesPage() {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
+          <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-page-title">
             Exercise Library
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Browse and add exercises to your workouts
           </p>
         </div>
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -101,22 +102,25 @@ export default function ExercisesPage() {
               data-testid="input-search"
             />
           </div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {categories.map((category) => (
-              <Badge
-                key={category}
-                variant={selectedCategory === category ? "default" : "outline"}
-                className="cursor-pointer whitespace-nowrap hover-elevate active-elevate-2"
-                onClick={() => setSelectedCategory(category)}
-                data-testid={`badge-category-${category.toLowerCase()}`}
-              >
-                {category}
-              </Badge>
-            ))}
-          </div>
+          <ScrollArea className="w-full sm:w-auto whitespace-nowrap">
+            <div className="flex gap-2 pb-2 sm:pb-0">
+              {categories.map((category) => (
+                <Badge
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
+                  className="cursor-pointer whitespace-nowrap hover-elevate active-elevate-2 text-xs sm:text-sm"
+                  onClick={() => setSelectedCategory(category)}
+                  data-testid={`badge-category-${category.toLowerCase()}`}
+                >
+                  {category}
+                </Badge>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" className="sm:hidden" />
+          </ScrollArea>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filteredExercises.map((exercise) => (
             <ExerciseCard
               key={exercise.id}
