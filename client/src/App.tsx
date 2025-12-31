@@ -13,6 +13,7 @@ import WorkoutsPage from "@/pages/WorkoutsPage";
 import ExercisesPage from "@/pages/ExercisesPage";
 import TrackPage from "@/pages/TrackPage";
 import HistoryPage from "@/pages/HistoryPage";
+import SettingsPage from "@/pages/SettingsPage";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/exercises" component={ExercisesPage} />
       <Route path="/track" component={TrackPage} />
       <Route path="/history" component={HistoryPage} />
+      <Route path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>
   );

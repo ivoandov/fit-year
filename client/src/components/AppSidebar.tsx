@@ -1,4 +1,4 @@
-import { Home, Database, Play, BarChart3 } from "lucide-react";
+import { Home, Database, Play, BarChart3, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -35,6 +35,12 @@ const menuItems = [
     url: "/history",
     icon: BarChart3,
     testId: "link-history",
+  },
+  {
+    title: "Settings",
+    url: "/settings",
+    icon: Settings,
+    testId: "link-settings",
   },
 ];
 
