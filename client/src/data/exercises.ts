@@ -111,15 +111,12 @@ export const exerciseLibrary: Exercise[] = [
 
 export const muscleGroups = [
   "All",
-  "Shoulders",
   "Chest",
-  "Biceps",
   "Triceps",
   "Back",
-  "Core",
+  "Biceps",
+  "Shoulders",
   "Legs",
+  "Core",
   "Cardio",
-  "PT",
-  "Flexibility",
-  "Mobility",
 ];

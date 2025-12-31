@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { muscleGroups } from "@/data/exercises";
+import { useSettings } from "@/components/SettingsProvider";
 
 export type ExerciseType = "weight_reps" | "distance_time";
 
@@ -40,8 +40,6 @@ interface AddExerciseDialogProps {
   mode?: "add" | "edit";
 }
 
-const selectableMuscleGroups = muscleGroups.filter(g => g !== "All");
-
 export function AddExerciseDialog({
   isOpen,
   onClose,
@@ -50,6 +48,7 @@ export function AddExerciseDialog({
   initialData = null,
   mode = "add",
 }: AddExerciseDialogProps) {
+  const { muscleGroups } = useSettings();
   const [name, setName] = useState("");
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<string[]>([]);
   const [description, setDescription] = useState("");
@@ -139,7 +138,7 @@ export function AddExerciseDialog({
           <div className="space-y-2">
             <Label>Muscle Groups</Label>
             <div className="grid grid-cols-2 gap-2 pt-1">
-              {selectableMuscleGroups.map((group) => (
+              {muscleGroups.map((group) => (
                 <div key={group} className="flex items-center space-x-2">
                   <Checkbox
                     id={`muscle-${group}`}

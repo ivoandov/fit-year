@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { exerciseLibrary, muscleGroups, type Exercise } from "@/data/exercises";
+import { exerciseLibrary, type Exercise } from "@/data/exercises";
+import { useSettings } from "@/components/SettingsProvider";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -26,6 +27,8 @@ export default function ExercisesPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingExercise, setEditingExercise] = useState<ExerciseFormData | null>(null);
   const { toast } = useToast();
+  const { muscleGroups: userMuscleGroups } = useSettings();
+  const muscleGroups = ["All", ...userMuscleGroups];
 
   const { data: dbExercises = [], isError } = useQuery<DBExercise[]>({
     queryKey: ["/api/exercises"],

@@ -8,7 +8,7 @@ import { useSettings } from "@/components/SettingsProvider";
 
 export default function HistoryPage() {
   const { completedWorkouts } = useWorkout();
-  const { weekStart: weekStartDay } = useSettings();
+  const { weekStart: weekStartDay, muscleGroups } = useSettings();
 
   const historyData = completedWorkouts.map((workout, index) => ({
     id: `${workout.displayId}-${index}`,
@@ -42,7 +42,6 @@ export default function HistoryPage() {
   const totalVolume = historyData.reduce((sum, w) => sum + w.totalVolume, 0);
 
   const calculateWeeklySetsByMuscle = () => {
-    const muscleGroupList = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Core", "Legs", "Cardio"];
     const setsByMuscle: { [key: string]: number } = {};
 
     historyData.forEach((workout) => {
@@ -55,7 +54,7 @@ export default function HistoryPage() {
       }
     });
 
-    return muscleGroupList.map((muscle) => ({
+    return muscleGroups.map((muscle) => ({
       muscleGroup: muscle,
       sets: setsByMuscle[muscle] || 0,
       maxSets: 20,
