@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { WorkoutProvider } from "@/context/WorkoutContext";
 import NotFound from "@/pages/not-found";
 import WorkoutsPage from "@/pages/WorkoutsPage";
 import ExercisesPage from "@/pages/ExercisesPage";
@@ -34,23 +35,25 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <SidebarProvider style={style as React.CSSProperties}>
-            <div className="flex h-screen w-full">
-              <AppSidebar />
-              <div className="flex flex-col flex-1 min-w-0">
-                <header className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b">
-                  <SidebarTrigger data-testid="button-sidebar-toggle" />
-                  <ThemeToggle />
-                </header>
-                <main className="flex-1 overflow-hidden">
-                  <Router />
-                </main>
+        <WorkoutProvider>
+          <TooltipProvider>
+            <SidebarProvider style={style as React.CSSProperties}>
+              <div className="flex h-screen w-full">
+                <AppSidebar />
+                <div className="flex flex-col flex-1 min-w-0">
+                  <header className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b">
+                    <SidebarTrigger data-testid="button-sidebar-toggle" />
+                    <ThemeToggle />
+                  </header>
+                  <main className="flex-1 overflow-hidden">
+                    <Router />
+                  </main>
+                </div>
               </div>
-            </div>
-          </SidebarProvider>
-          <Toaster />
-        </TooltipProvider>
+            </SidebarProvider>
+            <Toaster />
+          </TooltipProvider>
+        </WorkoutProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

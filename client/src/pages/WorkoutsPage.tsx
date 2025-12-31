@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { WorkoutEditorDialog, type WorkoutData } from "@/components/WorkoutEditorDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play } from "lucide-react";
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
 import { exerciseLibrary, type Exercise } from "@/data/exercises";
+import { useWorkout } from "@/context/WorkoutContext";
 
 interface ScheduledWorkout {
   id: string;
@@ -26,14 +28,25 @@ interface ScheduledWorkout {
 }
 
 export default function WorkoutsPage() {
+  const [, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showEditorDialog, setShowEditorDialog] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<ScheduledWorkout | null>(null);
   const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([]);
   const { toast } = useToast();
+  const { startWorkout } = useWorkout();
 
-  const handleStartWorkout = (id: string) => {
-    console.log("Starting workout:", id);
+  const handleStartWorkout = (workoutId: string) => {
+    const baseId = workoutId.split("-")[0];
+    const workout = scheduledWorkouts.find(w => w.id === baseId);
+    if (workout) {
+      startWorkout({
+        id: workout.id,
+        name: workout.name,
+        exercises: workout.exercises,
+      });
+      setLocation("/track");
+    }
   };
 
   const handleSaveWorkout = (data: WorkoutData) => {
