@@ -15,6 +15,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { MoreVertical } from "lucide-react";
 import { exerciseLibrary, type Exercise } from "@/data/exercises";
 import { useWorkout } from "@/context/WorkoutContext";
@@ -40,6 +50,7 @@ export default function WorkoutsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showEditorDialog, setShowEditorDialog] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<ScheduledWorkout | null>(null);
+  const [workoutToDelete, setWorkoutToDelete] = useState<{ id: string; name: string } | null>(null);
   const { toast } = useToast();
   const { startWorkout, isWorkoutCompleted, completedWorkouts, restartWorkout } = useWorkout();
 
@@ -139,12 +150,19 @@ export default function WorkoutsPage() {
     }
   };
 
-  const handleDeleteWorkout = (workoutId: string) => {
-    deleteMutation.mutate(workoutId);
-    toast({
-      title: "Workout Deleted",
-      description: "The workout has been removed from your schedule.",
-    });
+  const handleDeleteWorkout = (workoutId: string, workoutName: string) => {
+    setWorkoutToDelete({ id: workoutId, name: workoutName });
+  };
+
+  const confirmDeleteWorkout = () => {
+    if (workoutToDelete) {
+      deleteMutation.mutate(workoutToDelete.id);
+      toast({
+        title: "Workout Deleted",
+        description: "The workout has been removed from your schedule.",
+      });
+      setWorkoutToDelete(null);
+    }
   };
 
   const handleNewWorkout = () => {
@@ -287,7 +305,7 @@ export default function WorkoutsPage() {
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => handleDeleteWorkout(workout.displayId)}
+                              onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
                               className="text-destructive"
                               data-testid={`button-delete-workout-${workout.displayId}`}
                             >
@@ -375,7 +393,7 @@ export default function WorkoutsPage() {
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => handleDeleteWorkout(workout.displayId)}
+                              onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
                               className="text-destructive"
                               data-testid={`button-delete-workout-${workout.displayId}`}
                             >
@@ -534,7 +552,7 @@ export default function WorkoutsPage() {
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDeleteWorkout(workout.id)}
+                            onClick={() => handleDeleteWorkout(workout.id, workout.name)}
                             className="text-destructive"
                             data-testid={`button-delete-library-workout-${workout.id}`}
                           >
@@ -585,6 +603,27 @@ export default function WorkoutsPage() {
           initialData={editingWorkout ? { ...editingWorkout, repeatType: "none" as const } : null}
           availableExercises={exerciseLibrary}
         />
+
+        <AlertDialog open={!!workoutToDelete} onOpenChange={(open) => !open && setWorkoutToDelete(null)}>
+          <AlertDialogContent data-testid="dialog-confirm-delete">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Workout</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete "{workoutToDelete?.name}"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteWorkout}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                data-testid="button-confirm-delete"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
