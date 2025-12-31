@@ -9,24 +9,35 @@ interface WorkoutExercise extends Exercise {
 
 interface ActiveWorkout {
   id: string;
+  displayId: string;
   name: string;
   exercises: WorkoutExercise[];
 }
 
+interface CompletedWorkoutRecord {
+  displayId: string;
+  completedAt: Date;
+}
+
 interface WorkoutContextType {
   activeWorkout: ActiveWorkout | null;
-  startWorkout: (workout: { id: string; name: string; exercises: Exercise[] }) => void;
+  completedWorkouts: CompletedWorkoutRecord[];
+  startWorkout: (workout: { id: string; displayId: string; name: string; exercises: Exercise[] }) => void;
   endWorkout: () => void;
+  completeWorkout: () => void;
+  isWorkoutCompleted: (displayId: string) => boolean;
 }
 
 const WorkoutContext = createContext<WorkoutContextType | null>(null);
 
 export function WorkoutProvider({ children }: { children: ReactNode }) {
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(null);
+  const [completedWorkouts, setCompletedWorkouts] = useState<CompletedWorkoutRecord[]>([]);
 
-  const startWorkout = (workout: { id: string; name: string; exercises: Exercise[] }) => {
+  const startWorkout = (workout: { id: string; displayId: string; name: string; exercises: Exercise[] }) => {
     const workoutWithSets: ActiveWorkout = {
       id: workout.id,
+      displayId: workout.displayId,
       name: workout.name,
       exercises: workout.exercises.map(ex => ({
         ...ex,
@@ -42,8 +53,29 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     setActiveWorkout(null);
   };
 
+  const completeWorkout = () => {
+    if (activeWorkout) {
+      setCompletedWorkouts(prev => [
+        ...prev,
+        { displayId: activeWorkout.displayId, completedAt: new Date() }
+      ]);
+    }
+    setActiveWorkout(null);
+  };
+
+  const isWorkoutCompleted = (displayId: string) => {
+    return completedWorkouts.some(w => w.displayId === displayId);
+  };
+
   return (
-    <WorkoutContext.Provider value={{ activeWorkout, startWorkout, endWorkout }}>
+    <WorkoutContext.Provider value={{ 
+      activeWorkout, 
+      completedWorkouts,
+      startWorkout, 
+      endWorkout,
+      completeWorkout,
+      isWorkoutCompleted
+    }}>
       {children}
     </WorkoutContext.Provider>
   );

@@ -20,7 +20,7 @@ type TrackingState = "not_started" | "in_set" | "resting";
 
 export default function TrackPage() {
   const [, setLocation] = useLocation();
-  const { activeWorkout, endWorkout } = useWorkout();
+  const { activeWorkout, endWorkout, completeWorkout } = useWorkout();
   
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [trackingState, setTrackingState] = useState<TrackingState>("not_started");
@@ -94,8 +94,8 @@ export default function TrackPage() {
 
   const handleFinishExercise = () => {
     if (isLastExercise) {
-      endWorkout();
-      setLocation("/history");
+      completeWorkout();
+      setLocation("/");
     } else {
       setCurrentExerciseIndex(currentExerciseIndex + 1);
       setCurrentSetIndex(0);

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { WorkoutEditorDialog, type WorkoutData } from "@/components/WorkoutEditorDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays } from "date-fns";
@@ -17,6 +17,7 @@ import {
 import { MoreVertical } from "lucide-react";
 import { exerciseLibrary, type Exercise } from "@/data/exercises";
 import { useWorkout } from "@/context/WorkoutContext";
+import { Badge } from "@/components/ui/badge";
 
 interface ScheduledWorkout {
   id: string;
@@ -34,7 +35,7 @@ export default function WorkoutsPage() {
   const [editingWorkout, setEditingWorkout] = useState<ScheduledWorkout | null>(null);
   const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([]);
   const { toast } = useToast();
-  const { startWorkout } = useWorkout();
+  const { startWorkout, isWorkoutCompleted } = useWorkout();
 
   const handleStartWorkout = (workoutId: string) => {
     const baseId = workoutId.split("-")[0];
@@ -42,6 +43,7 @@ export default function WorkoutsPage() {
     if (workout) {
       startWorkout({
         id: workout.id,
+        displayId: workoutId,
         name: workout.name,
         exercises: workout.exercises,
       });
@@ -185,67 +187,84 @@ export default function WorkoutsPage() {
         </div>
 
         <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {displayedWorkouts.map((workout) => (
-            <Card key={workout.displayId} className="hover-elevate" data-testid={`card-workout-${workout.displayId}`}>
-              <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-base sm:text-lg font-semibold truncate" data-testid={`text-workout-name-${workout.displayId}`}>
-                    {workout.name}
-                  </CardTitle>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    {format(workout.date, "PP")}
-                  </p>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    size="icon"
-                    onClick={() => handleStartWorkout(workout.displayId)}
-                    data-testid={`button-start-workout-${workout.displayId}`}
-                  >
-                    <Play className="h-4 w-4" />
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" data-testid={`button-menu-${workout.displayId}`}>
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditWorkout(workout.displayId)} data-testid={`button-edit-${workout.displayId}`}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDeleteWorkout(workout.displayId)}
-                        className="text-destructive"
-                        data-testid={`button-delete-${workout.displayId}`}
+          {displayedWorkouts.map((workout) => {
+            const completed = isWorkoutCompleted(workout.displayId);
+            return (
+              <Card 
+                key={workout.displayId} 
+                className={`hover-elevate ${completed ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/20' : ''}`}
+                data-testid={`card-workout-${workout.displayId}`}
+              >
+                <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-base sm:text-lg font-semibold truncate" data-testid={`text-workout-name-${workout.displayId}`}>
+                        {workout.name}
+                      </CardTitle>
+                      {completed && (
+                        <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/50 dark:text-green-400 dark:border-green-700 shrink-0">
+                          <Check className="h-3 w-3 mr-1" />
+                          Done
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                      {format(workout.date, "PP")}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    {!completed && (
+                      <Button
+                        size="icon"
+                        onClick={() => handleStartWorkout(workout.displayId)}
+                        data-testid={`button-start-workout-${workout.displayId}`}
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-                <div className="text-xs sm:text-sm text-muted-foreground">
-                  {workout.exercises.length} exercises
-                </div>
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {workout.exercises.slice(0, 3).map((ex) => (
-                    <span key={ex.id} className="text-xs bg-accent px-2 py-0.5 rounded">
-                      {ex.name}
-                    </span>
-                  ))}
-                  {workout.exercises.length > 3 && (
-                    <span className="text-xs text-muted-foreground">
-                      +{workout.exercises.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                        <Play className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" data-testid={`button-menu-${workout.displayId}`}>
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditWorkout(workout.displayId)} data-testid={`button-edit-${workout.displayId}`}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteWorkout(workout.displayId)}
+                          className="text-destructive"
+                          data-testid={`button-delete-${workout.displayId}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+                  <div className="text-xs sm:text-sm text-muted-foreground">
+                    {workout.exercises.length} exercises
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {workout.exercises.slice(0, 3).map((ex) => (
+                      <span key={ex.id} className="text-xs bg-accent px-2 py-0.5 rounded">
+                        {ex.name}
+                      </span>
+                    ))}
+                    {workout.exercises.length > 3 && (
+                      <span className="text-xs text-muted-foreground">
+                        +{workout.exercises.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {displayedWorkouts.length === 0 && (
