@@ -14,8 +14,11 @@ interface ActiveWorkout {
   exercises: WorkoutExercise[];
 }
 
-interface CompletedWorkoutRecord {
+export interface CompletedWorkoutRecord {
+  id: string;
   displayId: string;
+  name: string;
+  exercises: Exercise[];
   completedAt: Date;
 }
 
@@ -26,6 +29,7 @@ interface WorkoutContextType {
   endWorkout: () => void;
   completeWorkout: () => void;
   isWorkoutCompleted: (displayId: string) => boolean;
+  restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
 }
 
 const WorkoutContext = createContext<WorkoutContextType | null>(null);
@@ -56,8 +60,14 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   const completeWorkout = () => {
     if (activeWorkout) {
       setCompletedWorkouts(prev => [
+        {
+          id: activeWorkout.id,
+          displayId: activeWorkout.displayId,
+          name: activeWorkout.name,
+          exercises: activeWorkout.exercises,
+          completedAt: new Date(),
+        },
         ...prev,
-        { displayId: activeWorkout.displayId, completedAt: new Date() }
       ]);
     }
     setActiveWorkout(null);
@@ -67,6 +77,16 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     return completedWorkouts.some(w => w.displayId === displayId);
   };
 
+  const restartWorkout = (completedWorkout: CompletedWorkoutRecord) => {
+    const newDisplayId = `${completedWorkout.id}-restart-${Date.now()}`;
+    startWorkout({
+      id: completedWorkout.id,
+      displayId: newDisplayId,
+      name: completedWorkout.name,
+      exercises: completedWorkout.exercises,
+    });
+  };
+
   return (
     <WorkoutContext.Provider value={{ 
       activeWorkout, 
@@ -74,7 +94,8 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       startWorkout, 
       endWorkout,
       completeWorkout,
-      isWorkoutCompleted
+      isWorkoutCompleted,
+      restartWorkout,
     }}>
       {children}
     </WorkoutContext.Provider>

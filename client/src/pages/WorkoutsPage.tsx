@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { WorkoutEditorDialog, type WorkoutData } from "@/components/WorkoutEditorDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, RotateCcw, Clock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays } from "date-fns";
@@ -35,7 +35,7 @@ export default function WorkoutsPage() {
   const [editingWorkout, setEditingWorkout] = useState<ScheduledWorkout | null>(null);
   const [scheduledWorkouts, setScheduledWorkouts] = useState<ScheduledWorkout[]>([]);
   const { toast } = useToast();
-  const { startWorkout, isWorkoutCompleted } = useWorkout();
+  const { startWorkout, isWorkoutCompleted, completedWorkouts, restartWorkout } = useWorkout();
 
   const handleStartWorkout = (workoutId: string) => {
     const baseId = workoutId.split("-")[0];
@@ -105,6 +105,11 @@ export default function WorkoutsPage() {
   const handleNewWorkout = () => {
     setEditingWorkout(null);
     setShowEditorDialog(true);
+  };
+
+  const handleRestartWorkout = (completedWorkout: typeof completedWorkouts[0]) => {
+    restartWorkout(completedWorkout);
+    setLocation("/track");
   };
 
   const getDisplayedWorkouts = () => {
@@ -277,6 +282,67 @@ export default function WorkoutsPage() {
               <Plus className="h-4 w-4 mr-2" />
               Create Your First Workout
             </Button>
+          </div>
+        )}
+
+        {completedWorkouts.length > 0 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold" data-testid="text-recent-workouts-title">
+                Recent Workouts
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Your completed sessions
+              </p>
+            </div>
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {completedWorkouts.slice(0, 6).map((workout, index) => (
+                <Card 
+                  key={`${workout.displayId}-${index}`}
+                  className="hover-elevate border-green-500/30 bg-green-50/20 dark:bg-green-950/10"
+                  data-testid={`card-recent-workout-${index}`}
+                >
+                  <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base sm:text-lg font-semibold truncate">
+                          {workout.name}
+                        </CardTitle>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground mt-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{format(workout.completedAt, "PP 'at' p")}</span>
+                      </div>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => handleRestartWorkout(workout)}
+                      data-testid={`button-restart-workout-${index}`}
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+                    <div className="text-xs sm:text-sm text-muted-foreground">
+                      {workout.exercises.length} exercises
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {workout.exercises.slice(0, 3).map((ex) => (
+                        <span key={ex.id} className="text-xs bg-accent px-2 py-0.5 rounded">
+                          {ex.name}
+                        </span>
+                      ))}
+                      {workout.exercises.length > 3 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{workout.exercises.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
 
