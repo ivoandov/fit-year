@@ -481,6 +481,100 @@ export default function WorkoutsPage() {
           </div>
         )}
 
+        <div className="space-y-3 sm:space-y-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold" data-testid="text-all-workouts-title">
+              All Workouts
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Your workout library
+            </p>
+          </div>
+          {scheduledWorkouts.length > 0 ? (
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {scheduledWorkouts.map((workout) => (
+                <Card 
+                  key={workout.id}
+                  className="hover-elevate"
+                  data-testid={`card-library-workout-${workout.id}`}
+                >
+                  <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base sm:text-lg font-semibold truncate">
+                        {workout.name}
+                      </CardTitle>
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                        {format(workout.date, "PPP")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        size="icon"
+                        onClick={() => handleStartWorkout(workout.id)}
+                        data-testid={`button-start-library-workout-${workout.id}`}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            data-testid={`button-library-workout-menu-${workout.id}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleEditWorkout(workout.id)}
+                            data-testid={`button-edit-library-workout-${workout.id}`}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteWorkout(workout.id)}
+                            className="text-destructive"
+                            data-testid={`button-delete-library-workout-${workout.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+                    <div className="text-xs sm:text-sm text-muted-foreground">
+                      {workout.exercises.length} exercises
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {workout.exercises.slice(0, 3).map((ex) => (
+                        <span key={ex.id} className="text-xs bg-accent px-2 py-0.5 rounded">
+                          {ex.name}
+                        </span>
+                      ))}
+                      {workout.exercises.length > 3 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{workout.exercises.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-6 sm:p-8">
+              <div className="text-center text-muted-foreground">
+                <p>No workouts created yet</p>
+                <p className="text-sm mt-1">Click "New Workout" to create your first workout</p>
+              </div>
+            </Card>
+          )}
+        </div>
+
         <WorkoutEditorDialog
           isOpen={showEditorDialog}
           onClose={() => {
