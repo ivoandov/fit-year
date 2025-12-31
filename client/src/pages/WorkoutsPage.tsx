@@ -51,7 +51,10 @@ export default function WorkoutsPage() {
     id: w.id,
     name: w.name,
     date: new Date(w.date),
-    exercises: w.exercises as Exercise[],
+    exercises: (w.exercises as any[]).map((ex: any) => ({
+      ...ex,
+      muscleGroups: ex.muscleGroups || [],
+    })) as Exercise[],
   }));
 
   const createMutation = useMutation({
@@ -496,7 +499,7 @@ export default function WorkoutsPage() {
             setEditingWorkout(null);
           }}
           onSave={handleSaveWorkout}
-          initialData={editingWorkout}
+          initialData={editingWorkout ? { ...editingWorkout, repeatType: "none" as const } : null}
           availableExercises={exerciseLibrary}
         />
       </div>

@@ -6,8 +6,7 @@ import { z } from "zod";
 export const exercises = pgTable("exercises", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
-  category: text("category").notNull(),
-  muscleGroup: text("muscle_group").notNull(),
+  muscleGroups: jsonb("muscle_groups").notNull().default([]),
   description: text("description").notNull(),
   imageUrl: text("image_url"),
 });

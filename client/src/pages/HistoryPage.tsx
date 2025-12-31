@@ -17,7 +17,7 @@ export default function HistoryPage() {
     totalVolume: 0,
     exercises: workout.exercises.map((ex) => ({
       name: ex.name,
-      muscleGroup: ex.category,
+      muscleGroups: ex.muscleGroups || [],
       sets: [],
     })),
   }));
@@ -39,19 +39,20 @@ export default function HistoryPage() {
   const totalVolume = historyData.reduce((sum, w) => sum + w.totalVolume, 0);
 
   const calculateWeeklySetsByMuscle = () => {
-    const muscleGroups = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Core"];
+    const muscleGroupList = ["Chest", "Back", "Shoulders", "Biceps", "Triceps", "Core", "Legs", "Cardio"];
     const setsByMuscle: { [key: string]: number } = {};
 
     historyData.forEach((workout) => {
       if (isWithinInterval(workout.date, { start: weekStart, end: now })) {
         workout.exercises?.forEach((exercise) => {
-          const muscle = exercise.muscleGroup || "Other";
-          setsByMuscle[muscle] = (setsByMuscle[muscle] || 0) + (exercise.sets?.length || 0);
+          exercise.muscleGroups?.forEach((muscle) => {
+            setsByMuscle[muscle] = (setsByMuscle[muscle] || 0) + (exercise.sets?.length || 0);
+          });
         });
       }
     });
 
-    return muscleGroups.map((muscle) => ({
+    return muscleGroupList.map((muscle) => ({
       muscleGroup: muscle,
       sets: setsByMuscle[muscle] || 0,
       maxSets: 20,

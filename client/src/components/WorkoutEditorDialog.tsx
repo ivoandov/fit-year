@@ -235,7 +235,7 @@ export function WorkoutEditorDialog({
                           <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           <span className="flex-1 text-sm truncate">{exercise.name}</span>
                           <Badge variant="outline" className="text-xs hidden sm:flex">
-                            {exercise.category}
+                            {exercise.muscleGroups[0] || ""}
                           </Badge>
                           <div className="flex gap-1">
                             <Button
@@ -292,7 +292,7 @@ export function WorkoutEditorDialog({
                         >
                           <span className="flex-1 text-sm truncate">{exercise.name}</span>
                           <Badge variant="outline" className="text-xs">
-                            {exercise.category}
+                            {exercise.muscleGroups[0] || ""}
                           </Badge>
                           {!isSelected && (
                             <Plus className="h-4 w-4 text-muted-foreground" />

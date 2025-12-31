@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/neon-http";
 import { neon } from "@neondatabase/serverless";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql as drizzleSql } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import {
   exercises,
@@ -14,8 +14,8 @@ import {
   type InsertCompletedWorkout,
 } from "@shared/schema";
 
-const sql = neon(process.env.DATABASE_URL!);
-const db = drizzle({ client: sql, schema });
+const neonClient = neon(process.env.DATABASE_URL!);
+const db = drizzle({ client: neonClient, schema });
 
 export interface IStorage {
   getExercises(): Promise<Exercise[]>;
@@ -49,13 +49,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createExercise(exercise: InsertExercise): Promise<Exercise> {
-    const results = await db.insert(exercises).values(exercise).returning();
-    return results[0];
+    const results = await neonClient`
+      INSERT INTO exercises (name, muscle_groups, description, image_url)
+      VALUES (${exercise.name}, ${JSON.stringify(exercise.muscleGroups)}::jsonb, ${exercise.description}, ${exercise.imageUrl || null})
+      RETURNING id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl"
+    `;
+    return results[0] as Exercise;
   }
 
   async updateExercise(id: string, exercise: Partial<InsertExercise>): Promise<Exercise | undefined> {
-    const results = await db.update(exercises).set(exercise).where(eq(exercises.id, id)).returning();
-    return results[0];
+    const setClauses: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+    
+    if (exercise.name !== undefined) {
+      setClauses.push(`name = $${paramIndex++}`);
+      params.push(exercise.name);
+    }
+    if (exercise.muscleGroups !== undefined) {
+      setClauses.push(`muscle_groups = $${paramIndex++}::jsonb`);
+      params.push(JSON.stringify(exercise.muscleGroups));
+    }
+    if (exercise.description !== undefined) {
+      setClauses.push(`description = $${paramIndex++}`);
+      params.push(exercise.description);
+    }
+    if (exercise.imageUrl !== undefined) {
+      setClauses.push(`image_url = $${paramIndex++}`);
+      params.push(exercise.imageUrl);
+    }
+    
+    if (setClauses.length === 0) return undefined;
+    
+    params.push(id);
+    const query = `UPDATE exercises SET ${setClauses.join(", ")} WHERE id = $${paramIndex} RETURNING id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl"`;
+    
+    const results = await neonClient(query, params);
+    return results[0] as Exercise;
   }
 
   async deleteExercise(id: string): Promise<boolean> {

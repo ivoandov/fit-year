@@ -11,36 +11,21 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { exerciseCategories } from "@/data/exercises";
+import { Checkbox } from "@/components/ui/checkbox";
+import { muscleGroups } from "@/data/exercises";
 
 interface AddExerciseDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: {
     name: string;
-    category: string;
-    muscleGroup: string;
+    muscleGroups: string[];
     description: string;
   }) => void;
   isPending?: boolean;
 }
 
-const muscleGroups = [
-  "Chest",
-  "Back",
-  "Shoulders",
-  "Arms",
-  "Core",
-  "Legs",
-  "Full Body",
-];
+const selectableMuscleGroups = muscleGroups.filter(g => g !== "All");
 
 export function AddExerciseDialog({
   isOpen,
@@ -49,30 +34,33 @@ export function AddExerciseDialog({
   isPending = false,
 }: AddExerciseDialogProps) {
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
-  const [muscleGroup, setMuscleGroup] = useState("");
+  const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<string[]>([]);
   const [description, setDescription] = useState("");
 
+  const handleMuscleGroupToggle = (group: string) => {
+    setSelectedMuscleGroups(prev => 
+      prev.includes(group) 
+        ? prev.filter(g => g !== group)
+        : [...prev, group]
+    );
+  };
+
   const handleSave = () => {
-    if (!name || !category || !muscleGroup || !description) return;
-    onSave({ name, category, muscleGroup, description });
+    if (!name || selectedMuscleGroups.length === 0 || !description) return;
+    onSave({ name, muscleGroups: selectedMuscleGroups, description });
     setName("");
-    setCategory("");
-    setMuscleGroup("");
+    setSelectedMuscleGroups([]);
     setDescription("");
   };
 
   const handleClose = () => {
     setName("");
-    setCategory("");
-    setMuscleGroup("");
+    setSelectedMuscleGroups([]);
     setDescription("");
     onClose();
   };
 
-  const categories = exerciseCategories.filter(c => c !== "All");
-
-  const isValid = name && category && muscleGroup && description;
+  const isValid = name && selectedMuscleGroups.length > 0 && description;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -97,35 +85,25 @@ export function AddExerciseDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger data-testid="select-category">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="muscleGroup">Muscle Group</Label>
-            <Select value={muscleGroup} onValueChange={setMuscleGroup}>
-              <SelectTrigger data-testid="select-muscle-group">
-                <SelectValue placeholder="Select muscle group" />
-              </SelectTrigger>
-              <SelectContent>
-                {muscleGroups.map((group) => (
-                  <SelectItem key={group} value={group}>
+            <Label>Muscle Groups</Label>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {selectableMuscleGroups.map((group) => (
+                <div key={group} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`muscle-${group}`}
+                    checked={selectedMuscleGroups.includes(group)}
+                    onCheckedChange={() => handleMuscleGroupToggle(group)}
+                    data-testid={`checkbox-muscle-${group.toLowerCase()}`}
+                  />
+                  <label
+                    htmlFor={`muscle-${group}`}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
                     {group}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  </label>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-2">

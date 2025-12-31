@@ -19,11 +19,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const parsed = insertExerciseSchema.safeParse(req.body);
       if (!parsed.success) {
+        console.error("Validation error:", parsed.error.message);
         return res.status(400).json({ error: parsed.error.message });
       }
       const exercise = await storage.createExercise(parsed.data);
       res.status(201).json(exercise);
     } catch (error) {
+      console.error("Error creating exercise:", error);
       res.status(500).json({ error: "Failed to create exercise" });
     }
   });

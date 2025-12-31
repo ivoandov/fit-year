@@ -49,7 +49,10 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     id: w.id,
     displayId: w.displayId,
     name: w.name,
-    exercises: w.exercises as Exercise[],
+    exercises: (w.exercises as any[]).map((ex: any) => ({
+      ...ex,
+      muscleGroups: ex.muscleGroups || [],
+    })) as Exercise[],
     completedAt: new Date(w.completedAt),
   }));
 

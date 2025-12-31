@@ -6,8 +6,7 @@ import { Plus } from "lucide-react";
 interface ExerciseCardProps {
   id: string;
   name: string;
-  category: string;
-  muscleGroup: string;
+  muscleGroups: string[];
   description: string;
   imageUrl?: string;
   onAdd?: (id: string) => void;
@@ -16,8 +15,7 @@ interface ExerciseCardProps {
 export function ExerciseCard({
   id,
   name,
-  category,
-  muscleGroup,
+  muscleGroups,
   description,
   imageUrl,
   onAdd,
@@ -35,12 +33,11 @@ export function ExerciseCard({
       )}
       <CardHeader className="space-y-2 p-4 sm:p-6">
         <div className="flex gap-1.5 sm:gap-2 flex-wrap">
-          <Badge variant="secondary" className="text-xs" data-testid={`badge-category-${id}`}>
-            {category}
-          </Badge>
-          <Badge variant="outline" className="text-xs" data-testid={`badge-muscle-${id}`}>
-            {muscleGroup}
-          </Badge>
+          {muscleGroups.map((group) => (
+            <Badge key={group} variant="secondary" className="text-xs" data-testid={`badge-muscle-${id}-${group.toLowerCase()}`}>
+              {group}
+            </Badge>
+          ))}
         </div>
         <CardTitle className="text-base sm:text-lg" data-testid={`text-exercise-name-${id}`}>
           {name}

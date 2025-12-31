@@ -7,21 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { exerciseLibrary, exerciseCategories, type Exercise } from "@/data/exercises";
+import { exerciseLibrary, muscleGroups, type Exercise } from "@/data/exercises";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface DBExercise {
   id: string;
   name: string;
-  category: string;
-  muscleGroup: string;
+  muscleGroups: string[];
   description: string;
   imageUrl: string | null;
 }
 
 export default function ExercisesPage() {
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const { toast } = useToast();
@@ -43,8 +42,7 @@ export default function ExercisesPage() {
   const customExercises: Exercise[] = dbExercises.map((ex) => ({
     id: ex.id,
     name: ex.name,
-    category: ex.category,
-    muscleGroup: ex.muscleGroup,
+    muscleGroups: ex.muscleGroups,
     description: ex.description,
     imageUrl: ex.imageUrl || undefined,
   }));
@@ -52,8 +50,8 @@ export default function ExercisesPage() {
   const allExercises = [...exerciseLibrary, ...customExercises];
 
   const createMutation = useMutation({
-    mutationFn: async (exercise: { name: string; category: string; muscleGroup: string; description: string }) => {
-      const imageUrl = getCategoryPlaceholderImage(exercise.category);
+    mutationFn: async (exercise: { name: string; muscleGroups: string[]; description: string }) => {
+      const imageUrl = getMuscleGroupPlaceholderImage(exercise.muscleGroups[0] || "");
       return apiRequest("POST", "/api/exercises", {
         ...exercise,
         imageUrl,
@@ -76,34 +74,35 @@ export default function ExercisesPage() {
     },
   });
 
-  const getCategoryPlaceholderImage = (category: string): string => {
-    const categoryImages: Record<string, string> = {
+  const getMuscleGroupPlaceholderImage = (muscleGroup: string): string => {
+    const muscleGroupImages: Record<string, string> = {
       Chest: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop",
       Back: "https://images.unsplash.com/photo-1603287681836-b174ce5074c2?w=400&h=300&fit=crop",
       Shoulders: "https://images.unsplash.com/photo-1581009146145-b5ef050c149a?w=400&h=300&fit=crop",
       Biceps: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&h=300&fit=crop",
       Triceps: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&h=300&fit=crop",
       Core: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
+      Legs: "https://images.unsplash.com/photo-1434682881908-b43d0467b798?w=400&h=300&fit=crop",
       Cardio: "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?w=400&h=300&fit=crop",
       PT: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop",
       Flexibility: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop",
       Mobility: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop",
     };
-    return categoryImages[category] || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=300&fit=crop";
+    return muscleGroupImages[muscleGroup] || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=300&fit=crop";
   };
 
   const filteredExercises = allExercises.filter((exercise) => {
-    const matchesCategory = selectedCategory === "All" || exercise.category === selectedCategory;
+    const matchesMuscleGroup = selectedMuscleGroup === "All" || exercise.muscleGroups.includes(selectedMuscleGroup);
     const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          exercise.muscleGroup.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
+                          exercise.muscleGroups.some(g => g.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesMuscleGroup && matchesSearch;
   });
 
   const handleAddExercise = (id: string) => {
     console.log("Adding exercise to workout:", id);
   };
 
-  const handleCreateExercise = (data: { name: string; category: string; muscleGroup: string; description: string }) => {
+  const handleCreateExercise = (data: { name: string; muscleGroups: string[]; description: string }) => {
     createMutation.mutate(data);
   };
 
@@ -138,15 +137,15 @@ export default function ExercisesPage() {
           </div>
           <ScrollArea className="w-full sm:w-auto whitespace-nowrap">
             <div className="flex gap-2 pb-2 sm:pb-0">
-              {exerciseCategories.map((category) => (
+              {muscleGroups.map((group) => (
                 <Badge
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
+                  key={group}
+                  variant={selectedMuscleGroup === group ? "default" : "outline"}
                   className="cursor-pointer whitespace-nowrap hover-elevate active-elevate-2 text-xs sm:text-sm"
-                  onClick={() => setSelectedCategory(category)}
-                  data-testid={`badge-category-${category.toLowerCase()}`}
+                  onClick={() => setSelectedMuscleGroup(group)}
+                  data-testid={`badge-muscle-group-${group.toLowerCase()}`}
                 >
-                  {category}
+                  {group}
                 </Badge>
               ))}
             </div>
