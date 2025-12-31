@@ -9,6 +9,7 @@ export const exercises = pgTable("exercises", {
   muscleGroups: jsonb("muscle_groups").notNull().default([]),
   description: text("description").notNull(),
   imageUrl: text("image_url"),
+  exerciseType: text("exercise_type").notNull().default("weight_reps"),
 });
 
 export const scheduledWorkouts = pgTable("scheduled_workouts", {

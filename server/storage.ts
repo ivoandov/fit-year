@@ -50,9 +50,9 @@ export class DatabaseStorage implements IStorage {
 
   async createExercise(exercise: InsertExercise): Promise<Exercise> {
     const results = await neonClient`
-      INSERT INTO exercises (name, muscle_groups, description, image_url)
-      VALUES (${exercise.name}, ${JSON.stringify(exercise.muscleGroups)}::jsonb, ${exercise.description}, ${exercise.imageUrl || null})
-      RETURNING id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl"
+      INSERT INTO exercises (name, muscle_groups, description, image_url, exercise_type)
+      VALUES (${exercise.name}, ${JSON.stringify(exercise.muscleGroups)}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"})
+      RETURNING id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType"
     `;
     return results[0] as Exercise;
   }
@@ -78,11 +78,15 @@ export class DatabaseStorage implements IStorage {
       setClauses.push(`image_url = $${paramIndex++}`);
       params.push(exercise.imageUrl);
     }
+    if (exercise.exerciseType !== undefined) {
+      setClauses.push(`exercise_type = $${paramIndex++}`);
+      params.push(exercise.exerciseType);
+    }
     
     if (setClauses.length === 0) return undefined;
     
     params.push(id);
-    const query = `UPDATE exercises SET ${setClauses.join(", ")} WHERE id = $${paramIndex} RETURNING id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl"`;
+    const query = `UPDATE exercises SET ${setClauses.join(", ")} WHERE id = $${paramIndex} RETURNING id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType"`;
     
     const results = await neonClient(query, params);
     return results[0] as Exercise;

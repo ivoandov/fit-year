@@ -17,6 +17,7 @@ interface DBExercise {
   muscleGroups: string[];
   description: string;
   imageUrl: string | null;
+  exerciseType: string | null;
 }
 
 export default function ExercisesPage() {
@@ -45,12 +46,13 @@ export default function ExercisesPage() {
     muscleGroups: ex.muscleGroups,
     description: ex.description,
     imageUrl: ex.imageUrl || undefined,
+    exerciseType: (ex.exerciseType as "weight_reps" | "distance_time") || "weight_reps",
   }));
 
   const allExercises = [...exerciseLibrary, ...customExercises];
 
   const createMutation = useMutation({
-    mutationFn: async (exercise: { name: string; muscleGroups: string[]; description: string }) => {
+    mutationFn: async (exercise: { name: string; muscleGroups: string[]; description: string; exerciseType: string }) => {
       const imageUrl = getMuscleGroupPlaceholderImage(exercise.muscleGroups[0] || "");
       return apiRequest("POST", "/api/exercises", {
         ...exercise,
@@ -102,7 +104,7 @@ export default function ExercisesPage() {
     console.log("Adding exercise to workout:", id);
   };
 
-  const handleCreateExercise = (data: { name: string; muscleGroups: string[]; description: string }) => {
+  const handleCreateExercise = (data: { name: string; muscleGroups: string[]; description: string; exerciseType: string }) => {
     createMutation.mutate(data);
   };
 

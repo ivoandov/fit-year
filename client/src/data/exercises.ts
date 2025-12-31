@@ -11,12 +11,15 @@ import lungesImage from "@assets/generated_images/male_lunges_exercise.png";
 import latPulldownImage from "@assets/generated_images/female_lat_pulldown_exercise.png";
 import cableFlyImage from "@assets/generated_images/male_cable_fly_exercise.png";
 
+export type ExerciseType = "weight_reps" | "distance_time";
+
 export interface Exercise {
   id: string;
   name: string;
   muscleGroups: string[];
   description: string;
   imageUrl?: string;
+  exerciseType?: ExerciseType;
 }
 
 export const exerciseLibrary: Exercise[] = [

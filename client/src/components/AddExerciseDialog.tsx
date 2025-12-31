@@ -12,7 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { muscleGroups } from "@/data/exercises";
+
+export type ExerciseType = "weight_reps" | "distance_time";
 
 interface AddExerciseDialogProps {
   isOpen: boolean;
@@ -21,6 +30,7 @@ interface AddExerciseDialogProps {
     name: string;
     muscleGroups: string[];
     description: string;
+    exerciseType: ExerciseType;
   }) => void;
   isPending?: boolean;
 }
@@ -36,6 +46,7 @@ export function AddExerciseDialog({
   const [name, setName] = useState("");
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<string[]>([]);
   const [description, setDescription] = useState("");
+  const [exerciseType, setExerciseType] = useState<ExerciseType>("weight_reps");
 
   const handleMuscleGroupToggle = (group: string) => {
     setSelectedMuscleGroups(prev => 
@@ -47,16 +58,18 @@ export function AddExerciseDialog({
 
   const handleSave = () => {
     if (!name || selectedMuscleGroups.length === 0 || !description) return;
-    onSave({ name, muscleGroups: selectedMuscleGroups, description });
+    onSave({ name, muscleGroups: selectedMuscleGroups, description, exerciseType });
     setName("");
     setSelectedMuscleGroups([]);
     setDescription("");
+    setExerciseType("weight_reps");
   };
 
   const handleClose = () => {
     setName("");
     setSelectedMuscleGroups([]);
     setDescription("");
+    setExerciseType("weight_reps");
     onClose();
   };
 
@@ -82,6 +95,19 @@ export function AddExerciseDialog({
               onChange={(e) => setName(e.target.value)}
               data-testid="input-exercise-name"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="type">Type</Label>
+            <Select value={exerciseType} onValueChange={(v) => setExerciseType(v as ExerciseType)}>
+              <SelectTrigger data-testid="select-exercise-type">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weight_reps">Weight and Reps</SelectItem>
+                <SelectItem value="distance_time">Distance and Time</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
