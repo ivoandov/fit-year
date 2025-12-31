@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { ExerciseCard } from "@/components/ExerciseCard";
-import { AddExerciseDialog } from "@/components/AddExerciseDialog";
+import { AddExerciseDialog, type ExerciseFormData } from "@/components/AddExerciseDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ export default function ExercisesPage() {
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingExercise, setEditingExercise] = useState<ExerciseFormData | null>(null);
   const { toast } = useToast();
 
   const { data: dbExercises = [], isError } = useQuery<DBExercise[]>({
@@ -76,6 +77,32 @@ export default function ExercisesPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (exercise: ExerciseFormData & { id: string }) => {
+      return apiRequest("PUT", `/api/exercises/${exercise.id}`, {
+        name: exercise.name,
+        muscleGroups: exercise.muscleGroups,
+        description: exercise.description,
+        exerciseType: exercise.exerciseType,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
+      setEditingExercise(null);
+      toast({
+        title: "Exercise Updated",
+        description: "Your exercise has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update exercise. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getMuscleGroupPlaceholderImage = (muscleGroup: string): string => {
     const muscleGroupImages: Record<string, string> = {
       Chest: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop",
@@ -104,8 +131,25 @@ export default function ExercisesPage() {
     console.log("Adding exercise to workout:", id);
   };
 
-  const handleCreateExercise = (data: { name: string; muscleGroups: string[]; description: string; exerciseType: string }) => {
-    createMutation.mutate(data);
+  const handleEditExercise = (id: string) => {
+    const exercise = allExercises.find(ex => ex.id === id);
+    if (exercise) {
+      setEditingExercise({
+        id: exercise.id,
+        name: exercise.name,
+        muscleGroups: exercise.muscleGroups,
+        description: exercise.description,
+        exerciseType: exercise.exerciseType || "weight_reps",
+      });
+    }
+  };
+
+  const handleSaveExercise = (data: ExerciseFormData) => {
+    if (data.id) {
+      updateMutation.mutate(data as ExerciseFormData & { id: string });
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
   return (
@@ -161,6 +205,7 @@ export default function ExercisesPage() {
               key={exercise.id}
               {...exercise}
               onAdd={handleAddExercise}
+              onEdit={handleEditExercise}
             />
           ))}
         </div>
@@ -174,8 +219,18 @@ export default function ExercisesPage() {
         <AddExerciseDialog
           isOpen={showAddDialog}
           onClose={() => setShowAddDialog(false)}
-          onSave={handleCreateExercise}
+          onSave={handleSaveExercise}
           isPending={createMutation.isPending}
+          mode="add"
+        />
+
+        <AddExerciseDialog
+          isOpen={!!editingExercise}
+          onClose={() => setEditingExercise(null)}
+          onSave={handleSaveExercise}
+          isPending={updateMutation.isPending}
+          initialData={editingExercise}
+          mode="edit"
         />
       </div>
     </div>

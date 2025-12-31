@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,16 +23,21 @@ import { muscleGroups } from "@/data/exercises";
 
 export type ExerciseType = "weight_reps" | "distance_time";
 
+export interface ExerciseFormData {
+  id?: string;
+  name: string;
+  muscleGroups: string[];
+  description: string;
+  exerciseType: ExerciseType;
+}
+
 interface AddExerciseDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: {
-    name: string;
-    muscleGroups: string[];
-    description: string;
-    exerciseType: ExerciseType;
-  }) => void;
+  onSave: (data: ExerciseFormData) => void;
   isPending?: boolean;
+  initialData?: ExerciseFormData | null;
+  mode?: "add" | "edit";
 }
 
 const selectableMuscleGroups = muscleGroups.filter(g => g !== "All");
@@ -42,11 +47,27 @@ export function AddExerciseDialog({
   onClose,
   onSave,
   isPending = false,
+  initialData = null,
+  mode = "add",
 }: AddExerciseDialogProps) {
   const [name, setName] = useState("");
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [exerciseType, setExerciseType] = useState<ExerciseType>("weight_reps");
+
+  useEffect(() => {
+    if (initialData && isOpen) {
+      setName(initialData.name);
+      setSelectedMuscleGroups(initialData.muscleGroups);
+      setDescription(initialData.description);
+      setExerciseType(initialData.exerciseType || "weight_reps");
+    } else if (!isOpen) {
+      setName("");
+      setSelectedMuscleGroups([]);
+      setDescription("");
+      setExerciseType("weight_reps");
+    }
+  }, [initialData, isOpen]);
 
   const handleMuscleGroupToggle = (group: string) => {
     setSelectedMuscleGroups(prev => 
@@ -58,11 +79,13 @@ export function AddExerciseDialog({
 
   const handleSave = () => {
     if (!name || selectedMuscleGroups.length === 0 || !description) return;
-    onSave({ name, muscleGroups: selectedMuscleGroups, description, exerciseType });
-    setName("");
-    setSelectedMuscleGroups([]);
-    setDescription("");
-    setExerciseType("weight_reps");
+    onSave({ 
+      id: initialData?.id,
+      name, 
+      muscleGroups: selectedMuscleGroups, 
+      description, 
+      exerciseType 
+    });
   };
 
   const handleClose = () => {
@@ -74,14 +97,17 @@ export function AddExerciseDialog({
   };
 
   const isValid = name && selectedMuscleGroups.length > 0 && description;
+  const isEditMode = mode === "edit";
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Exercise</DialogTitle>
+          <DialogTitle>{isEditMode ? "Edit Exercise" : "Add New Exercise"}</DialogTitle>
           <DialogDescription>
-            Create a custom exercise for your workout library
+            {isEditMode 
+              ? "Update the exercise details" 
+              : "Create a custom exercise for your workout library"}
           </DialogDescription>
         </DialogHeader>
 
@@ -154,7 +180,7 @@ export function AddExerciseDialog({
             disabled={!isValid || isPending}
             data-testid="button-save-exercise"
           >
-            {isPending ? "Saving..." : "Add Exercise"}
+            {isPending ? "Saving..." : isEditMode ? "Save Changes" : "Add Exercise"}
           </Button>
         </DialogFooter>
       </DialogContent>

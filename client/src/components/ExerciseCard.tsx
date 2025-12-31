@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 
 interface ExerciseCardProps {
   id: string;
@@ -9,7 +9,9 @@ interface ExerciseCardProps {
   muscleGroups: string[];
   description: string;
   imageUrl?: string;
+  exerciseType?: string;
   onAdd?: (id: string) => void;
+  onEdit?: (id: string) => void;
 }
 
 export function ExerciseCard({
@@ -18,6 +20,7 @@ export function ExerciseCard({
   muscleGroups,
   description,
   imageUrl,
+  onEdit,
   onAdd,
 }: ExerciseCardProps) {
   return (
@@ -48,10 +51,19 @@ export function ExerciseCard({
           {description}
         </p>
       </CardContent>
-      <CardFooter className="p-4 sm:p-6 pt-0 sm:pt-0">
+      <CardFooter className="p-4 sm:p-6 pt-0 sm:pt-0 gap-2">
+        <Button
+          onClick={() => onEdit?.(id)}
+          variant="outline"
+          size="sm"
+          data-testid={`button-edit-exercise-${id}`}
+        >
+          <Pencil className="h-4 w-4 mr-2" />
+          Edit
+        </Button>
         <Button
           onClick={() => onAdd?.(id)}
-          className="w-full"
+          className="flex-1"
           size="sm"
           data-testid={`button-add-exercise-${id}`}
         >

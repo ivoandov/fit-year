@@ -30,6 +30,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/exercises/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const parsed = insertExerciseSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        console.error("Validation error:", parsed.error.message);
+        return res.status(400).json({ error: parsed.error.message });
+      }
+      const exercise = await storage.updateExercise(id, parsed.data);
+      if (!exercise) {
+        return res.status(404).json({ error: "Exercise not found" });
+      }
+      res.json(exercise);
+    } catch (error) {
+      console.error("Error updating exercise:", error);
+      res.status(500).json({ error: "Failed to update exercise" });
+    }
+  });
+
   app.delete("/api/exercises/:id", async (req, res) => {
     try {
       const { id } = req.params;
