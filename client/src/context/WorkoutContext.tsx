@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { type Exercise } from "@/data/exercises";
 
 interface WorkoutExercise extends Exercise {
@@ -25,18 +27,54 @@ export interface CompletedWorkoutRecord {
 interface WorkoutContextType {
   activeWorkout: ActiveWorkout | null;
   completedWorkouts: CompletedWorkoutRecord[];
+  isLoading: boolean;
   startWorkout: (workout: { id: string; displayId: string; name: string; exercises: Exercise[] }) => void;
   endWorkout: () => void;
   completeWorkout: () => void;
   isWorkoutCompleted: (displayId: string) => boolean;
   restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
+  deleteCompletedWorkout: (id: string) => void;
 }
 
 const WorkoutContext = createContext<WorkoutContextType | null>(null);
 
 export function WorkoutProvider({ children }: { children: ReactNode }) {
   const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(null);
-  const [completedWorkouts, setCompletedWorkouts] = useState<CompletedWorkoutRecord[]>([]);
+
+  const { data: completedWorkoutsData = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/completed-workouts"],
+  });
+
+  const completedWorkouts: CompletedWorkoutRecord[] = completedWorkoutsData.map((w: any) => ({
+    id: w.id,
+    displayId: w.displayId,
+    name: w.name,
+    exercises: w.exercises as Exercise[],
+    completedAt: new Date(w.completedAt),
+  }));
+
+  const createCompletedMutation = useMutation({
+    mutationFn: async (workout: { displayId: string; name: string; exercises: Exercise[]; completedAt: Date }) => {
+      return apiRequest("POST", "/api/completed-workouts", {
+        displayId: workout.displayId,
+        name: workout.name,
+        exercises: workout.exercises,
+        completedAt: workout.completedAt.toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/completed-workouts"] });
+    },
+  });
+
+  const deleteCompletedMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/completed-workouts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/completed-workouts"] });
+    },
+  });
 
   const startWorkout = (workout: { id: string; displayId: string; name: string; exercises: Exercise[] }) => {
     const workoutWithSets: ActiveWorkout = {
@@ -59,16 +97,12 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
 
   const completeWorkout = () => {
     if (activeWorkout) {
-      setCompletedWorkouts(prev => [
-        {
-          id: activeWorkout.id,
-          displayId: activeWorkout.displayId,
-          name: activeWorkout.name,
-          exercises: activeWorkout.exercises,
-          completedAt: new Date(),
-        },
-        ...prev,
-      ]);
+      createCompletedMutation.mutate({
+        displayId: activeWorkout.displayId,
+        name: activeWorkout.name,
+        exercises: activeWorkout.exercises,
+        completedAt: new Date(),
+      });
     }
     setActiveWorkout(null);
   };
@@ -87,15 +121,21 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const deleteCompletedWorkout = (id: string) => {
+    deleteCompletedMutation.mutate(id);
+  };
+
   return (
     <WorkoutContext.Provider value={{ 
       activeWorkout, 
       completedWorkouts,
+      isLoading,
       startWorkout, 
       endWorkout,
       completeWorkout,
       isWorkoutCompleted,
       restartWorkout,
+      deleteCompletedWorkout,
     }}>
       {children}
     </WorkoutContext.Provider>

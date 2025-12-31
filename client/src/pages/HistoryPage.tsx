@@ -14,16 +14,11 @@ export default function HistoryPage() {
     date: workout.completedAt,
     duration: Math.floor(Math.random() * 30 + 30),
     exerciseCount: workout.exercises.length,
-    totalVolume: workout.exercises.reduce((sum, ex) => {
-      return sum + ex.sets.reduce((setSum, set) => setSum + (set.weight * set.reps), 0);
-    }, 0),
+    totalVolume: 0,
     exercises: workout.exercises.map((ex) => ({
       name: ex.name,
       muscleGroup: ex.category,
-      sets: ex.sets.map((set) => ({
-        weight: set.weight,
-        reps: set.reps,
-      })),
+      sets: [],
     })),
   }));
 
