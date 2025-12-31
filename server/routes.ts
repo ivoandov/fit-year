@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertExerciseSchema, insertScheduledWorkoutSchema, insertCompletedWorkoutSchema } from "@shared/schema";
+import { registerImageRoutes, openai } from "./replit_integrations/image";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Exercises
@@ -24,11 +25,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const exercise = await storage.createExercise(parsed.data);
       res.status(201).json(exercise);
+      
+      // Generate image in background after responding
+      if (!exercise.imageUrl) {
+        generateExerciseImage(exercise.id, exercise.name, exercise.muscleGroups as string[]).catch(err => {
+          console.error("Background image generation failed:", err);
+        });
+      }
     } catch (error) {
       console.error("Error creating exercise:", error);
       res.status(500).json({ error: "Failed to create exercise" });
     }
   });
+
+  // Background function to generate exercise image
+  async function generateExerciseImage(exerciseId: string, exerciseName: string, muscleGroups: string[]) {
+    try {
+      const muscleText = muscleGroups.length > 0 ? muscleGroups.join(", ") : "full body";
+      const prompt = `A professional fitness illustration of a person demonstrating the "${exerciseName}" exercise targeting ${muscleText}. Clean, modern, minimalist style with a white background. Athletic figure in proper form. No text or labels.`;
+      
+      console.log(`Generating image for exercise: ${exerciseName}`);
+      
+      const response = await openai.images.generate({
+        model: "gpt-image-1",
+        prompt,
+        n: 1,
+        size: "512x512",
+      });
+      
+      const b64_json = response.data?.[0]?.b64_json;
+      if (b64_json) {
+        const imageUrl = `data:image/png;base64,${b64_json}`;
+        await storage.updateExercise(exerciseId, { imageUrl });
+        console.log(`Image generated successfully for: ${exerciseName}`);
+      }
+    } catch (error) {
+      console.error(`Failed to generate image for ${exerciseName}:`, error);
+    }
+  }
 
   app.put("/api/exercises/:id", async (req, res) => {
     try {
@@ -164,6 +198,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to delete completed workout" });
     }
   });
+
+  // Register image generation routes
+  registerImageRoutes(app);
 
   const httpServer = createServer(app);
 

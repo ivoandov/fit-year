@@ -37,3 +37,5 @@ export type CompletedWorkout = typeof completedWorkouts.$inferSelect;
 export type InsertExercise = z.infer<typeof insertExerciseSchema>;
 export type InsertScheduledWorkout = z.infer<typeof insertScheduledWorkoutSchema>;
 export type InsertCompletedWorkout = z.infer<typeof insertCompletedWorkoutSchema>;
+
+export * from "./models/chat";
