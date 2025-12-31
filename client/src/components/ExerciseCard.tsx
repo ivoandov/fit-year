@@ -55,18 +55,9 @@ export function ExerciseCard({
   return (
     <>
       <Card className="overflow-hidden hover-elevate relative" data-testid={`card-exercise-${id}`}>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="absolute top-2 right-2 z-10 rounded-full bg-white/90 hover:bg-white text-gray-700 hover:text-red-600 h-8 w-8 shadow-md"
-          onClick={handleDeleteClick}
-          data-testid={`button-delete-exercise-${id}`}
-        >
-          <X className="h-4 w-4" />
-        </Button>
         {imageUrl && (
           <div 
-            className="aspect-[16/10] sm:aspect-video overflow-hidden cursor-pointer"
+            className="aspect-[16/10] sm:aspect-video overflow-hidden cursor-pointer relative"
             onClick={() => setShowImageDialog(true)}
             data-testid={`image-container-${id}`}
           >
@@ -75,6 +66,13 @@ export function ExerciseCard({
               alt={name}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
             />
+            <button
+              className="absolute top-2 right-2 text-white drop-shadow-lg hover:text-red-400 transition-colors"
+              onClick={handleDeleteClick}
+              data-testid={`button-delete-exercise-${id}`}
+            >
+              <X className="h-6 w-6" strokeWidth={3} />
+            </button>
           </div>
         )}
         <CardHeader className="space-y-2 p-4 sm:p-6">
