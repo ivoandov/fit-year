@@ -93,8 +93,7 @@ export default function WorkoutsPage() {
   });
 
   const handleStartWorkout = (workoutId: string) => {
-    const baseId = workoutId.split("-")[0];
-    const workout = scheduledWorkouts.find(w => w.id === baseId);
+    const workout = scheduledWorkouts.find(w => w.id === workoutId);
     if (workout) {
       startWorkout({
         id: workout.id,
@@ -133,8 +132,7 @@ export default function WorkoutsPage() {
   };
 
   const handleEditWorkout = (workoutId: string) => {
-    const baseId = workoutId.split("-")[0];
-    const workout = scheduledWorkouts.find(w => w.id === baseId);
+    const workout = scheduledWorkouts.find(w => w.id === workoutId);
     if (workout) {
       setEditingWorkout(workout);
       setShowEditorDialog(true);
@@ -142,8 +140,7 @@ export default function WorkoutsPage() {
   };
 
   const handleDeleteWorkout = (workoutId: string) => {
-    const baseId = workoutId.split("-")[0];
-    deleteMutation.mutate(baseId);
+    deleteMutation.mutate(workoutId);
     toast({
       title: "Workout Deleted",
       description: "The workout has been removed from your schedule.",
@@ -164,10 +161,9 @@ export default function WorkoutsPage() {
     const workouts: (ScheduledWorkout & { displayId: string })[] = [];
 
     scheduledWorkouts.forEach((workout) => {
-      const workoutDate = new Date(workout.date);
       workouts.push({
         ...workout,
-        displayId: `${workout.id}-${workoutDate.getTime()}`,
+        displayId: workout.id,
       });
     });
 
