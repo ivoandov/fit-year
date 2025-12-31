@@ -209,7 +209,7 @@ export default function ExercisesPage() {
             <ExerciseCard
               key={exercise.id}
               {...exercise}
-              isEditable={customExerciseIds.has(exercise.id)}
+              isEditable={true}
               onAdd={handleAddExercise}
               onEdit={handleEditExercise}
             />

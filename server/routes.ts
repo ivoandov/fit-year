@@ -38,9 +38,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Validation error:", parsed.error.message);
         return res.status(400).json({ error: parsed.error.message });
       }
-      const exercise = await storage.updateExercise(id, parsed.data);
+      let exercise = await storage.updateExercise(id, parsed.data);
       if (!exercise) {
-        return res.status(404).json({ error: "Exercise not found" });
+        const fullParsed = insertExerciseSchema.safeParse(req.body);
+        if (!fullParsed.success) {
+          return res.status(400).json({ error: "Full exercise data required for new exercise" });
+        }
+        exercise = await storage.createExercise(fullParsed.data);
       }
       res.json(exercise);
     } catch (error) {
