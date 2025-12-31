@@ -108,6 +108,26 @@ export default function ExercisesPage() {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/exercises/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
+      toast({
+        title: "Exercise Deleted",
+        description: "The exercise has been removed from your library.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete exercise. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const getMuscleGroupPlaceholderImage = (muscleGroup: string): string => {
     const muscleGroupImages: Record<string, string> = {
       Chest: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop",
@@ -134,6 +154,10 @@ export default function ExercisesPage() {
 
   const handleAddExercise = (id: string) => {
     console.log("Adding exercise to workout:", id);
+  };
+
+  const handleDeleteExercise = (id: string) => {
+    deleteMutation.mutate(id);
   };
 
   const handleEditExercise = (id: string) => {
@@ -212,6 +236,7 @@ export default function ExercisesPage() {
               isEditable={true}
               onAdd={handleAddExercise}
               onEdit={handleEditExercise}
+              onDelete={handleDeleteExercise}
             />
           ))}
         </div>

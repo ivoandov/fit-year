@@ -3,6 +3,16 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Plus, Pencil, X } from "lucide-react";
 
 interface ExerciseCardProps {
@@ -15,6 +25,7 @@ interface ExerciseCardProps {
   isEditable?: boolean;
   onAdd?: (id: string) => void;
   onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 export function ExerciseCard({
@@ -26,12 +37,33 @@ export function ExerciseCard({
   isEditable = false,
   onEdit,
   onAdd,
+  onDelete,
 }: ExerciseCardProps) {
   const [showImageDialog, setShowImageDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = () => {
+    onDelete?.(id);
+    setShowDeleteDialog(false);
+  };
 
   return (
     <>
-      <Card className="overflow-hidden hover-elevate" data-testid={`card-exercise-${id}`}>
+      <Card className="overflow-hidden hover-elevate relative" data-testid={`card-exercise-${id}`}>
+        <Button
+          variant="secondary"
+          size="icon"
+          className="absolute top-2 right-2 z-10 rounded-full bg-white/90 hover:bg-white text-gray-700 hover:text-red-600 h-8 w-8 shadow-md"
+          onClick={handleDeleteClick}
+          data-testid={`button-delete-exercise-${id}`}
+        >
+          <X className="h-4 w-4" />
+        </Button>
         {imageUrl && (
           <div 
             className="aspect-[16/10] sm:aspect-video overflow-hidden cursor-pointer"
@@ -109,6 +141,27 @@ export function ExerciseCard({
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent data-testid={`dialog-confirm-delete-exercise-${id}`}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Exercise</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid={`button-cancel-delete-exercise-${id}`}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid={`button-confirm-delete-exercise-${id}`}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
