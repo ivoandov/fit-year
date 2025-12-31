@@ -13,6 +13,8 @@ interface SetData {
   setNumber: number;
   weight: number;
   reps: number;
+  distance: number;
+  time: number;
   completed: boolean;
 }
 
@@ -29,9 +31,9 @@ export default function TrackPage() {
   const [exerciseSets, setExerciseSets] = useState<Map<number, SetData[]>>(new Map());
 
   const getDefaultSets = (): SetData[] => [
-    { setNumber: 1, weight: 135, reps: 10, completed: false },
-    { setNumber: 2, weight: 135, reps: 10, completed: false },
-    { setNumber: 3, weight: 135, reps: 10, completed: false },
+    { setNumber: 1, weight: 135, reps: 10, distance: 1, time: 30, completed: false },
+    { setNumber: 2, weight: 135, reps: 10, distance: 1, time: 30, completed: false },
+    { setNumber: 3, weight: 135, reps: 10, distance: 1, time: 30, completed: false },
   ];
 
   const getCurrentSets = (): SetData[] => {
@@ -110,6 +112,8 @@ export default function TrackPage() {
       setNumber: newSetNumber,
       weight: lastSet?.weight || 135,
       reps: lastSet?.reps || 10,
+      distance: lastSet?.distance || 1,
+      time: lastSet?.time || 30,
       completed: false,
     };
     setCurrentSets([...sets, newSet]);
@@ -196,7 +200,7 @@ export default function TrackPage() {
                   {currentExercise.name}
                 </CardTitle>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                  {currentExercise.muscleGroup}
+                  {currentExercise.muscleGroups?.join(", ")}
                 </p>
               </div>
               <Button
@@ -212,58 +216,118 @@ export default function TrackPage() {
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
             <div className="space-y-3 sm:space-y-4">
-              <div className="grid grid-cols-4 gap-2 sm:gap-4 font-semibold text-xs sm:text-sm pb-2 border-b">
-                <div>Set</div>
-                <div className="text-center">Weight</div>
-                <div className="text-center">Reps</div>
-                <div className="text-center">Done</div>
-              </div>
-              {sets.map((set, index) => {
-                const isCurrentSet = index === currentSetIndex && !set.completed;
-                const isActive = isCurrentSet && trackingState === "in_set";
-                
-                return (
-                  <div
-                    key={set.setNumber}
-                    className={`grid grid-cols-4 gap-2 sm:gap-4 items-center py-2 rounded-md px-1 sm:px-2 ${
-                      set.completed ? 'bg-accent' : ''
-                    } ${isActive ? 'border-2 border-primary bg-primary/5' : isCurrentSet ? 'border border-muted-foreground/30' : ''}`}
-                    data-testid={`row-set-${set.setNumber}`}
-                  >
-                    <div className="font-medium text-sm sm:text-base">{set.setNumber}</div>
-                    <Input
-                      type="number"
-                      value={set.weight}
-                      onChange={(e) => {
-                        const newSets = [...sets];
-                        newSets[index].weight = parseInt(e.target.value) || 0;
-                        setCurrentSets(newSets);
-                      }}
-                      className="text-center text-sm h-9 sm:h-10"
-                      data-testid={`input-weight-${set.setNumber}`}
-                    />
-                    <Input
-                      type="number"
-                      value={set.reps}
-                      onChange={(e) => {
-                        const newSets = [...sets];
-                        newSets[index].reps = parseInt(e.target.value) || 0;
-                        setCurrentSets(newSets);
-                      }}
-                      className="text-center text-sm h-9 sm:h-10"
-                      data-testid={`input-reps-${set.setNumber}`}
-                    />
-                    <div className="flex justify-center">
-                      <Checkbox
-                        checked={set.completed}
-                        disabled
-                        data-testid={`checkbox-complete-${set.setNumber}`}
-                        className="h-5 w-5 sm:h-6 sm:w-6"
-                      />
-                    </div>
+              {currentExercise.exerciseType === "distance_time" ? (
+                <>
+                  <div className="grid grid-cols-4 gap-2 sm:gap-4 font-semibold text-xs sm:text-sm pb-2 border-b">
+                    <div>Set</div>
+                    <div className="text-center">Distance (mi)</div>
+                    <div className="text-center">Time (min)</div>
+                    <div className="text-center">Done</div>
                   </div>
-                );
-              })}
+                  {sets.map((set, index) => {
+                    const isCurrentSet = index === currentSetIndex && !set.completed;
+                    const isActive = isCurrentSet && trackingState === "in_set";
+                    
+                    return (
+                      <div
+                        key={set.setNumber}
+                        className={`grid grid-cols-4 gap-2 sm:gap-4 items-center py-2 rounded-md px-1 sm:px-2 ${
+                          set.completed ? 'bg-accent' : ''
+                        } ${isActive ? 'border-2 border-primary bg-primary/5' : isCurrentSet ? 'border border-muted-foreground/30' : ''}`}
+                        data-testid={`row-set-${set.setNumber}`}
+                      >
+                        <div className="font-medium text-sm sm:text-base">{set.setNumber}</div>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={set.distance}
+                          onChange={(e) => {
+                            const newSets = [...sets];
+                            newSets[index].distance = parseFloat(e.target.value) || 0;
+                            setCurrentSets(newSets);
+                          }}
+                          className="text-center text-sm h-9 sm:h-10"
+                          data-testid={`input-distance-${set.setNumber}`}
+                        />
+                        <Input
+                          type="number"
+                          value={set.time}
+                          onChange={(e) => {
+                            const newSets = [...sets];
+                            newSets[index].time = parseInt(e.target.value) || 0;
+                            setCurrentSets(newSets);
+                          }}
+                          className="text-center text-sm h-9 sm:h-10"
+                          data-testid={`input-time-${set.setNumber}`}
+                        />
+                        <div className="flex justify-center">
+                          <Checkbox
+                            checked={set.completed}
+                            disabled
+                            data-testid={`checkbox-complete-${set.setNumber}`}
+                            className="h-5 w-5 sm:h-6 sm:w-6"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              ) : (
+                <>
+                  <div className="grid grid-cols-4 gap-2 sm:gap-4 font-semibold text-xs sm:text-sm pb-2 border-b">
+                    <div>Set</div>
+                    <div className="text-center">Weight</div>
+                    <div className="text-center">Reps</div>
+                    <div className="text-center">Done</div>
+                  </div>
+                  {sets.map((set, index) => {
+                    const isCurrentSet = index === currentSetIndex && !set.completed;
+                    const isActive = isCurrentSet && trackingState === "in_set";
+                    
+                    return (
+                      <div
+                        key={set.setNumber}
+                        className={`grid grid-cols-4 gap-2 sm:gap-4 items-center py-2 rounded-md px-1 sm:px-2 ${
+                          set.completed ? 'bg-accent' : ''
+                        } ${isActive ? 'border-2 border-primary bg-primary/5' : isCurrentSet ? 'border border-muted-foreground/30' : ''}`}
+                        data-testid={`row-set-${set.setNumber}`}
+                      >
+                        <div className="font-medium text-sm sm:text-base">{set.setNumber}</div>
+                        <Input
+                          type="number"
+                          value={set.weight}
+                          onChange={(e) => {
+                            const newSets = [...sets];
+                            newSets[index].weight = parseInt(e.target.value) || 0;
+                            setCurrentSets(newSets);
+                          }}
+                          className="text-center text-sm h-9 sm:h-10"
+                          data-testid={`input-weight-${set.setNumber}`}
+                        />
+                        <Input
+                          type="number"
+                          value={set.reps}
+                          onChange={(e) => {
+                            const newSets = [...sets];
+                            newSets[index].reps = parseInt(e.target.value) || 0;
+                            setCurrentSets(newSets);
+                          }}
+                          className="text-center text-sm h-9 sm:h-10"
+                          data-testid={`input-reps-${set.setNumber}`}
+                        />
+                        <div className="flex justify-center">
+                          <Checkbox
+                            checked={set.completed}
+                            disabled
+                            data-testid={`checkbox-complete-${set.setNumber}`}
+                            className="h-5 w-5 sm:h-6 sm:w-6"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
 
               {allSetsCompleted && (
                 <Button
