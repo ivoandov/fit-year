@@ -107,8 +107,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
   
-  // Start periodic check every 30 seconds
-  const imageCheckInterval = setInterval(checkAndGenerateMissingImages, 30000);
+  // Start periodic check once a day (24 hours in milliseconds)
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+  const imageCheckInterval = setInterval(checkAndGenerateMissingImages, ONE_DAY_MS);
   
   // Run initial check after 5 seconds
   setTimeout(checkAndGenerateMissingImages, 5000);
