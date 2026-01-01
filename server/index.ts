@@ -59,20 +59,25 @@ app.use((req, res, next) => {
     
     // Try object storage first
     try {
+      console.log(`Looking for image in object storage: exercises/${filename}`);
       const file = await objectStorageService.searchPublicObject(`exercises/${filename}`);
       if (file) {
+        console.log(`Found in object storage: ${filename}`);
         await objectStorageService.downloadObject(file, res);
         return;
       }
-    } catch (err) {
-      // Object storage not available or file not found, continue to local
+      console.log(`Not found in object storage: ${filename}`);
+    } catch (err: any) {
+      console.log(`Object storage error for ${filename}: ${err.message}`);
     }
     
     // Fall back to local file
     const localPath = path.join(process.cwd(), 'attached_assets/generated_images', filename);
     if (fs.existsSync(localPath)) {
+      console.log(`Serving from local: ${filename}`);
       res.sendFile(localPath);
     } else {
+      console.log(`Image not found anywhere: ${filename}`);
       res.status(404).json({ error: 'Image not found' });
     }
   });
