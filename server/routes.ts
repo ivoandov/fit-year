@@ -243,14 +243,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const exerciseList = await storage.getExercises();
       
       // Convert object storage paths to signed URLs for direct browser access
+      // Also verify files exist before returning signed URLs
       const exercisesWithSignedUrls = await Promise.all(
         exerciseList.map(async (exercise) => {
           if (exercise.imageUrl?.startsWith('/objects/public/exercises/')) {
             const filename = exercise.imageUrl.replace('/objects/public/exercises/', '');
             try {
-              const signedUrl = await objectStorageService.getSignedUrlForPublicObject(`exercises/${filename}`, 3600);
-              if (signedUrl) {
-                return { ...exercise, imageUrl: signedUrl };
+              // First check if file actually exists in object storage
+              const file = await objectStorageService.searchPublicObject(`exercises/${filename}`);
+              if (file) {
+                const signedUrl = await objectStorageService.getSignedUrlForPublicObject(`exercises/${filename}`, 3600);
+                if (signedUrl) {
+                  return { ...exercise, imageUrl: signedUrl };
+                }
+              } else {
+                // File doesn't exist in object storage - return without imageUrl
+                console.warn(`Image not found in object storage for ${exercise.name}: ${filename}`);
+                return { ...exercise, imageUrl: undefined };
               }
             } catch (err) {
               console.error(`Failed to get signed URL for ${exercise.name}:`, err);
