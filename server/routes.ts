@@ -236,7 +236,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/exercises", async (req, res) => {
     try {
       const exerciseList = await storage.getExercises();
-      res.json(exerciseList);
+      
+      // Convert object storage paths to signed URLs for direct browser access
+      const exercisesWithSignedUrls = await Promise.all(
+        exerciseList.map(async (exercise) => {
+          if (exercise.imageUrl?.startsWith('/objects/public/exercises/')) {
+            const filename = exercise.imageUrl.replace('/objects/public/exercises/', '');
+            try {
+              const signedUrl = await objectStorageService.getSignedUrlForPublicObject(`exercises/${filename}`, 3600);
+              if (signedUrl) {
+                return { ...exercise, imageUrl: signedUrl };
+              }
+            } catch (err) {
+              console.error(`Failed to get signed URL for ${exercise.name}:`, err);
+            }
+          }
+          return exercise;
+        })
+      );
+      
+      res.json(exercisesWithSignedUrls);
     } catch (error) {
       console.error("Error fetching exercises:", error);
       res.status(500).json({ error: "Failed to fetch exercises" });

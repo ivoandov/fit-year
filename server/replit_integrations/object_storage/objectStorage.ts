@@ -94,6 +94,23 @@ export class ObjectStorageService {
     return null;
   }
 
+  // Get a signed URL for a public object that can be accessed directly by the browser
+  async getSignedUrlForPublicObject(filePath: string, ttlSec: number = 3600): Promise<string | null> {
+    for (const searchPath of this.getPublicObjectSearchPaths()) {
+      const fullPath = `${searchPath}/${filePath}`;
+      const { bucketName, objectName } = parseObjectPath(fullPath);
+      
+      const bucket = objectStorageClient.bucket(bucketName);
+      const file = bucket.file(objectName);
+      
+      const [exists] = await file.exists();
+      if (exists) {
+        return signObjectURL({ bucketName, objectName, method: "GET", ttlSec });
+      }
+    }
+    return null;
+  }
+
   // Downloads an object to the response.
   async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600) {
     try {
