@@ -3,8 +3,11 @@ import { createServer, type Server } from "http";
 import { storage, seedBuiltInExercises } from "./storage";
 import { insertExerciseSchema, insertWorkoutTemplateSchema, insertScheduledWorkoutSchema, insertCompletedWorkoutSchema } from "@shared/schema";
 import { registerImageRoutes, openai } from "./replit_integrations/image";
+import { registerObjectStorageRoutes, ObjectStorageService, objectStorageClient } from "./replit_integrations/object_storage";
 import * as fs from "fs";
 import * as path from "path";
+
+const objectStorageService = new ObjectStorageService();
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Database status and manual seed endpoint
@@ -249,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Background function to generate exercise image and save to file
+  // Background function to generate exercise image and save to object storage
   async function generateExerciseImage(exerciseId: string, exerciseName: string, muscleGroups: string[]) {
     try {
       const muscleText = muscleGroups.length > 0 ? muscleGroups.join(", ") : "full body";
@@ -266,29 +269,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const b64_json = response.data?.[0]?.b64_json;
       if (b64_json) {
-        // Save to file instead of storing base64 in database
         const sanitizedName = exerciseName.replace(/[^a-zA-Z0-9]/g, '_');
         const uniqueId = Math.random().toString(16).slice(2, 10);
         const filename = `${sanitizedName}_${uniqueId}.png`;
-        const imageDir = path.join(process.cwd(), 'attached_assets', 'generated_images');
-        const filePath = path.join(imageDir, filename);
         
-        // Ensure directory exists
-        if (!fs.existsSync(imageDir)) {
-          fs.mkdirSync(imageDir, { recursive: true });
+        // Upload to object storage
+        try {
+          const publicSearchPaths = objectStorageService.getPublicObjectSearchPaths();
+          const publicDir = publicSearchPaths[0]; // Use first public path
+          const { bucketName, objectName } = parseObjectPath(`${publicDir}/exercises/${filename}`);
+          
+          const bucket = objectStorageClient.bucket(bucketName);
+          const file = bucket.file(objectName);
+          
+          const imageBuffer = Buffer.from(b64_json, 'base64');
+          await file.save(imageBuffer, {
+            contentType: 'image/png',
+            metadata: {
+              'custom:aclPolicy': JSON.stringify({ owner: 'system', visibility: 'public' })
+            }
+          });
+          
+          // Store object storage path in database
+          const imageUrl = `/objects/public/exercises/${filename}`;
+          await storage.updateExercise(exerciseId, { imageUrl });
+          console.log(`Image generated and saved to object storage for: ${exerciseName} at ${imageUrl}`);
+        } catch (storageError) {
+          console.error(`Object storage upload failed, falling back to local file:`, storageError);
+          
+          // Fallback to local file storage
+          const imageDir = path.join(process.cwd(), 'attached_assets', 'generated_images');
+          const filePath = path.join(imageDir, filename);
+          
+          if (!fs.existsSync(imageDir)) {
+            fs.mkdirSync(imageDir, { recursive: true });
+          }
+          
+          fs.writeFileSync(filePath, Buffer.from(b64_json, 'base64'));
+          const imageUrl = `/generated_images/${filename}`;
+          await storage.updateExercise(exerciseId, { imageUrl });
+          console.log(`Image generated and saved locally for: ${exerciseName} at ${imageUrl}`);
         }
-        
-        // Write image file
-        fs.writeFileSync(filePath, Buffer.from(b64_json, 'base64'));
-        
-        // Store file path URL in database
-        const imageUrl = `/generated_images/${filename}`;
-        await storage.updateExercise(exerciseId, { imageUrl });
-        console.log(`Image generated and saved for: ${exerciseName} at ${imageUrl}`);
       }
     } catch (error) {
       console.error(`Failed to generate image for ${exerciseName}:`, error);
     }
+  }
+  
+  // Helper to parse object path
+  function parseObjectPath(path: string): { bucketName: string; objectName: string } {
+    if (!path.startsWith("/")) {
+      path = `/${path}`;
+    }
+    const pathParts = path.split("/");
+    if (pathParts.length < 3) {
+      throw new Error("Invalid path: must contain at least a bucket name");
+    }
+    const bucketName = pathParts[1];
+    const objectName = pathParts.slice(2).join("/");
+    return { bucketName, objectName };
   }
 
   // Background worker to check and generate missing images and descriptions
@@ -586,6 +625,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register image generation routes
   registerImageRoutes(app);
+
+  // Register object storage routes
+  registerObjectStorageRoutes(app);
 
   const httpServer = createServer(app);
 
