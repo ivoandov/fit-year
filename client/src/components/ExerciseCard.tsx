@@ -55,7 +55,7 @@ export function ExerciseCard({
   return (
     <>
       <Card className="overflow-hidden hover-elevate relative" data-testid={`card-exercise-${id}`}>
-        {imageUrl && (
+        {imageUrl ? (
           <div 
             className="aspect-[16/10] sm:aspect-video overflow-hidden cursor-pointer relative"
             onClick={() => setShowImageDialog(true)}
@@ -75,6 +75,14 @@ export function ExerciseCard({
               <X className="h-6 w-6" strokeWidth={3} />
             </button>
           </div>
+        ) : (
+          <button
+            className="absolute top-2 right-2 text-muted-foreground hover:text-red-500 transition-colors z-10"
+            onClick={handleDeleteClick}
+            data-testid={`button-delete-exercise-${id}`}
+          >
+            <X className="h-5 w-5" strokeWidth={2.5} />
+          </button>
         )}
         <CardHeader className="space-y-2 p-4 sm:p-6">
           <div className="flex gap-1.5 sm:gap-2 flex-wrap">
