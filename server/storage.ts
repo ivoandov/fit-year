@@ -515,12 +515,15 @@ export class DatabaseStorage implements IStorage {
   async upsertUserSettings(userId: string, settings: Partial<InsertUserSettings>): Promise<UserSettings> {
     const existing = await this.getUserSettings(userId);
     
+    const calendarId = settings.selectedCalendarId !== undefined ? settings.selectedCalendarId : (existing?.selectedCalendarId ?? null);
+    const calendarName = settings.selectedCalendarName !== undefined ? settings.selectedCalendarName : (existing?.selectedCalendarName ?? null);
+    
     if (existing) {
       const results = await neonClient`
         UPDATE user_settings 
         SET 
-          selected_calendar_id = ${settings.selectedCalendarId ?? existing.selectedCalendarId},
-          selected_calendar_name = ${settings.selectedCalendarName ?? existing.selectedCalendarName}
+          selected_calendar_id = ${calendarId},
+          selected_calendar_name = ${calendarName}
         WHERE user_id = ${userId}
         RETURNING 
           id,
@@ -533,13 +536,13 @@ export class DatabaseStorage implements IStorage {
       const id = crypto.randomUUID();
       await neonClient`
         INSERT INTO user_settings (id, user_id, selected_calendar_id, selected_calendar_name)
-        VALUES (${id}, ${userId}, ${settings.selectedCalendarId || null}, ${settings.selectedCalendarName || null})
+        VALUES (${id}, ${userId}, ${calendarId}, ${calendarName})
       `;
       return {
         id,
         userId,
-        selectedCalendarId: settings.selectedCalendarId || null,
-        selectedCalendarName: settings.selectedCalendarName || null,
+        selectedCalendarId: calendarId,
+        selectedCalendarName: calendarName,
       };
     }
   }
