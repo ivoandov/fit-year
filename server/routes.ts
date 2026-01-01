@@ -44,6 +44,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Background function to generate exercise description using AI
+  async function generateExerciseDescription(exerciseId: string, exerciseName: string, muscleGroups: string[]) {
+    try {
+      const muscleText = muscleGroups.length > 0 ? muscleGroups.join(", ") : "full body";
+      
+      console.log(`Generating description for exercise: ${exerciseName}`);
+      
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a fitness expert. Write concise, helpful exercise descriptions for a workout app. Keep descriptions to 1-2 sentences that explain what the exercise targets and basic form tips."
+          },
+          {
+            role: "user",
+            content: `Write a brief description for the "${exerciseName}" exercise that targets ${muscleText}.`
+          }
+        ],
+        max_tokens: 150,
+      });
+      
+      const description = response.choices?.[0]?.message?.content?.trim();
+      if (description) {
+        await storage.updateExercise(exerciseId, { description });
+        console.log(`Description generated successfully for: ${exerciseName}`);
+      }
+    } catch (error) {
+      console.error(`Failed to generate description for ${exerciseName}:`, error);
+    }
+  }
+
   // Background function to generate exercise image
   async function generateExerciseImage(exerciseId: string, exerciseName: string, muscleGroups: string[]) {
     try {
@@ -70,18 +102,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Background worker to check and generate missing images
-  let isProcessingImages = false;
+  // Background worker to check and generate missing images and descriptions
+  let isProcessingExercises = false;
   
-  async function checkAndGenerateMissingImages() {
-    if (isProcessingImages) {
+  async function checkAndGenerateMissingContent() {
+    if (isProcessingExercises) {
       return;
     }
     
-    isProcessingImages = true;
+    isProcessingExercises = true;
     
     try {
       const allExercises = await storage.getExercises();
+      
+      // Check for missing descriptions first (faster to generate)
+      const exercisesWithoutDescriptions = allExercises.filter(ex => !ex.description || ex.description.trim() === "");
+      
+      if (exercisesWithoutDescriptions.length > 0) {
+        console.log(`Found ${exercisesWithoutDescriptions.length} exercises without descriptions`);
+        
+        // Process one exercise at a time to respect rate limits
+        const exercise = exercisesWithoutDescriptions[0];
+        await generateExerciseDescription(
+          exercise.id, 
+          exercise.name, 
+          exercise.muscleGroups as string[]
+        );
+      }
+      
+      // Check for missing images
       const exercisesWithoutImages = allExercises.filter(ex => !ex.imageUrl);
       
       if (exercisesWithoutImages.length > 0) {
@@ -101,18 +150,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
     } catch (error) {
-      console.error("Error in background image worker:", error);
+      console.error("Error in background content worker:", error);
     } finally {
-      isProcessingImages = false;
+      isProcessingExercises = false;
     }
   }
   
   // Start periodic check once a day (24 hours in milliseconds)
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-  const imageCheckInterval = setInterval(checkAndGenerateMissingImages, ONE_DAY_MS);
+  const contentCheckInterval = setInterval(checkAndGenerateMissingContent, ONE_DAY_MS);
   
   // Run initial check after 5 seconds
-  setTimeout(checkAndGenerateMissingImages, 5000);
+  setTimeout(checkAndGenerateMissingContent, 5000);
 
   app.put("/api/exercises/:id", async (req, res) => {
     try {
