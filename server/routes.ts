@@ -40,10 +40,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Migrate base64 images to files
+  // Migrate base64 images to files - processes one at a time to avoid memory issues
   app.post("/api/migrate-images", async (req, res) => {
     try {
-      const exercises = await storage.getExercises();
+      // Get just the IDs of exercises that have base64 images
+      const exercisesWithBase64 = await storage.getExercisesWithBase64Images();
       const imageDir = path.join(process.cwd(), 'attached_assets', 'generated_images');
       
       // Ensure directory exists
@@ -53,43 +54,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let migratedCount = 0;
       
-      for (const exercise of exercises) {
-        if (exercise.imageUrl && exercise.imageUrl.startsWith('data:image')) {
-          try {
-            // Extract base64 data
-            const base64Match = exercise.imageUrl.match(/^data:image\/\w+;base64,(.+)$/);
-            if (base64Match) {
-              const base64Data = base64Match[1];
-              const sanitizedName = exercise.name.replace(/[^a-zA-Z0-9]/g, '_');
-              const uniqueId = Math.random().toString(16).slice(2, 10);
-              const filename = `${sanitizedName}_${uniqueId}.png`;
-              const filePath = path.join(imageDir, filename);
-              
-              // Write image file
-              fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
-              
-              // Update database with file path
-              const newImageUrl = `/generated_images/${filename}`;
-              await storage.updateExercise(exercise.id, { imageUrl: newImageUrl });
-              migratedCount++;
-              console.log(`Migrated image for: ${exercise.name}`);
-            }
-          } catch (err) {
-            console.error(`Failed to migrate image for ${exercise.name}:`, err);
+      for (const exercise of exercisesWithBase64) {
+        try {
+          // Extract base64 data
+          const base64Match = exercise.imageUrl?.match(/^data:image\/\w+;base64,(.+)$/);
+          if (base64Match) {
+            const base64Data = base64Match[1];
+            const sanitizedName = exercise.name.replace(/[^a-zA-Z0-9]/g, '_');
+            const uniqueId = Math.random().toString(16).slice(2, 10);
+            const filename = `${sanitizedName}_${uniqueId}.png`;
+            const filePath = path.join(imageDir, filename);
+            
+            // Write image file
+            fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+            
+            // Update database with file path
+            const newImageUrl = `/generated_images/${filename}`;
+            await storage.updateExercise(exercise.id, { imageUrl: newImageUrl });
+            migratedCount++;
+            console.log(`Migrated image for: ${exercise.name}`);
           }
+        } catch (err) {
+          console.error(`Failed to migrate image for ${exercise.name}:`, err);
         }
       }
       
       res.json({
         success: true,
         migratedCount,
-        totalExercises: exercises.length
+        totalWithBase64: exercisesWithBase64.length
       });
     } catch (error: any) {
       res.status(500).json({
         success: false,
         error: error.message
       });
+    }
+  });
+
+  // Migrate a single exercise image - for manual use
+  app.post("/api/migrate-image/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const exercise = await storage.getExerciseWithImage(id);
+      
+      if (!exercise) {
+        return res.status(404).json({ error: "Exercise not found" });
+      }
+      
+      if (!exercise.imageUrl || !exercise.imageUrl.startsWith('data:image')) {
+        return res.json({ success: true, message: "No base64 image to migrate" });
+      }
+      
+      const imageDir = path.join(process.cwd(), 'attached_assets', 'generated_images');
+      if (!fs.existsSync(imageDir)) {
+        fs.mkdirSync(imageDir, { recursive: true });
+      }
+      
+      const base64Match = exercise.imageUrl.match(/^data:image\/\w+;base64,(.+)$/);
+      if (base64Match) {
+        const base64Data = base64Match[1];
+        const sanitizedName = exercise.name.replace(/[^a-zA-Z0-9]/g, '_');
+        const uniqueId = Math.random().toString(16).slice(2, 10);
+        const filename = `${sanitizedName}_${uniqueId}.png`;
+        const filePath = path.join(imageDir, filename);
+        
+        fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+        
+        const newImageUrl = `/generated_images/${filename}`;
+        await storage.updateExercise(exercise.id, { imageUrl: newImageUrl });
+        
+        res.json({ success: true, imageUrl: newImageUrl });
+      } else {
+        res.json({ success: false, message: "Invalid base64 format" });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
     }
   });
 

@@ -64,6 +64,8 @@ export async function seedBuiltInExercises(): Promise<void> {
 
 export interface IStorage {
   getExercises(): Promise<Exercise[]>;
+  getExercisesWithBase64Images(): Promise<Exercise[]>;
+  getExerciseWithImage(id: string): Promise<Exercise | undefined>;
   createExercise(exercise: InsertExercise): Promise<Exercise>;
   createExerciseWithId(id: string, exercise: InsertExercise): Promise<Exercise>;
   updateExercise(id: string, exercise: Partial<InsertExercise>): Promise<Exercise | undefined>;
@@ -83,12 +85,63 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   async getExercises(): Promise<Exercise[]> {
     try {
-      const results = await db.select().from(exercises).orderBy(exercises.name);
-      return results || [];
+      // Select all columns except replace base64 images with null to avoid huge responses
+      const results = await neonClient`
+        SELECT 
+          id, 
+          name, 
+          muscle_groups as "muscleGroups", 
+          description, 
+          CASE 
+            WHEN image_url LIKE 'data:image%' THEN NULL 
+            ELSE image_url 
+          END as "imageUrl", 
+          exercise_type as "exerciseType"
+        FROM exercises 
+        ORDER BY name
+      `;
+      return (results || []) as Exercise[];
     } catch (error: any) {
       if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
         console.warn("Known Neon empty result issue, returning empty array");
         return [];
+      }
+      throw error;
+    }
+  }
+
+  async getExercisesWithBase64Images(): Promise<Exercise[]> {
+    try {
+      // Query exercises one at a time that have base64 images
+      const results = await neonClient`
+        SELECT id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType"
+        FROM exercises 
+        WHERE image_url LIKE 'data:image%'
+        ORDER BY name
+      `;
+      return (results || []) as Exercise[];
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async getExerciseWithImage(id: string): Promise<Exercise | undefined> {
+    try {
+      const results = await neonClient`
+        SELECT id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType"
+        FROM exercises 
+        WHERE id = ${id}
+      `;
+      if (results && results.length > 0) {
+        return results[0] as Exercise;
+      }
+      return undefined;
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return undefined;
       }
       throw error;
     }
