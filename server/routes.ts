@@ -5,7 +5,7 @@ import { insertExerciseSchema, insertWorkoutTemplateSchema, insertScheduledWorko
 import { registerImageRoutes, openai } from "./replit_integrations/image";
 import { registerObjectStorageRoutes, ObjectStorageService, objectStorageClient } from "./replit_integrations/object_storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
-import { createCalendarEvent, deleteCalendarEvent } from "./replit_integrations/google-calendar";
+import { createCalendarEvent, deleteCalendarEvent, listCalendars } from "./replit_integrations/google-calendar";
 import * as fs from "fs";
 import * as path from "path";
 import sharp from "sharp";
@@ -848,12 +848,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         completedAt: completedDate,
       });
       
+      // Get user's selected calendar for syncing
+      const userSettings = await storage.getUserSettings(userId);
+      const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+      
       // Sync to Google Calendar in background (don't block response)
-      createCalendarEvent(name, completedDate)
+      createCalendarEvent(name, completedDate, selectedCalendarId)
         .then(async (eventId) => {
           if (eventId) {
             await storage.updateCompletedWorkoutCalendarEventId(workout.id, eventId);
-            console.log(`Synced workout "${name}" to Google Calendar: ${eventId}`);
+            console.log(`Synced workout "${name}" to Google Calendar (${selectedCalendarId || 'primary'}): ${eventId}`);
           }
         })
         .catch((err) => {
@@ -883,9 +887,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       
+      // Get user's selected calendar for deleting events
+      const userSettings = await storage.getUserSettings(userId);
+      const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+      
       // Delete from Google Calendar if linked
       if (workout.calendarEventId) {
-        deleteCalendarEvent(workout.calendarEventId).catch((err) => {
+        deleteCalendarEvent(workout.calendarEventId, selectedCalendarId).catch((err) => {
           console.error("Failed to delete calendar event:", err);
         });
       }
@@ -897,6 +905,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete completed workout" });
+    }
+  });
+
+  // Google Calendar list endpoint
+  app.get("/api/calendars", isAuthenticated, async (req: any, res) => {
+    try {
+      const calendars = await listCalendars();
+      res.json(calendars);
+    } catch (error: any) {
+      console.error("Failed to list calendars:", error);
+      if (error.message?.includes('Google Calendar not connected')) {
+        return res.status(401).json({ error: "Google Calendar not connected" });
+      }
+      res.status(500).json({ error: "Failed to list calendars" });
+    }
+  });
+
+  // User settings endpoints
+  app.get("/api/user-settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const settings = await storage.getUserSettings(userId);
+      res.json(settings || { userId, selectedCalendarId: null, selectedCalendarName: null });
+    } catch (error) {
+      console.error("Failed to get user settings:", error);
+      res.status(500).json({ error: "Failed to get user settings" });
+    }
+  });
+
+  app.patch("/api/user-settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const { selectedCalendarId, selectedCalendarName } = req.body;
+      
+      const settings = await storage.upsertUserSettings(userId, {
+        selectedCalendarId,
+        selectedCalendarName,
+      });
+      
+      res.json(settings);
+    } catch (error) {
+      console.error("Failed to update user settings:", error);
+      res.status(500).json({ error: "Failed to update user settings" });
     }
   });
 

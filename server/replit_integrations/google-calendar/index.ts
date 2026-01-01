@@ -47,7 +47,37 @@ async function getGoogleCalendarClient() {
   return google.calendar({ version: 'v3', auth: oauth2Client });
 }
 
-export async function createCalendarEvent(workoutName: string, completedDate: Date): Promise<string | null> {
+export interface CalendarInfo {
+  id: string;
+  summary: string;
+  primary?: boolean;
+  backgroundColor?: string;
+}
+
+export async function listCalendars(): Promise<CalendarInfo[]> {
+  try {
+    const calendar = await getGoogleCalendarClient();
+    
+    const response = await calendar.calendarList.list();
+    
+    const calendars = response.data.items || [];
+    
+    // Filter to only show calendars the user can write to
+    return calendars
+      .filter((cal: any) => cal.accessRole === 'owner' || cal.accessRole === 'writer')
+      .map((cal: any) => ({
+        id: cal.id,
+        summary: cal.summary || cal.id,
+        primary: cal.primary || false,
+        backgroundColor: cal.backgroundColor,
+      }));
+  } catch (error: any) {
+    console.error('Failed to list calendars:', error.message);
+    throw error;
+  }
+}
+
+export async function createCalendarEvent(workoutName: string, completedDate: Date, calendarId?: string): Promise<string | null> {
   try {
     const calendar = await getGoogleCalendarClient();
     
@@ -69,12 +99,14 @@ export async function createCalendarEvent(workoutName: string, completedDate: Da
       },
     };
 
+    const targetCalendarId = calendarId || 'primary';
+    
     const response = await calendar.events.insert({
-      calendarId: 'primary',
+      calendarId: targetCalendarId,
       requestBody: event,
     });
 
-    console.log(`Created calendar event: ${response.data.id}`);
+    console.log(`Created calendar event in ${targetCalendarId}: ${response.data.id}`);
     return response.data.id || null;
   } catch (error: any) {
     console.error('Failed to create calendar event:', error.message);
@@ -82,16 +114,18 @@ export async function createCalendarEvent(workoutName: string, completedDate: Da
   }
 }
 
-export async function deleteCalendarEvent(eventId: string): Promise<boolean> {
+export async function deleteCalendarEvent(eventId: string, calendarId?: string): Promise<boolean> {
   try {
     const calendar = await getGoogleCalendarClient();
     
+    const targetCalendarId = calendarId || 'primary';
+    
     await calendar.events.delete({
-      calendarId: 'primary',
+      calendarId: targetCalendarId,
       eventId: eventId,
     });
 
-    console.log(`Deleted calendar event: ${eventId}`);
+    console.log(`Deleted calendar event from ${targetCalendarId}: ${eventId}`);
     return true;
   } catch (error: any) {
     console.error('Failed to delete calendar event:', error.message);
