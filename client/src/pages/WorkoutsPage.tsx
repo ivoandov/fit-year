@@ -81,7 +81,8 @@ export default function WorkoutsPage() {
     exerciseType: (ex.exerciseType as "weight_reps" | "distance_time") || "weight_reps",
   }));
 
-  const allAvailableExercises: Exercise[] = [...exerciseLibrary, ...customExercises];
+  const allAvailableExercises: Exercise[] = [...exerciseLibrary, ...customExercises]
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const scheduledWorkouts: ScheduledWorkout[] = dbWorkouts.map((w) => ({
     id: w.id,

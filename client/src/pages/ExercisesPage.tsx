@@ -57,7 +57,8 @@ export default function ExercisesPage() {
     exerciseType: (ex.exerciseType as "weight_reps" | "distance_time") || "weight_reps",
   }));
 
-  const allExercises = [...exerciseLibrary, ...customExercises];
+  const allExercises = [...exerciseLibrary, ...customExercises]
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const createMutation = useMutation({
     mutationFn: async (exercise: { name: string; muscleGroups: string[]; description: string; exerciseType: string }) => {
