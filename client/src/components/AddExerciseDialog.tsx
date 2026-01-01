@@ -77,7 +77,7 @@ export function AddExerciseDialog({
   };
 
   const handleSave = () => {
-    if (!name || selectedMuscleGroups.length === 0 || !description) return;
+    if (!name || selectedMuscleGroups.length === 0) return;
     onSave({ 
       id: initialData?.id,
       name, 
@@ -95,7 +95,7 @@ export function AddExerciseDialog({
     onClose();
   };
 
-  const isValid = name && selectedMuscleGroups.length > 0 && description;
+  const isValid = name && selectedMuscleGroups.length > 0;
   const isEditMode = mode === "edit";
 
   return (
@@ -158,10 +158,10 @@ export function AddExerciseDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">Notes (Optional)</Label>
             <Textarea
               id="description"
-              placeholder="Describe how to perform the exercise..."
+              placeholder="Add any notes about this exercise..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="min-h-[100px]"
