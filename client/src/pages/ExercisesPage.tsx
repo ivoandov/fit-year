@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import { AddExerciseDialog, type ExerciseFormData } from "@/components/AddExerciseDialog";
@@ -32,19 +32,9 @@ export default function ExercisesPage() {
   const { muscleGroups: userMuscleGroups } = useSettings();
   const muscleGroups = ["All", ...userMuscleGroups];
 
-  const { data: dbExercises = [], isError } = useQuery<DBExercise[]>({
+  const { data: dbExercises = [] } = useQuery<DBExercise[]>({
     queryKey: ["/api/exercises"],
   });
-
-  useEffect(() => {
-    if (isError) {
-      toast({
-        title: "Error loading exercises",
-        description: "There was a problem loading custom exercises from the database.",
-        variant: "destructive",
-      });
-    }
-  }, [isError, toast]);
 
   const customExerciseIds = new Set(dbExercises.map(ex => ex.id));
 
