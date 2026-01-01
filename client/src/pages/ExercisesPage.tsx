@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { ExerciseCard } from "@/components/ExerciseCard";
 import { AddExerciseDialog, type ExerciseFormData } from "@/components/AddExerciseDialog";
+import { AddToWorkoutDialog } from "@/components/AddToWorkoutDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ export default function ExercisesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingExercise, setEditingExercise] = useState<ExerciseFormData | null>(null);
+  const [exerciseToAddToWorkout, setExerciseToAddToWorkout] = useState<Exercise | null>(null);
   const { toast } = useToast();
   const { muscleGroups: userMuscleGroups } = useSettings();
   const muscleGroups = ["All", ...userMuscleGroups];
@@ -153,7 +155,10 @@ export default function ExercisesPage() {
   });
 
   const handleAddExercise = (id: string) => {
-    console.log("Adding exercise to workout:", id);
+    const exercise = allExercises.find(ex => ex.id === id);
+    if (exercise) {
+      setExerciseToAddToWorkout(exercise);
+    }
   };
 
   const handleDeleteExercise = (id: string) => {
@@ -262,6 +267,12 @@ export default function ExercisesPage() {
           isPending={updateMutation.isPending}
           initialData={editingExercise}
           mode="edit"
+        />
+
+        <AddToWorkoutDialog
+          isOpen={!!exerciseToAddToWorkout}
+          onClose={() => setExerciseToAddToWorkout(null)}
+          exercise={exerciseToAddToWorkout}
         />
       </div>
     </div>
