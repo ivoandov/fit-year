@@ -68,9 +68,7 @@ export default function HistoryPage() {
     historyData.forEach((workout) => {
       if (isWithinInterval(workout.date, { start: weekStart, end: now })) {
         workout.exercises?.forEach((exercise) => {
-          // Count only completed sets
           const completedSetCount = exercise.sets?.filter((s: any) => s.completed).length || 0;
-          
           exercise.muscleGroups?.forEach((muscle: string) => {
             setsByMuscle[muscle] = (setsByMuscle[muscle] || 0) + completedSetCount;
           });
