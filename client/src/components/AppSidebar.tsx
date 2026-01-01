@@ -9,6 +9,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const menuItems = [
@@ -46,6 +47,11 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { setOpenMobile } = useSidebar();
+
+  const handleLinkClick = () => {
+    setOpenMobile(false);
+  };
 
   return (
     <Sidebar>
@@ -59,7 +65,7 @@ export function AppSidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={item.testId}>
+                    <Link href={item.url} data-testid={item.testId} onClick={handleLinkClick}>
                       <item.icon className="h-5 w-5" />
                       <span>{item.title}</span>
                     </Link>
