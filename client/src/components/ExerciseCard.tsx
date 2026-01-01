@@ -70,7 +70,7 @@ export function ExerciseCard({
               alt={name}
               className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
             />
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-black/50 to-transparent pointer-events-none" />
+            <div className="absolute top-0 right-0 w-10 h-10 bg-[radial-gradient(ellipse_at_top_right,rgba(0,0,0,0.4)_0%,transparent_70%)] pointer-events-none" />
             <button
               className="absolute top-2 right-2 text-white drop-shadow-lg hover:text-red-400 transition-colors z-10"
               onClick={handleDeleteClick}
