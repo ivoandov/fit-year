@@ -276,8 +276,8 @@ export function WorkoutEditorDialog({
               </div>
 
               <div className="space-y-2 flex-1 overflow-hidden flex flex-col">
-                <Label className="text-sm">Available Exercises</Label>
-                <ScrollArea className="flex-1 min-h-[150px] border rounded-md">
+                <Label className="text-sm">Available Exercises ({availableExercises.length})</Label>
+                <ScrollArea className="flex-1 min-h-[150px] max-h-[250px] border rounded-md">
                   <div className="p-2 space-y-1">
                     {availableExercises.map((exercise) => {
                       const isSelected = selectedExercises.some(e => e.id === exercise.id);
