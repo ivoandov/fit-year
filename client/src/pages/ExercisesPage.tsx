@@ -52,19 +52,19 @@ export default function ExercisesPage() {
 
   const createMutation = useMutation({
     mutationFn: async (exercise: { name: string; muscleGroups: string[]; description: string; exerciseType: string }) => {
-      const imageUrl = getMuscleGroupPlaceholderImage(exercise.muscleGroups[0] || "");
-      return apiRequest("POST", "/api/exercises", {
-        ...exercise,
-        imageUrl,
-      });
+      return apiRequest("POST", "/api/exercises", exercise);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
       setShowAddDialog(false);
       toast({
         title: "Exercise Created",
-        description: "Your custom exercise has been added to the library.",
+        description: "Your custom exercise has been added. An AI image is being generated.",
       });
+      // Refresh again after a delay to pick up the generated image
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
+      }, 8000);
     },
     onError: () => {
       toast({
@@ -120,23 +120,6 @@ export default function ExercisesPage() {
       });
     },
   });
-
-  const getMuscleGroupPlaceholderImage = (muscleGroup: string): string => {
-    const muscleGroupImages: Record<string, string> = {
-      Chest: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=400&h=300&fit=crop",
-      Back: "https://images.unsplash.com/photo-1603287681836-b174ce5074c2?w=400&h=300&fit=crop",
-      Shoulders: "https://images.unsplash.com/photo-1581009146145-b5ef050c149a?w=400&h=300&fit=crop",
-      Biceps: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&h=300&fit=crop",
-      Triceps: "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400&h=300&fit=crop",
-      Core: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=300&fit=crop",
-      Legs: "https://images.unsplash.com/photo-1434682881908-b43d0467b798?w=400&h=300&fit=crop",
-      Cardio: "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?w=400&h=300&fit=crop",
-      PT: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop",
-      Flexibility: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop",
-      Mobility: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=300&fit=crop",
-    };
-    return muscleGroupImages[muscleGroup] || "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=400&h=300&fit=crop";
-  };
 
   const filteredExercises = allExercises.filter((exercise) => {
     const matchesMuscleGroup = selectedMuscleGroup === "All" || exercise.muscleGroups.includes(selectedMuscleGroup);
