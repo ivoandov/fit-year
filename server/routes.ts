@@ -1,10 +1,43 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, seedBuiltInExercises } from "./storage";
 import { insertExerciseSchema, insertScheduledWorkoutSchema, insertCompletedWorkoutSchema } from "@shared/schema";
 import { registerImageRoutes, openai } from "./replit_integrations/image";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Database status and manual seed endpoint
+  app.get("/api/db-status", async (req, res) => {
+    try {
+      const exercises = await storage.getExercises();
+      res.json({
+        status: "connected",
+        exerciseCount: exercises.length,
+        exercises: exercises.map(e => ({ id: e.id, name: e.name }))
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        status: "error",
+        error: error.message
+      });
+    }
+  });
+
+  app.post("/api/seed-exercises", async (req, res) => {
+    try {
+      await seedBuiltInExercises();
+      const exercises = await storage.getExercises();
+      res.json({
+        success: true,
+        exerciseCount: exercises.length
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
   // Exercises
   app.get("/api/exercises", async (req, res) => {
     try {
