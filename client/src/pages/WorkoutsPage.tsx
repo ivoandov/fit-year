@@ -45,6 +45,15 @@ interface DBScheduledWorkout {
   exercises: any;
 }
 
+interface DBExercise {
+  id: string;
+  name: string;
+  muscleGroups: string[];
+  description: string;
+  imageUrl: string | null;
+  exerciseType: string | null;
+}
+
 export default function WorkoutsPage() {
   const [, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -57,6 +66,22 @@ export default function WorkoutsPage() {
   const { data: dbWorkouts = [], isLoading } = useQuery<DBScheduledWorkout[]>({
     queryKey: ["/api/scheduled-workouts"],
   });
+
+  const { data: dbExercises = [] } = useQuery<DBExercise[]>({
+    queryKey: ["/api/exercises"],
+  });
+
+  // Combine built-in exercises with custom exercises from database
+  const customExercises: Exercise[] = dbExercises.map((ex) => ({
+    id: ex.id,
+    name: ex.name,
+    muscleGroups: ex.muscleGroups,
+    description: ex.description,
+    imageUrl: ex.imageUrl || undefined,
+    exerciseType: (ex.exerciseType as "weight_reps" | "distance_time") || "weight_reps",
+  }));
+
+  const allAvailableExercises: Exercise[] = [...exerciseLibrary, ...customExercises];
 
   const scheduledWorkouts: ScheduledWorkout[] = dbWorkouts.map((w) => ({
     id: w.id,
@@ -601,7 +626,7 @@ export default function WorkoutsPage() {
           }}
           onSave={handleSaveWorkout}
           initialData={editingWorkout ? { ...editingWorkout, repeatType: "none" as const } : null}
-          availableExercises={exerciseLibrary}
+          availableExercises={allAvailableExercises}
         />
 
         <AlertDialog open={!!workoutToDelete} onOpenChange={(open) => !open && setWorkoutToDelete(null)}>
