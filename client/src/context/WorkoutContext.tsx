@@ -12,6 +12,7 @@ interface WorkoutExercise extends Exercise {
 interface ActiveWorkout {
   id: string;
   displayId: string;
+  scheduledWorkoutId: string | null;
   name: string;
   exercises: WorkoutExercise[];
 }
@@ -24,13 +25,22 @@ export interface CompletedWorkoutRecord {
   completedAt: Date;
 }
 
+interface ExerciseSetData {
+  setNumber: number;
+  weight: number;
+  reps: number;
+  distance: number;
+  time: number;
+  completed: boolean;
+}
+
 interface WorkoutContextType {
   activeWorkout: ActiveWorkout | null;
   completedWorkouts: CompletedWorkoutRecord[];
   isLoading: boolean;
-  startWorkout: (workout: { id: string; displayId: string; name: string; exercises: Exercise[] }) => void;
+  startWorkout: (workout: { id: string; displayId: string; scheduledWorkoutId?: string; name: string; exercises: Exercise[] }) => void;
   endWorkout: () => void;
-  completeWorkout: () => void;
+  completeWorkout: (exerciseSets?: Map<number, ExerciseSetData[]>) => void;
   isWorkoutCompleted: (displayId: string) => boolean;
   restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
   deleteCompletedWorkout: (id: string) => void;
@@ -79,10 +89,20 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     },
   });
 
-  const startWorkout = (workout: { id: string; displayId: string; name: string; exercises: Exercise[] }) => {
+  const deleteScheduledWorkoutMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/scheduled-workouts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
+    },
+  });
+
+  const startWorkout = (workout: { id: string; displayId: string; scheduledWorkoutId?: string; name: string; exercises: Exercise[] }) => {
     const workoutWithSets: ActiveWorkout = {
       id: workout.id,
       displayId: workout.displayId,
+      scheduledWorkoutId: workout.scheduledWorkoutId || null,
       name: workout.name,
       exercises: workout.exercises.map(ex => ({
         ...ex,
@@ -98,14 +118,37 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     setActiveWorkout(null);
   };
 
-  const completeWorkout = () => {
+  const completeWorkout = (exerciseSets?: Map<number, ExerciseSetData[]>) => {
     if (activeWorkout) {
+      // Merge set data into exercises if provided
+      const exercisesWithSets = activeWorkout.exercises.map((exercise, index) => {
+        const sets = exerciseSets?.get(index);
+        if (sets) {
+          const completedSets = sets.filter(s => s.completed);
+          return {
+            ...exercise,
+            completedSets: completedSets.length,
+            setsData: sets,
+          };
+        }
+        return {
+          ...exercise,
+          completedSets: exercise.sets,
+          setsData: [],
+        };
+      });
+      
       createCompletedMutation.mutate({
         displayId: activeWorkout.displayId,
         name: activeWorkout.name,
-        exercises: activeWorkout.exercises,
+        exercises: exercisesWithSets,
         completedAt: new Date(),
       });
+      
+      // Delete the scheduled workout if this was a scheduled workout
+      if (activeWorkout.scheduledWorkoutId) {
+        deleteScheduledWorkoutMutation.mutate(activeWorkout.scheduledWorkoutId);
+      }
     }
     setActiveWorkout(null);
   };

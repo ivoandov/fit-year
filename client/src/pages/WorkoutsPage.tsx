@@ -147,6 +147,7 @@ export default function WorkoutsPage() {
       startWorkout({
         id: workout.id,
         displayId: workoutId,
+        scheduledWorkoutId: workout.id,
         name: workout.name,
         exercises: workout.exercises,
       });

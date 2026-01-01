@@ -96,7 +96,7 @@ export default function TrackPage() {
 
   const handleFinishExercise = () => {
     if (isLastExercise) {
-      completeWorkout();
+      completeWorkout(exerciseSets);
       setLocation("/");
     } else {
       setCurrentExerciseIndex(currentExerciseIndex + 1);
