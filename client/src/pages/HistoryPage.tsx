@@ -68,14 +68,20 @@ export default function HistoryPage() {
     historyData.forEach((workout) => {
       if (isWithinInterval(workout.date, { start: weekStart, end: now })) {
         workout.exercises?.forEach((exercise) => {
+          // Count only completed sets
+          const completedSetCount = exercise.sets?.filter((s: any) => s.completed).length || 0;
+          
           exercise.muscleGroups?.forEach((muscle: string) => {
-            setsByMuscle[muscle] = (setsByMuscle[muscle] || 0) + (exercise.sets?.length || 0);
+            setsByMuscle[muscle] = (setsByMuscle[muscle] || 0) + completedSetCount;
           });
         });
       }
     });
 
-    return muscleGroups.map((muscle) => ({
+    // Return all muscle groups from settings, plus any additional ones found in workouts
+    const allMuscleGroups = new Set([...muscleGroups, ...Object.keys(setsByMuscle)]);
+    
+    return Array.from(allMuscleGroups).map((muscle) => ({
       muscleGroup: muscle,
       sets: setsByMuscle[muscle] || 0,
       maxSets: 20,
