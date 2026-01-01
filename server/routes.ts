@@ -8,6 +8,7 @@ import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integra
 import { createCalendarEvent, deleteCalendarEvent } from "./replit_integrations/google-calendar";
 import * as fs from "fs";
 import * as path from "path";
+import sharp from "sharp";
 
 const objectStorageService = new ObjectStorageService();
 
@@ -237,6 +238,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Compress all existing exercise images in object storage
+  app.post("/api/compress-exercise-images", async (req, res) => {
+    try {
+      const exercises = await storage.getExercises();
+      const exercisesWithImages = exercises.filter(ex => ex.imageUrl?.startsWith('/objects/public/exercises/'));
+      
+      let compressedCount = 0;
+      let skippedCount = 0;
+      const errors: string[] = [];
+      
+      const publicSearchPaths = objectStorageService.getPublicObjectSearchPaths();
+      const publicDir = publicSearchPaths[0];
+      
+      for (const exercise of exercisesWithImages) {
+        try {
+          const oldFilename = exercise.imageUrl!.replace('/objects/public/exercises/', '');
+          
+          // Skip if already compressed (has .jpg extension)
+          if (oldFilename.endsWith('.jpg')) {
+            skippedCount++;
+            continue;
+          }
+          
+          // Find and download the original file
+          const file = await objectStorageService.searchPublicObject(`exercises/${oldFilename}`);
+          if (!file) {
+            errors.push(`${exercise.name}: File not found`);
+            continue;
+          }
+          
+          // Download the file content
+          const [fileContents] = await file.download();
+          
+          // Compress the image
+          const compressedBuffer = await sharp(fileContents)
+            .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+            .jpeg({ quality: 80, progressive: true })
+            .toBuffer();
+          
+          // Create new filename with .jpg extension
+          const baseName = oldFilename.replace(/\.(png|PNG)$/, '');
+          const newFilename = `${baseName}.jpg`;
+          
+          // Upload compressed image
+          const { bucketName, objectName } = parseObjectPath(`${publicDir}/exercises/${newFilename}`);
+          const bucket = objectStorageClient.bucket(bucketName);
+          const newFile = bucket.file(objectName);
+          
+          await newFile.save(compressedBuffer, {
+            contentType: 'image/jpeg',
+            metadata: {
+              'custom:aclPolicy': JSON.stringify({ owner: 'system', visibility: 'public' })
+            }
+          });
+          
+          // Update database with new path
+          const newImageUrl = `/objects/public/exercises/${newFilename}`;
+          await storage.updateExercise(exercise.id, { imageUrl: newImageUrl });
+          
+          const originalSize = (fileContents.length / 1024).toFixed(1);
+          const compressedSize = (compressedBuffer.length / 1024).toFixed(1);
+          console.log(`Compressed ${exercise.name}: ${originalSize}KB -> ${compressedSize}KB`);
+          
+          compressedCount++;
+        } catch (err: any) {
+          errors.push(`${exercise.name}: ${err.message}`);
+          console.error(`Failed to compress ${exercise.name}:`, err);
+        }
+      }
+      
+      res.json({
+        success: true,
+        compressedCount,
+        skippedCount,
+        totalImages: exercisesWithImages.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Helper function for compression endpoint
+  function parseObjectPath(pathStr: string): { bucketName: string; objectName: string } {
+    if (!pathStr.startsWith("/")) {
+      pathStr = `/${pathStr}`;
+    }
+    const pathParts = pathStr.split("/");
+    if (pathParts.length < 3) {
+      throw new Error("Invalid path: must contain at least a bucket name");
+    }
+    const bucketName = pathParts[1];
+    const objectName = pathParts.slice(2).join("/");
+    return { bucketName, objectName };
+  }
+
   // Exercises
   app.get("/api/exercises", async (req, res) => {
     try {
@@ -336,6 +433,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Compress image for web using sharp
+  async function compressImageForWeb(imageBuffer: Buffer): Promise<Buffer> {
+    try {
+      // Resize to max 800x800 and compress as JPEG with 80% quality
+      // This typically reduces file size from ~1.5MB to ~50-100KB
+      const compressedBuffer = await sharp(imageBuffer)
+        .resize(800, 800, {
+          fit: 'inside',
+          withoutEnlargement: true
+        })
+        .jpeg({
+          quality: 80,
+          progressive: true
+        })
+        .toBuffer();
+      
+      const originalSize = (imageBuffer.length / 1024).toFixed(1);
+      const compressedSize = (compressedBuffer.length / 1024).toFixed(1);
+      console.log(`Image compressed: ${originalSize}KB -> ${compressedSize}KB (${((1 - compressedBuffer.length / imageBuffer.length) * 100).toFixed(1)}% reduction)`);
+      
+      return compressedBuffer;
+    } catch (error) {
+      console.error('Image compression failed, using original:', error);
+      return imageBuffer;
+    }
+  }
+
   // Background function to generate exercise image and save to object storage
   async function generateExerciseImage(exerciseId: string, exerciseName: string, muscleGroups: string[]) {
     try {
@@ -355,7 +479,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (b64_json) {
         const sanitizedName = exerciseName.replace(/[^a-zA-Z0-9]/g, '_');
         const uniqueId = Math.random().toString(16).slice(2, 10);
-        const filename = `${sanitizedName}_${uniqueId}.png`;
+        const filename = `${sanitizedName}_${uniqueId}.jpg`; // Changed to .jpg for compressed images
+        
+        // Compress image before saving
+        const originalBuffer = Buffer.from(b64_json, 'base64');
+        const compressedBuffer = await compressImageForWeb(originalBuffer);
         
         // Upload to object storage
         try {
@@ -366,9 +494,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const bucket = objectStorageClient.bucket(bucketName);
           const file = bucket.file(objectName);
           
-          const imageBuffer = Buffer.from(b64_json, 'base64');
-          await file.save(imageBuffer, {
-            contentType: 'image/png',
+          await file.save(compressedBuffer, {
+            contentType: 'image/jpeg',
             metadata: {
               'custom:aclPolicy': JSON.stringify({ owner: 'system', visibility: 'public' })
             }
@@ -389,7 +516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fs.mkdirSync(imageDir, { recursive: true });
           }
           
-          fs.writeFileSync(filePath, Buffer.from(b64_json, 'base64'));
+          fs.writeFileSync(filePath, compressedBuffer);
           const imageUrl = `/generated_images/${filename}`;
           await storage.updateExercise(exerciseId, { imageUrl });
           console.log(`Image generated and saved locally for: ${exerciseName} at ${imageUrl}`);
@@ -398,20 +525,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error(`Failed to generate image for ${exerciseName}:`, error);
     }
-  }
-  
-  // Helper to parse object path
-  function parseObjectPath(path: string): { bucketName: string; objectName: string } {
-    if (!path.startsWith("/")) {
-      path = `/${path}`;
-    }
-    const pathParts = path.split("/");
-    if (pathParts.length < 3) {
-      throw new Error("Invalid path: must contain at least a bucket name");
-    }
-    const bucketName = pathParts[1];
-    const objectName = pathParts.slice(2).join("/");
-    return { bucketName, objectName };
   }
 
   // Background worker to check and generate missing images and descriptions
