@@ -116,9 +116,17 @@ Preferred communication style: Simple, everyday language.
 - class-variance-authority for component variant management
 - clsx and tailwind-merge utilities for conditional class names
 
-**Session Management**
-- connect-pg-simple for PostgreSQL-backed session storage (configured but not yet integrated)
-- Express session middleware (ready for authentication implementation)
+**Authentication & Authorization**
+- Replit Auth integration for user login (supports Google, GitHub, Apple, email)
+- Session-based authentication with PostgreSQL-backed session storage
+- User data isolation: workout templates, scheduled workouts, and completed workouts are scoped by userId
+- All CRUD operations verify ownership before allowing modifications (403 if unauthorized)
+
+**Google Calendar Integration**
+- Completed workouts automatically create all-day events in user's Google Calendar
+- Uses OAuth2 with Google Calendar API (requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN)
+- Events include workout name and completion date
+- Calendar events are deleted when workouts are removed
 
 **Font Loading**
 - Google Fonts CDN for Inter, DM Sans, Fira Code, and Geist Mono font families
