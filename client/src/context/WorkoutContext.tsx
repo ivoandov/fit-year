@@ -62,6 +62,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     exercises: (w.exercises as any[]).map((ex: any) => ({
       ...ex,
       muscleGroups: ex.muscleGroups || [],
+      setsData: ex.setsData || [],
     })) as Exercise[],
     completedAt: new Date(w.completedAt),
   }));
