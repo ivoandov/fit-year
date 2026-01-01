@@ -74,10 +74,11 @@ Preferred communication style: Simple, everyday language.
 5. **Sets** - Individual set tracking with exercise reference, weight, reps, and completion status
 
 **Exercise Data Pattern**
-- Built-in exercises are defined in `client/src/data/exercises.ts` as `exerciseLibrary`
-- Custom exercises are stored in the database and fetched via `/api/exercises`
-- All pages that display exercises MUST combine both sources: `[...exerciseLibrary, ...customExercises]`
-- This ensures users see all available exercises (both built-in and custom) throughout the app
+- All exercises (both built-in and custom) are stored in the PostgreSQL database
+- Built-in exercises are seeded on server startup from `server/data/builtInExercises.ts`
+- Exercise images are served statically from `/generated_images/` (maps to `attached_assets/generated_images/`)
+- The frontend fetches all exercises from `/api/exercises` - no client-side merging needed
+- Image regeneration via AI is available for all exercises (both built-in and custom)
 
 **Schema Features**
 - UUID primary keys using PostgreSQL's `gen_random_uuid()`
