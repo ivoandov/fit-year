@@ -17,10 +17,10 @@ export default function HistoryPage() {
     duration: Math.floor(Math.random() * 30 + 30),
     exerciseCount: workout.exercises.length,
     totalVolume: 0,
-    exercises: workout.exercises.map((ex) => ({
+    exercises: workout.exercises.map((ex: any) => ({
       name: ex.name,
       muscleGroups: ex.muscleGroups || [],
-      sets: [],
+      sets: ex.setsData || [],
     })),
   }));
 
@@ -47,7 +47,7 @@ export default function HistoryPage() {
     historyData.forEach((workout) => {
       if (isWithinInterval(workout.date, { start: weekStart, end: now })) {
         workout.exercises?.forEach((exercise) => {
-          exercise.muscleGroups?.forEach((muscle) => {
+          exercise.muscleGroups?.forEach((muscle: string) => {
             setsByMuscle[muscle] = (setsByMuscle[muscle] || 0) + (exercise.sets?.length || 0);
           });
         });
