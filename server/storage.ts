@@ -288,8 +288,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createWorkoutTemplate(template: InsertWorkoutTemplate): Promise<WorkoutTemplate> {
-    const results = await db.insert(workoutTemplates).values(template).returning();
-    return results[0];
+    const id = crypto.randomUUID();
+    const exercisesJson = JSON.stringify(template.exercises || []);
+    await neonClient`
+      INSERT INTO workout_templates (id, name, exercises)
+      VALUES (${id}, ${template.name}, ${exercisesJson}::jsonb)
+    `;
+    return {
+      id,
+      name: template.name,
+      exercises: template.exercises || [],
+    };
   }
 
   async updateWorkoutTemplate(id: string, template: Partial<InsertWorkoutTemplate>): Promise<WorkoutTemplate | undefined> {
@@ -330,8 +339,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createScheduledWorkout(workout: InsertScheduledWorkout): Promise<ScheduledWorkout> {
-    const results = await db.insert(scheduledWorkouts).values(workout).returning();
-    return results[0];
+    const id = crypto.randomUUID();
+    const exercisesJson = JSON.stringify(workout.exercises || []);
+    const dateStr = workout.date instanceof Date ? workout.date.toISOString() : workout.date;
+    await neonClient`
+      INSERT INTO scheduled_workouts (id, name, date, exercises, template_id)
+      VALUES (${id}, ${workout.name}, ${dateStr}::timestamp, ${exercisesJson}::jsonb, ${workout.templateId || null})
+    `;
+    return {
+      id,
+      name: workout.name,
+      date: workout.date instanceof Date ? workout.date : new Date(workout.date),
+      exercises: workout.exercises || [],
+      templateId: workout.templateId || null,
+    };
   }
 
   async updateScheduledWorkout(id: string, workout: Partial<InsertScheduledWorkout>): Promise<ScheduledWorkout | undefined> {
