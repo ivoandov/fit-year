@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -144,6 +145,10 @@ export function ExerciseCard({
 
       <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
         <DialogContent className="max-w-3xl p-0 overflow-hidden bg-transparent border-none">
+          <VisuallyHidden>
+            <DialogTitle>{name} - Exercise Image</DialogTitle>
+            <DialogDescription>Full size image of the {name} exercise</DialogDescription>
+          </VisuallyHidden>
           <div className="relative">
             <Button
               variant="secondary"
