@@ -92,6 +92,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear base64 images from database and regenerate them as files
+  app.post("/api/fix-images", async (req, res) => {
+    try {
+      // First clear base64 images
+      const exercisesWithBase64 = await storage.getExercisesWithBase64Images();
+      
+      for (const exercise of exercisesWithBase64) {
+        await storage.updateExercise(exercise.id, { imageUrl: null });
+        console.log(`Cleared base64 image for: ${exercise.name}`);
+      }
+      
+      // Now get all exercises without images and regenerate
+      const allExercises = await storage.getExercises();
+      const exercisesWithoutImages = allExercises.filter(ex => !ex.imageUrl);
+      
+      // Start regenerating in background (don't wait)
+      const regeneratePromises = exercisesWithoutImages.map(async (exercise, index) => {
+        // Stagger requests to avoid rate limits (5 seconds between each)
+        await new Promise(resolve => setTimeout(resolve, index * 5000));
+        try {
+          await generateExerciseImage(exercise.id, exercise.name, exercise.muscleGroups as string[]);
+        } catch (err) {
+          console.error(`Failed to regenerate image for ${exercise.name}:`, err);
+        }
+      });
+      
+      // Don't await - let it run in background
+      Promise.all(regeneratePromises).then(() => {
+        console.log("All image regeneration complete");
+      });
+      
+      res.json({
+        success: true,
+        clearedCount: exercisesWithBase64.length,
+        regeneratingCount: exercisesWithoutImages.length,
+        message: `Cleared ${exercisesWithBase64.length} base64 images. Regenerating ${exercisesWithoutImages.length} images in background.`
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
   // Migrate a single exercise image - for manual use
   app.post("/api/migrate-image/:id", async (req, res) => {
     try {
