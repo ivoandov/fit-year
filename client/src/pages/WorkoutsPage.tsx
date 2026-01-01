@@ -26,7 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { MoreVertical } from "lucide-react";
-import { exerciseLibrary, type Exercise } from "@/data/exercises";
+import { type Exercise } from "@/data/exercises";
 import { useWorkout } from "@/context/WorkoutContext";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -71,8 +71,7 @@ export default function WorkoutsPage() {
     queryKey: ["/api/exercises"],
   });
 
-  // Combine built-in exercises with custom exercises from database
-  const customExercises: Exercise[] = dbExercises.map((ex) => ({
+  const allAvailableExercises: Exercise[] = dbExercises.map((ex) => ({
     id: ex.id,
     name: ex.name,
     muscleGroups: ex.muscleGroups,
@@ -80,9 +79,6 @@ export default function WorkoutsPage() {
     imageUrl: ex.imageUrl || undefined,
     exerciseType: (ex.exerciseType as "weight_reps" | "distance_time") || "weight_reps",
   }));
-
-  const allAvailableExercises: Exercise[] = [...exerciseLibrary, ...customExercises]
-    .sort((a, b) => a.name.localeCompare(b.name));
 
   const scheduledWorkouts: ScheduledWorkout[] = dbWorkouts.map((w) => ({
     id: w.id,

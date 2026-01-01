@@ -23,17 +23,32 @@ export async function seedBuiltInExercises(): Promise<void> {
   
   try {
     for (const exercise of builtInExercises) {
-      const existing = await neonClient`
-        SELECT id FROM exercises WHERE id = ${exercise.id}
-      `;
-      
-      if (existing.length === 0) {
-        const muscleGroupsJson = JSON.stringify(exercise.muscleGroups);
-        await neonClient`
-          INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type)
-          VALUES (${exercise.id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl}, ${exercise.exerciseType})
+      try {
+        const existing = await neonClient`
+          SELECT id FROM exercises WHERE id = ${exercise.id}
         `;
-        console.log(`Seeded exercise: ${exercise.name}`);
+        
+        if (!existing || existing.length === 0) {
+          const muscleGroupsJson = JSON.stringify(exercise.muscleGroups);
+          await neonClient`
+            INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type)
+            VALUES (${exercise.id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl}, ${exercise.exerciseType})
+          `;
+          console.log(`Seeded exercise: ${exercise.name}`);
+        }
+      } catch (innerError: any) {
+        if (innerError?.message?.includes("Cannot read properties of null (reading 'map')")) {
+          const muscleGroupsJson = JSON.stringify(exercise.muscleGroups);
+          await neonClient`
+            INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type)
+            VALUES (${exercise.id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl}, ${exercise.exerciseType})
+          `;
+          console.log(`Seeded exercise: ${exercise.name}`);
+        } else if (innerError?.code === '23505') {
+          console.log(`Exercise already exists: ${exercise.name}`);
+        } else {
+          throw innerError;
+        }
       }
     }
     console.log("Built-in exercises seeding complete.");

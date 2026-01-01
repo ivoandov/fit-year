@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { exerciseLibrary, type Exercise } from "@/data/exercises";
+import { type Exercise } from "@/data/exercises";
 import { useSettings } from "@/components/SettingsProvider";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -37,9 +37,7 @@ export default function ExercisesPage() {
     queryKey: ["/api/exercises"],
   });
 
-  const customExerciseIds = new Set(dbExercises.map(ex => ex.id));
-
-  const customExercises: Exercise[] = dbExercises.map((ex) => ({
+  const allExercises: Exercise[] = dbExercises.map((ex) => ({
     id: ex.id,
     name: ex.name,
     muscleGroups: ex.muscleGroups,
@@ -47,9 +45,6 @@ export default function ExercisesPage() {
     imageUrl: ex.imageUrl || undefined,
     exerciseType: (ex.exerciseType as "weight_reps" | "distance_time") || "weight_reps",
   }));
-
-  const allExercises = [...exerciseLibrary, ...customExercises]
-    .sort((a, b) => a.name.localeCompare(b.name));
 
   const createMutation = useMutation({
     mutationFn: async (exercise: { name: string; muscleGroups: string[]; description: string; exerciseType: string }) => {
