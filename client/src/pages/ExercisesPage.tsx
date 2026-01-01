@@ -123,9 +123,17 @@ export default function ExercisesPage() {
   });
 
   const handleRegenerateImage = async (id: string) => {
+    const exercise = allExercises.find(ex => ex.id === id);
+    if (!exercise) return;
+    
     setRegeneratingIds(prev => new Set(prev).add(id));
     try {
-      await apiRequest("POST", `/api/exercises/${id}/regenerate-image`);
+      await apiRequest("POST", `/api/exercises/${id}/regenerate-image`, {
+        name: exercise.name,
+        muscleGroups: exercise.muscleGroups,
+        description: exercise.description,
+        exerciseType: exercise.exerciseType,
+      });
       toast({
         title: "Regenerating Image",
         description: "A new AI image is being generated. It will appear in a few seconds.",
@@ -249,7 +257,7 @@ export default function ExercisesPage() {
               onAdd={handleAddExercise}
               onEdit={handleEditExercise}
               onDelete={handleDeleteExercise}
-              onRegenerateImage={customExerciseIds.has(exercise.id) ? handleRegenerateImage : undefined}
+              onRegenerateImage={handleRegenerateImage}
             />
           ))}
         </div>

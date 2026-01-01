@@ -20,6 +20,7 @@ const db = drizzle({ client: neonClient, schema });
 export interface IStorage {
   getExercises(): Promise<Exercise[]>;
   createExercise(exercise: InsertExercise): Promise<Exercise>;
+  createExerciseWithId(id: string, exercise: InsertExercise): Promise<Exercise>;
   updateExercise(id: string, exercise: Partial<InsertExercise>): Promise<Exercise | undefined>;
   deleteExercise(id: string): Promise<boolean>;
   
@@ -71,6 +72,32 @@ export class DatabaseStorage implements IStorage {
       return newExercise;
     } catch (error) {
       console.error("Error in createExercise:", error);
+      throw error;
+    }
+  }
+
+  async createExerciseWithId(id: string, exercise: InsertExercise): Promise<Exercise> {
+    try {
+      const muscleGroupsJson = JSON.stringify(exercise.muscleGroups || []);
+      
+      await neonClient`
+        INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type)
+        VALUES (${id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"})
+      `;
+      
+      const newExercise: Exercise = {
+        id,
+        name: exercise.name,
+        muscleGroups: exercise.muscleGroups || [],
+        description: exercise.description,
+        imageUrl: exercise.imageUrl || null,
+        exerciseType: exercise.exerciseType || "weight_reps",
+      };
+      
+      console.log("Created exercise with ID:", newExercise);
+      return newExercise;
+    } catch (error) {
+      console.error("Error in createExerciseWithId:", error);
       throw error;
     }
   }

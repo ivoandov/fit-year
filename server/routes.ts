@@ -153,8 +153,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/exercises/:id/regenerate-image", async (req, res) => {
     try {
       const { id } = req.params;
+      const { name, muscleGroups } = req.body;
+      
+      // First check if it exists in database
       const exercises = await storage.getExercises();
-      const exercise = exercises.find(ex => ex.id === id);
+      let exercise = exercises.find(ex => ex.id === id);
+      
+      // If not in database but we have the data from request, create it with the specified ID
+      if (!exercise && name && muscleGroups) {
+        exercise = await storage.createExerciseWithId(id, {
+          name,
+          muscleGroups,
+          description: req.body.description || "",
+          exerciseType: req.body.exerciseType || "weight_reps",
+        });
+      }
       
       if (!exercise) {
         return res.status(404).json({ error: "Exercise not found" });
