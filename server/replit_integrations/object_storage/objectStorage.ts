@@ -95,20 +95,21 @@ export class ObjectStorageService {
   }
 
   // Get a signed URL for a public object that can be accessed directly by the browser
+  // Note: This skips existence check for performance - the signed URL will 404 if file doesn't exist
   async getSignedUrlForPublicObject(filePath: string, ttlSec: number = 3600): Promise<string | null> {
-    for (const searchPath of this.getPublicObjectSearchPaths()) {
-      const fullPath = `${searchPath}/${filePath}`;
-      const { bucketName, objectName } = parseObjectPath(fullPath);
-      
-      const bucket = objectStorageClient.bucket(bucketName);
-      const file = bucket.file(objectName);
-      
-      const [exists] = await file.exists();
-      if (exists) {
-        return signObjectURL({ bucketName, objectName, method: "GET", ttlSec });
-      }
+    const searchPaths = this.getPublicObjectSearchPaths();
+    if (searchPaths.length === 0) return null;
+    
+    // Use first search path and generate signed URL without existence check
+    const fullPath = `${searchPaths[0]}/${filePath}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    
+    try {
+      return await signObjectURL({ bucketName, objectName, method: "GET", ttlSec });
+    } catch (err) {
+      console.error(`Failed to sign URL for ${filePath}:`, err);
+      return null;
     }
-    return null;
   }
 
   // Downloads an object to the response.
