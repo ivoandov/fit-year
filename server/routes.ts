@@ -871,6 +871,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/completed-workouts/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      const { name, exercises } = req.body;
+      
+      const existing = await storage.getCompletedWorkout(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Workout not found" });
+      }
+      
+      if (existing.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const updated = await storage.updateCompletedWorkout(id, { name, exercises });
+      res.json(updated);
+    } catch (error) {
+      console.error("Failed to update completed workout:", error);
+      res.status(500).json({ error: "Failed to update completed workout" });
+    }
+  });
+
   app.delete("/api/completed-workouts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;

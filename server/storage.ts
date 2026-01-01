@@ -92,6 +92,7 @@ export interface IStorage {
   getCompletedWorkouts(userId?: string): Promise<CompletedWorkout[]>;
   getCompletedWorkout(id: string): Promise<CompletedWorkout | undefined>;
   createCompletedWorkout(workout: InsertCompletedWorkout): Promise<CompletedWorkout>;
+  updateCompletedWorkout(id: string, workout: Partial<InsertCompletedWorkout>): Promise<CompletedWorkout | undefined>;
   updateCompletedWorkoutCalendarEventId(id: string, calendarEventId: string): Promise<void>;
   deleteCompletedWorkout(id: string): Promise<boolean>;
   
@@ -478,6 +479,24 @@ export class DatabaseStorage implements IStorage {
       exercises: workout.exercises,
       completedAt: workout.completedAt instanceof Date ? workout.completedAt : new Date(completedAtStr),
       calendarEventId: null,
+    };
+  }
+
+  async updateCompletedWorkout(id: string, workout: Partial<InsertCompletedWorkout>): Promise<CompletedWorkout | undefined> {
+    const existing = await this.getCompletedWorkout(id);
+    if (!existing) return undefined;
+    
+    const name = workout.name !== undefined ? workout.name : existing.name;
+    
+    await neonClient`
+      UPDATE completed_workouts 
+      SET name = ${name}
+      WHERE id = ${id}
+    `;
+    
+    return {
+      ...existing,
+      name,
     };
   }
 

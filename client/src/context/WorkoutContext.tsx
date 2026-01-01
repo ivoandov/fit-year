@@ -43,6 +43,7 @@ interface WorkoutContextType {
   completeWorkout: (exerciseSets?: Map<number, ExerciseSetData[]>) => void;
   isWorkoutCompleted: (displayId: string) => boolean;
   restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
+  updateCompletedWorkout: (id: string, name: string) => void;
   deleteCompletedWorkout: (id: string) => void;
 }
 
@@ -84,6 +85,15 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   const deleteCompletedMutation = useMutation({
     mutationFn: async (id: string) => {
       return apiRequest("DELETE", `/api/completed-workouts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/completed-workouts"] });
+    },
+  });
+
+  const updateCompletedMutation = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      return apiRequest("PUT", `/api/completed-workouts/${id}`, { name });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/completed-workouts"] });
@@ -168,6 +178,10 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const updateCompletedWorkout = (id: string, name: string) => {
+    updateCompletedMutation.mutate({ id, name });
+  };
+
   const deleteCompletedWorkout = (id: string) => {
     deleteCompletedMutation.mutate(id);
   };
@@ -182,6 +196,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       completeWorkout,
       isWorkoutCompleted,
       restartWorkout,
+      updateCompletedWorkout,
       deleteCompletedWorkout,
     }}>
       {children}

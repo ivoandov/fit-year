@@ -2,7 +2,7 @@ import { WorkoutHistoryCard } from "@/components/WorkoutHistoryCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Calendar, Flame, Activity } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { startOfWeek, startOfMonth, isWithinInterval } from "date-fns";
+import { startOfWeek, startOfMonth, isAfter, isBefore, isEqual, endOfDay } from "date-fns";
 import { useWorkout } from "@/context/WorkoutContext";
 import { useSettings } from "@/components/SettingsProvider";
 
@@ -45,16 +45,21 @@ export default function HistoryPage() {
   });
 
   const now = new Date();
+  const todayEnd = endOfDay(now);
   const weekStartsOn = weekStartDay === "monday" ? 1 : 0;
   const weekStart = startOfWeek(now, { weekStartsOn });
   const monthStart = startOfMonth(now);
 
+  const isWithinRange = (date: Date, start: Date, end: Date) => {
+    return (isAfter(date, start) || isEqual(date, start)) && (isBefore(date, end) || isEqual(date, end));
+  };
+
   const workoutsThisWeek = historyData.filter((w) =>
-    isWithinInterval(w.date, { start: weekStart, end: now })
+    isWithinRange(w.date, weekStart, todayEnd)
   ).length;
 
   const workoutsThisMonth = historyData.filter((w) =>
-    isWithinInterval(w.date, { start: monthStart, end: now })
+    isWithinRange(w.date, monthStart, todayEnd)
   ).length;
 
   const totalWorkouts = historyData.length;
@@ -66,7 +71,7 @@ export default function HistoryPage() {
     const setsByMuscle: { [key: string]: number } = {};
 
     historyData.forEach((workout) => {
-      if (isWithinInterval(workout.date, { start: weekStart, end: now })) {
+      if (isWithinRange(workout.date, weekStart, todayEnd)) {
         workout.exercises?.forEach((exercise) => {
           const completedSetCount = exercise.sets?.filter((s: any) => s.completed).length || 0;
           exercise.muscleGroups?.forEach((muscle: string) => {

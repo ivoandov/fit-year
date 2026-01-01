@@ -74,9 +74,10 @@ export default function WorkoutsPage() {
   const [showEditorDialog, setShowEditorDialog] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<ScheduledWorkout | null>(null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
-  const [workoutToDelete, setWorkoutToDelete] = useState<{ id: string; name: string; isTemplate?: boolean } | null>(null);
+  const [workoutToDelete, setWorkoutToDelete] = useState<{ id: string; name: string; isTemplate?: boolean; isCompleted?: boolean } | null>(null);
   const { toast } = useToast();
-  const { startWorkout, isWorkoutCompleted, completedWorkouts, restartWorkout } = useWorkout();
+  const { startWorkout, isWorkoutCompleted, completedWorkouts, restartWorkout, updateCompletedWorkout, deleteCompletedWorkout } = useWorkout();
+  const [editingCompletedWorkout, setEditingCompletedWorkout] = useState<{ id: string; name: string; exercises: Exercise[] } | null>(null);
 
   const { data: dbWorkouts = [], isLoading } = useQuery<DBScheduledWorkout[]>({
     queryKey: ["/api/scheduled-workouts"],
@@ -235,7 +236,15 @@ export default function WorkoutsPage() {
   };
 
   const handleSaveWorkout = async (data: WorkoutData) => {
-    if (editingTemplateId) {
+    if (editingCompletedWorkout) {
+      // Editing a completed workout - only name can be changed to preserve set data
+      updateCompletedWorkout(editingCompletedWorkout.id, data.name);
+      toast({
+        title: "Workout Updated",
+        description: `${data.name} has been updated successfully.`,
+      });
+      setEditingCompletedWorkout(null);
+    } else if (editingTemplateId) {
       // Editing an existing template
       updateTemplateMutation.mutate({
         id: editingTemplateId,
@@ -314,6 +323,12 @@ export default function WorkoutsPage() {
           title: "Workout Deleted",
           description: "The workout has been removed from your library.",
         });
+      } else if (workoutToDelete.isCompleted) {
+        deleteCompletedWorkout(workoutToDelete.id);
+        toast({
+          title: "Workout Deleted",
+          description: "The completed workout has been removed from your history.",
+        });
       } else {
         deleteMutation.mutate(workoutToDelete.id);
         toast({
@@ -366,6 +381,21 @@ export default function WorkoutsPage() {
 
   const handleDeleteTemplate = (templateId: string, templateName: string) => {
     setWorkoutToDelete({ id: templateId, name: templateName, isTemplate: true });
+  };
+
+  const handleEditCompletedWorkout = (workout: { id: string; name: string; exercises: Exercise[] }) => {
+    setEditingCompletedWorkout(workout);
+    setEditingWorkout({
+      id: workout.id,
+      name: workout.name,
+      date: new Date(),
+      exercises: workout.exercises,
+    });
+    setShowEditorDialog(true);
+  };
+
+  const handleDeleteCompletedWorkout = (id: string, name: string) => {
+    setWorkoutToDelete({ id, name, isTemplate: false, isCompleted: true });
   };
 
   const getDisplayedWorkouts = () => {
@@ -661,13 +691,43 @@ export default function WorkoutsPage() {
                         <span>{format(workout.completedAt, "PP 'at' p")}</span>
                       </div>
                     </div>
-                    <Button
-                      size="icon"
-                      onClick={() => handleRestartWorkout(workout)}
-                      data-testid={`button-restart-workout-${index}`}
-                    >
-                      <Play className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        size="icon"
+                        onClick={() => handleRestartWorkout(workout)}
+                        data-testid={`button-restart-workout-${index}`}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            data-testid={`button-recent-workout-menu-${index}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleEditCompletedWorkout(workout)}
+                            data-testid={`button-edit-recent-workout-${index}`}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteCompletedWorkout(workout.id, workout.name)}
+                            className="text-destructive"
+                            data-testid={`button-delete-recent-workout-${index}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
                     <div className="text-xs sm:text-sm text-muted-foreground">
@@ -789,6 +849,7 @@ export default function WorkoutsPage() {
             setShowEditorDialog(false);
             setEditingWorkout(null);
             setEditingTemplateId(null);
+            setEditingCompletedWorkout(null);
           }}
           onSave={handleSaveWorkout}
           initialData={editingWorkout ? { ...editingWorkout, repeatType: "none" as const } : null}
