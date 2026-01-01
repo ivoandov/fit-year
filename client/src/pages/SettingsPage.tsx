@@ -44,12 +44,9 @@ export default function SettingsPage() {
   // Mutation to update calendar selection
   const updateCalendarMutation = useMutation({
     mutationFn: async ({ calendarId, calendarName }: { calendarId: string; calendarName: string }) => {
-      return apiRequest('/api/user-settings', {
-        method: 'PATCH',
-        body: JSON.stringify({
-          selectedCalendarId: calendarId,
-          selectedCalendarName: calendarName,
-        }),
+      return apiRequest('PATCH', '/api/user-settings', {
+        selectedCalendarId: calendarId,
+        selectedCalendarName: calendarName,
       });
     },
     onSuccess: () => {
