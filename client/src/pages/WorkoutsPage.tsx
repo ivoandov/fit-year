@@ -105,6 +105,14 @@ export default function WorkoutsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
     },
+    onError: (error) => {
+      console.error("Failed to create workout:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create workout. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateMutation = useMutation({
@@ -117,6 +125,14 @@ export default function WorkoutsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
+    },
+    onError: (error) => {
+      console.error("Failed to update workout:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update workout. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
