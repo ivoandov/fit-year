@@ -48,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function generateExerciseImage(exerciseId: string, exerciseName: string, muscleGroups: string[]) {
     try {
       const muscleText = muscleGroups.length > 0 ? muscleGroups.join(", ") : "full body";
-      const prompt = `A professional fitness illustration of a person demonstrating the "${exerciseName}" exercise targeting ${muscleText}. Clean, modern, minimalist style with a white background. Athletic figure in proper form. No text or labels.`;
+      const prompt = `Professional fitness photography of an athletic person demonstrating the "${exerciseName}" exercise, targeting ${muscleText}. Shot in a modern gym or fitness studio setting with warm lighting. The person should be wearing athletic workout clothes. High quality, realistic photo style similar to stock fitness photography. Show proper exercise form and technique. Natural poses, professional composition.`;
       
       console.log(`Generating image for exercise: ${exerciseName}`);
       
