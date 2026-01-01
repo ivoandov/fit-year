@@ -7,14 +7,17 @@ import {
   workoutTemplates,
   scheduledWorkouts,
   completedWorkouts,
+  userSettings,
   type Exercise,
   type WorkoutTemplate,
   type ScheduledWorkout,
   type CompletedWorkout,
+  type UserSettings,
   type InsertExercise,
   type InsertWorkoutTemplate,
   type InsertScheduledWorkout,
   type InsertCompletedWorkout,
+  type InsertUserSettings,
 } from "@shared/schema";
 import { builtInExercises } from "./data/builtInExercises";
 
@@ -91,6 +94,9 @@ export interface IStorage {
   createCompletedWorkout(workout: InsertCompletedWorkout): Promise<CompletedWorkout>;
   updateCompletedWorkoutCalendarEventId(id: string, calendarEventId: string): Promise<void>;
   deleteCompletedWorkout(id: string): Promise<boolean>;
+  
+  getUserSettings(userId: string): Promise<UserSettings | undefined>;
+  upsertUserSettings(userId: string, settings: Partial<InsertUserSettings>): Promise<UserSettings>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -484,6 +490,58 @@ export class DatabaseStorage implements IStorage {
   async deleteCompletedWorkout(id: string): Promise<boolean> {
     const results = await db.delete(completedWorkouts).where(eq(completedWorkouts.id, id)).returning();
     return results.length > 0;
+  }
+
+  async getUserSettings(userId: string): Promise<UserSettings | undefined> {
+    try {
+      const results = await neonClient`
+        SELECT 
+          id,
+          user_id as "userId",
+          selected_calendar_id as "selectedCalendarId",
+          selected_calendar_name as "selectedCalendarName"
+        FROM user_settings 
+        WHERE user_id = ${userId}
+      `;
+      return results?.[0] as UserSettings | undefined;
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
+  async upsertUserSettings(userId: string, settings: Partial<InsertUserSettings>): Promise<UserSettings> {
+    const existing = await this.getUserSettings(userId);
+    
+    if (existing) {
+      const results = await neonClient`
+        UPDATE user_settings 
+        SET 
+          selected_calendar_id = ${settings.selectedCalendarId ?? existing.selectedCalendarId},
+          selected_calendar_name = ${settings.selectedCalendarName ?? existing.selectedCalendarName}
+        WHERE user_id = ${userId}
+        RETURNING 
+          id,
+          user_id as "userId",
+          selected_calendar_id as "selectedCalendarId",
+          selected_calendar_name as "selectedCalendarName"
+      `;
+      return results[0] as UserSettings;
+    } else {
+      const id = crypto.randomUUID();
+      await neonClient`
+        INSERT INTO user_settings (id, user_id, selected_calendar_id, selected_calendar_name)
+        VALUES (${id}, ${userId}, ${settings.selectedCalendarId || null}, ${settings.selectedCalendarName || null})
+      `;
+      return {
+        id,
+        userId,
+        selectedCalendarId: settings.selectedCalendarId || null,
+        selectedCalendarName: settings.selectedCalendarName || null,
+      };
+    }
   }
 }
 
