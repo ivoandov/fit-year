@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage, seedBuiltInExercises } from "./storage";
 import { insertExerciseSchema, insertScheduledWorkoutSchema, insertCompletedWorkoutSchema } from "@shared/schema";
 import { registerImageRoutes, openai } from "./replit_integrations/image";
+import * as fs from "fs";
+import * as path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Database status and manual seed endpoint
@@ -29,6 +31,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         exerciseCount: exercises.length
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // Migrate base64 images to files
+  app.post("/api/migrate-images", async (req, res) => {
+    try {
+      const exercises = await storage.getExercises();
+      const imageDir = path.join(process.cwd(), 'attached_assets', 'generated_images');
+      
+      // Ensure directory exists
+      if (!fs.existsSync(imageDir)) {
+        fs.mkdirSync(imageDir, { recursive: true });
+      }
+      
+      let migratedCount = 0;
+      
+      for (const exercise of exercises) {
+        if (exercise.imageUrl && exercise.imageUrl.startsWith('data:image')) {
+          try {
+            // Extract base64 data
+            const base64Match = exercise.imageUrl.match(/^data:image\/\w+;base64,(.+)$/);
+            if (base64Match) {
+              const base64Data = base64Match[1];
+              const sanitizedName = exercise.name.replace(/[^a-zA-Z0-9]/g, '_');
+              const uniqueId = Math.random().toString(16).slice(2, 10);
+              const filename = `${sanitizedName}_${uniqueId}.png`;
+              const filePath = path.join(imageDir, filename);
+              
+              // Write image file
+              fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+              
+              // Update database with file path
+              const newImageUrl = `/generated_images/${filename}`;
+              await storage.updateExercise(exercise.id, { imageUrl: newImageUrl });
+              migratedCount++;
+              console.log(`Migrated image for: ${exercise.name}`);
+            }
+          } catch (err) {
+            console.error(`Failed to migrate image for ${exercise.name}:`, err);
+          }
+        }
+      }
+      
+      res.json({
+        success: true,
+        migratedCount,
+        totalExercises: exercises.length
       });
     } catch (error: any) {
       res.status(500).json({
@@ -109,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Background function to generate exercise image
+  // Background function to generate exercise image and save to file
   async function generateExerciseImage(exerciseId: string, exerciseName: string, muscleGroups: string[]) {
     try {
       const muscleText = muscleGroups.length > 0 ? muscleGroups.join(", ") : "full body";
@@ -126,9 +181,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const b64_json = response.data?.[0]?.b64_json;
       if (b64_json) {
-        const imageUrl = `data:image/png;base64,${b64_json}`;
+        // Save to file instead of storing base64 in database
+        const sanitizedName = exerciseName.replace(/[^a-zA-Z0-9]/g, '_');
+        const uniqueId = Math.random().toString(16).slice(2, 10);
+        const filename = `${sanitizedName}_${uniqueId}.png`;
+        const imageDir = path.join(process.cwd(), 'attached_assets', 'generated_images');
+        const filePath = path.join(imageDir, filename);
+        
+        // Ensure directory exists
+        if (!fs.existsSync(imageDir)) {
+          fs.mkdirSync(imageDir, { recursive: true });
+        }
+        
+        // Write image file
+        fs.writeFileSync(filePath, Buffer.from(b64_json, 'base64'));
+        
+        // Store file path URL in database
+        const imageUrl = `/generated_images/${filename}`;
         await storage.updateExercise(exerciseId, { imageUrl });
-        console.log(`Image generated successfully for: ${exerciseName}`);
+        console.log(`Image generated and saved for: ${exerciseName} at ${imageUrl}`);
       }
     } catch (error) {
       console.error(`Failed to generate image for ${exerciseName}:`, error);
