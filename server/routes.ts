@@ -552,13 +552,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/completed-workouts", async (req, res) => {
     try {
-      const parsed = insertCompletedWorkoutSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ error: parsed.error.message });
+      const { displayId, name, exercises, completedAt } = req.body;
+      
+      if (!displayId || !name || !exercises) {
+        return res.status(400).json({ error: "Missing required fields: displayId, name, exercises" });
       }
-      const workout = await storage.createCompletedWorkout(parsed.data);
+      
+      const workout = await storage.createCompletedWorkout({
+        displayId,
+        name,
+        exercises,
+        completedAt: completedAt ? new Date(completedAt) : new Date(),
+      });
       res.status(201).json(workout);
     } catch (error) {
+      console.error("Failed to create completed workout:", error);
       res.status(500).json({ error: "Failed to create completed workout" });
     }
   });

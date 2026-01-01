@@ -387,8 +387,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCompletedWorkout(workout: InsertCompletedWorkout): Promise<CompletedWorkout> {
-    const results = await db.insert(completedWorkouts).values(workout).returning();
-    return results[0];
+    const id = crypto.randomUUID();
+    const exercisesJson = JSON.stringify(workout.exercises || []);
+    const completedAtStr = workout.completedAt instanceof Date 
+      ? workout.completedAt.toISOString() 
+      : (workout.completedAt || new Date().toISOString());
+    
+    await neonClient`
+      INSERT INTO completed_workouts (id, display_id, name, exercises, completed_at)
+      VALUES (${id}, ${workout.displayId}, ${workout.name}, ${exercisesJson}::jsonb, ${completedAtStr}::timestamp)
+    `;
+    
+    return {
+      id,
+      displayId: workout.displayId,
+      name: workout.name,
+      exercises: workout.exercises,
+      completedAt: workout.completedAt instanceof Date ? workout.completedAt : new Date(completedAtStr),
+    };
   }
 
   async deleteCompletedWorkout(id: string): Promise<boolean> {
