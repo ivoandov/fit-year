@@ -13,9 +13,34 @@ import {
   type InsertScheduledWorkout,
   type InsertCompletedWorkout,
 } from "@shared/schema";
+import { builtInExercises } from "./data/builtInExercises";
 
 const neonClient = neon(process.env.DATABASE_URL!);
 const db = drizzle({ client: neonClient, schema });
+
+export async function seedBuiltInExercises(): Promise<void> {
+  console.log("Checking for built-in exercises to seed...");
+  
+  try {
+    for (const exercise of builtInExercises) {
+      const existing = await neonClient`
+        SELECT id FROM exercises WHERE id = ${exercise.id}
+      `;
+      
+      if (existing.length === 0) {
+        const muscleGroupsJson = JSON.stringify(exercise.muscleGroups);
+        await neonClient`
+          INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type)
+          VALUES (${exercise.id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl}, ${exercise.exerciseType})
+        `;
+        console.log(`Seeded exercise: ${exercise.name}`);
+      }
+    }
+    console.log("Built-in exercises seeding complete.");
+  } catch (error) {
+    console.error("Error seeding built-in exercises:", error);
+  }
+}
 
 export interface IStorage {
   getExercises(): Promise<Exercise[]>;
