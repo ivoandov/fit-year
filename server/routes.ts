@@ -941,7 +941,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/user-settings", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      console.log("PATCH /api/user-settings - userId:", userId, "body:", JSON.stringify(req.body));
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -953,11 +952,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         selectedCalendarName,
       });
       
-      console.log("User settings updated successfully:", JSON.stringify(settings));
       res.json(settings);
-    } catch (error: any) {
-      console.error("Failed to update user settings - Error:", error?.message || error);
-      console.error("Full error:", error);
+    } catch (error) {
+      console.error("Failed to update user settings:", error);
       res.status(500).json({ error: "Failed to update user settings" });
     }
   });
