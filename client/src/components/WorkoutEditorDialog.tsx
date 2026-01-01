@@ -279,7 +279,14 @@ export function WorkoutEditorDialog({
                 <Label className="text-sm">Available Exercises ({availableExercises.length})</Label>
                 <ScrollArea className="h-[200px] border rounded-md">
                   <div className="p-2 space-y-1">
-                    {availableExercises.map((exercise) => {
+                    {[...availableExercises]
+                      .sort((a, b) => {
+                        const muscleA = (a.muscleGroups[0] || "").toLowerCase();
+                        const muscleB = (b.muscleGroups[0] || "").toLowerCase();
+                        if (muscleA !== muscleB) return muscleA.localeCompare(muscleB);
+                        return a.name.localeCompare(b.name);
+                      })
+                      .map((exercise) => {
                       const isSelected = selectedExercises.some(e => e.id === exercise.id);
                       return (
                         <div
