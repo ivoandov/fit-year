@@ -6,12 +6,74 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/ThemeProvider";
 import { useSettings, type WeekStart, DEFAULT_MUSCLE_GROUPS } from "@/components/SettingsProvider";
-import { Sun, Moon, Monitor, Calendar, Plus, X, ChevronUp, ChevronDown, RotateCcw } from "lucide-react";
+import { Sun, Moon, Monitor, Calendar, Plus, X, ChevronUp, ChevronDown, RotateCcw, RefreshCw, Check, AlertCircle } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+
+interface CalendarInfo {
+  id: string;
+  summary: string;
+  primary?: boolean;
+  backgroundColor?: string;
+}
+
+interface UserSettings {
+  userId: string;
+  selectedCalendarId: string | null;
+  selectedCalendarName: string | null;
+}
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { weekStart, setWeekStart, muscleGroups, addMuscleGroup, removeMuscleGroup, reorderMuscleGroups, setMuscleGroups } = useSettings();
   const [newMuscleGroup, setNewMuscleGroup] = useState("");
+  const { toast } = useToast();
+
+  // Fetch available Google Calendars
+  const { data: calendars, isLoading: calendarsLoading, error: calendarsError, refetch: refetchCalendars } = useQuery<CalendarInfo[]>({
+    queryKey: ['/api/calendars'],
+  });
+
+  // Fetch user settings
+  const { data: userSettings, isLoading: settingsLoading } = useQuery<UserSettings>({
+    queryKey: ['/api/user-settings'],
+  });
+
+  // Mutation to update calendar selection
+  const updateCalendarMutation = useMutation({
+    mutationFn: async ({ calendarId, calendarName }: { calendarId: string; calendarName: string }) => {
+      return apiRequest('/api/user-settings', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          selectedCalendarId: calendarId,
+          selectedCalendarName: calendarName,
+        }),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user-settings'] });
+      toast({
+        title: "Calendar updated",
+        description: "Your workout sync calendar has been changed.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to update calendar",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSelectCalendar = (calendar: CalendarInfo) => {
+    updateCalendarMutation.mutate({
+      calendarId: calendar.id,
+      calendarName: calendar.summary,
+    });
+  };
 
   const themeOptions = [
     {
@@ -149,6 +211,80 @@ export default function SettingsPage() {
                 </div>
               ))}
             </RadioGroup>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base sm:text-lg">Google Calendar Sync</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Choose which calendar receives your completed workout events
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => refetchCalendars()}
+                disabled={calendarsLoading}
+                data-testid="button-refresh-calendars"
+              >
+                <RefreshCw className={`h-4 w-4 ${calendarsLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            {calendarsLoading || settingsLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
+              </div>
+            ) : calendarsError ? (
+              <div className="flex items-center gap-2 p-4 rounded-md border border-destructive/50 bg-destructive/10 text-destructive">
+                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Unable to load calendars</p>
+                  <p className="text-xs">Make sure Google Calendar is connected in your account settings.</p>
+                </div>
+              </div>
+            ) : calendars && calendars.length > 0 ? (
+              <div className="space-y-3">
+                {calendars.map((calendar) => {
+                  const isSelected = userSettings?.selectedCalendarId === calendar.id || 
+                    (!userSettings?.selectedCalendarId && calendar.primary);
+                  return (
+                    <div
+                      key={calendar.id}
+                      className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer hover-elevate ${
+                        isSelected ? 'border-primary bg-primary/5' : ''
+                      }`}
+                      onClick={() => handleSelectCalendar(calendar)}
+                      data-testid={`option-calendar-${calendar.id}`}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-sm flex-shrink-0"
+                        style={{ backgroundColor: calendar.backgroundColor || '#4285f4' }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{calendar.summary}</p>
+                        {calendar.primary && (
+                          <p className="text-xs text-muted-foreground">Primary calendar</p>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No calendars available. Connect Google Calendar to sync your workouts.
+              </p>
+            )}
           </CardContent>
         </Card>
 

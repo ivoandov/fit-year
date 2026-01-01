@@ -72,6 +72,7 @@ Preferred communication style: Simple, everyday language.
 3. **Scheduled Workouts** - Calendar-based workout scheduling with optional calendar event integration
 4. **Workout Sessions** - Completed workout records with date and duration
 5. **Sets** - Individual set tracking with exercise reference, weight, reps, and completion status
+6. **User Settings** - Per-user preferences including selected Google Calendar for workout sync
 
 **Exercise Data Pattern**
 - All exercises (both built-in and custom) are stored in the PostgreSQL database
@@ -124,7 +125,10 @@ Preferred communication style: Simple, everyday language.
 
 **Google Calendar Integration**
 - Completed workouts automatically create all-day events in user's Google Calendar
-- Uses OAuth2 with Google Calendar API (requires GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN)
+- Users can select which Google Calendar receives workout sync events via Settings page
+- User calendar preferences stored in `user_settings` table (selectedCalendarId, selectedCalendarName)
+- Defaults to primary calendar if no selection is made
+- Uses OAuth2 with Google Calendar API via Replit's connector integration
 - Events include workout name and completion date
 - Calendar events are deleted when workouts are removed
 
