@@ -33,9 +33,12 @@ export default function ExercisesPage() {
   const { muscleGroups: userMuscleGroups } = useSettings();
   const muscleGroups = ["All", ...userMuscleGroups];
 
-  const { data: dbExercises = [] } = useQuery<DBExercise[]>({
+  const { data: dbExercises = [], isLoading, isError, error } = useQuery<DBExercise[]>({
     queryKey: ["/api/exercises"],
   });
+
+  // Debug logging for production
+  console.log("Exercises query state:", { isLoading, isError, exerciseCount: dbExercises.length, error: error?.message });
 
   const allExercises: Exercise[] = dbExercises.map((ex) => ({
     id: ex.id,
@@ -257,9 +260,21 @@ export default function ExercisesPage() {
           ))}
         </div>
 
-        {filteredExercises.length === 0 && (
+        {isLoading && (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No exercises found</p>
+            <p className="text-muted-foreground">Loading exercises...</p>
+          </div>
+        )}
+
+        {isError && (
+          <div className="text-center py-12">
+            <p className="text-destructive">Error loading exercises: {error?.message}</p>
+          </div>
+        )}
+
+        {!isLoading && !isError && filteredExercises.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No exercises found ({dbExercises.length} total in database)</p>
           </div>
         )}
 
