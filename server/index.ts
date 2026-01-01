@@ -1,8 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import path from "path";
+import fs from "fs";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedBuiltInExercises } from "./storage";
+import { ObjectStorageService, objectStorageClient } from "./replit_integrations/object_storage";
 
 const app = express();
 
@@ -49,7 +51,31 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  app.use('/generated_images', express.static(path.join(process.cwd(), 'attached_assets/generated_images')));
+  const objectStorageService = new ObjectStorageService();
+  
+  // Serve generated images - check object storage first, then fall back to local files
+  app.get('/generated_images/:filename', async (req, res, next) => {
+    const filename = req.params.filename;
+    
+    // Try object storage first
+    try {
+      const file = await objectStorageService.searchPublicObject(`exercises/${filename}`);
+      if (file) {
+        await objectStorageService.downloadObject(file, res);
+        return;
+      }
+    } catch (err) {
+      // Object storage not available or file not found, continue to local
+    }
+    
+    // Fall back to local file
+    const localPath = path.join(process.cwd(), 'attached_assets/generated_images', filename);
+    if (fs.existsSync(localPath)) {
+      res.sendFile(localPath);
+    } else {
+      res.status(404).json({ error: 'Image not found' });
+    }
+  });
   
   await seedBuiltInExercises();
   

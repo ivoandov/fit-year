@@ -181,6 +181,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Migrate local images to object storage
+  app.post("/api/migrate-to-object-storage", async (req, res) => {
+    try {
+      const imageDir = path.join(process.cwd(), 'attached_assets', 'generated_images');
+      
+      if (!fs.existsSync(imageDir)) {
+        return res.json({ success: true, migratedCount: 0, message: "No local images directory" });
+      }
+      
+      const files = fs.readdirSync(imageDir).filter(f => f.endsWith('.png') || f.endsWith('.jpg') || f.endsWith('.jpeg'));
+      let migratedCount = 0;
+      const errors: string[] = [];
+      
+      const publicSearchPaths = objectStorageService.getPublicObjectSearchPaths();
+      const publicDir = publicSearchPaths[0];
+      
+      for (const filename of files) {
+        try {
+          const filePath = path.join(imageDir, filename);
+          const fileBuffer = fs.readFileSync(filePath);
+          
+          const { bucketName, objectName } = parseObjectPath(`${publicDir}/exercises/${filename}`);
+          const bucket = objectStorageClient.bucket(bucketName);
+          const file = bucket.file(objectName);
+          
+          await file.save(fileBuffer, {
+            contentType: 'image/png',
+            metadata: {
+              'custom:aclPolicy': JSON.stringify({ owner: 'system', visibility: 'public' })
+            }
+          });
+          
+          migratedCount++;
+          console.log(`Migrated to object storage: ${filename}`);
+        } catch (err: any) {
+          errors.push(`${filename}: ${err.message}`);
+          console.error(`Failed to migrate ${filename}:`, err);
+        }
+      }
+      
+      res.json({
+        success: true,
+        migratedCount,
+        totalFiles: files.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Exercises
   app.get("/api/exercises", async (req, res) => {
     try {
