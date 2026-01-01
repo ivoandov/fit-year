@@ -150,6 +150,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/exercises/:id/regenerate-image", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const exercises = await storage.getExercises();
+      const exercise = exercises.find(ex => ex.id === id);
+      
+      if (!exercise) {
+        return res.status(404).json({ error: "Exercise not found" });
+      }
+      
+      res.json({ message: "Image regeneration started" });
+      
+      generateExerciseImage(exercise.id, exercise.name, exercise.muscleGroups as string[]).catch(err => {
+        console.error("Image regeneration failed:", err);
+      });
+    } catch (error) {
+      console.error("Error regenerating image:", error);
+      res.status(500).json({ error: "Failed to regenerate image" });
+    }
+  });
+
   // Scheduled Workouts
   app.get("/api/scheduled-workouts", async (req, res) => {
     try {
