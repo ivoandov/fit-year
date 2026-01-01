@@ -70,6 +70,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Background worker to check and generate missing images
+  let isProcessingImages = false;
+  
+  async function checkAndGenerateMissingImages() {
+    if (isProcessingImages) {
+      return;
+    }
+    
+    isProcessingImages = true;
+    
+    try {
+      const allExercises = await storage.getExercises();
+      const exercisesWithoutImages = allExercises.filter(ex => !ex.imageUrl);
+      
+      if (exercisesWithoutImages.length > 0) {
+        console.log(`Found ${exercisesWithoutImages.length} exercises without images`);
+        
+        // Process one exercise at a time to respect rate limits
+        const exercise = exercisesWithoutImages[0];
+        
+        // Double-check the exercise still needs an image
+        const currentExercise = allExercises.find(ex => ex.id === exercise.id);
+        if (currentExercise && !currentExercise.imageUrl) {
+          await generateExerciseImage(
+            exercise.id, 
+            exercise.name, 
+            exercise.muscleGroups as string[]
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error in background image worker:", error);
+    } finally {
+      isProcessingImages = false;
+    }
+  }
+  
+  // Start periodic check every 30 seconds
+  const imageCheckInterval = setInterval(checkAndGenerateMissingImages, 30000);
+  
+  // Run initial check after 5 seconds
+  setTimeout(checkAndGenerateMissingImages, 5000);
+
   app.put("/api/exercises/:id", async (req, res) => {
     try {
       const { id } = req.params;
