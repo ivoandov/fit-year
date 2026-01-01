@@ -74,20 +74,22 @@ export interface IStorage {
   updateExercise(id: string, exercise: Partial<InsertExercise>): Promise<Exercise | undefined>;
   deleteExercise(id: string): Promise<boolean>;
   
-  getWorkoutTemplates(): Promise<WorkoutTemplate[]>;
+  getWorkoutTemplates(userId?: string): Promise<WorkoutTemplate[]>;
   getWorkoutTemplate(id: string): Promise<WorkoutTemplate | undefined>;
   createWorkoutTemplate(template: InsertWorkoutTemplate): Promise<WorkoutTemplate>;
   updateWorkoutTemplate(id: string, template: Partial<InsertWorkoutTemplate>): Promise<WorkoutTemplate | undefined>;
   deleteWorkoutTemplate(id: string): Promise<boolean>;
   
-  getScheduledWorkouts(): Promise<ScheduledWorkout[]>;
+  getScheduledWorkouts(userId?: string): Promise<ScheduledWorkout[]>;
   getScheduledWorkout(id: string): Promise<ScheduledWorkout | undefined>;
   createScheduledWorkout(workout: InsertScheduledWorkout): Promise<ScheduledWorkout>;
   updateScheduledWorkout(id: string, workout: Partial<InsertScheduledWorkout>): Promise<ScheduledWorkout | undefined>;
   deleteScheduledWorkout(id: string): Promise<boolean>;
   
-  getCompletedWorkouts(): Promise<CompletedWorkout[]>;
+  getCompletedWorkouts(userId?: string): Promise<CompletedWorkout[]>;
+  getCompletedWorkout(id: string): Promise<CompletedWorkout | undefined>;
   createCompletedWorkout(workout: InsertCompletedWorkout): Promise<CompletedWorkout>;
+  updateCompletedWorkoutCalendarEventId(id: string, calendarEventId: string): Promise<void>;
   deleteCompletedWorkout(id: string): Promise<boolean>;
 }
 
@@ -254,13 +256,20 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getWorkoutTemplates(): Promise<WorkoutTemplate[]> {
+  async getWorkoutTemplates(userId?: string): Promise<WorkoutTemplate[]> {
     try {
-      const results = await neonClient`
-        SELECT id, name, exercises 
-        FROM workout_templates 
-        ORDER BY name
-      `;
+      const results = userId 
+        ? await neonClient`
+            SELECT id, user_id as "userId", name, exercises 
+            FROM workout_templates 
+            WHERE user_id = ${userId}
+            ORDER BY name
+          `
+        : await neonClient`
+            SELECT id, user_id as "userId", name, exercises 
+            FROM workout_templates 
+            ORDER BY name
+          `;
       return (results || []) as WorkoutTemplate[];
     } catch (error: any) {
       if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
@@ -274,7 +283,7 @@ export class DatabaseStorage implements IStorage {
   async getWorkoutTemplate(id: string): Promise<WorkoutTemplate | undefined> {
     try {
       const results = await neonClient`
-        SELECT id, name, exercises 
+        SELECT id, user_id as "userId", name, exercises 
         FROM workout_templates 
         WHERE id = ${id}
       `;
@@ -291,11 +300,12 @@ export class DatabaseStorage implements IStorage {
     const id = crypto.randomUUID();
     const exercisesJson = JSON.stringify(template.exercises || []);
     await neonClient`
-      INSERT INTO workout_templates (id, name, exercises)
-      VALUES (${id}, ${template.name}, ${exercisesJson}::jsonb)
+      INSERT INTO workout_templates (id, user_id, name, exercises)
+      VALUES (${id}, ${template.userId || null}, ${template.name}, ${exercisesJson}::jsonb)
     `;
     return {
       id,
+      userId: template.userId || null,
       name: template.name,
       exercises: template.exercises || [],
     };
@@ -316,13 +326,20 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getScheduledWorkouts(): Promise<ScheduledWorkout[]> {
+  async getScheduledWorkouts(userId?: string): Promise<ScheduledWorkout[]> {
     try {
-      const results = await neonClient`
-        SELECT id, name, date, exercises 
-        FROM scheduled_workouts 
-        ORDER BY date
-      `;
+      const results = userId
+        ? await neonClient`
+            SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises 
+            FROM scheduled_workouts 
+            WHERE user_id = ${userId}
+            ORDER BY date
+          `
+        : await neonClient`
+            SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises 
+            FROM scheduled_workouts 
+            ORDER BY date
+          `;
       return (results || []) as ScheduledWorkout[];
     } catch (error: any) {
       if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
@@ -343,11 +360,12 @@ export class DatabaseStorage implements IStorage {
     const exercisesJson = JSON.stringify(workout.exercises || []);
     const dateStr = workout.date instanceof Date ? workout.date.toISOString() : workout.date;
     await neonClient`
-      INSERT INTO scheduled_workouts (id, name, date, exercises, template_id)
-      VALUES (${id}, ${workout.name}, ${dateStr}::timestamp, ${exercisesJson}::jsonb, ${workout.templateId || null})
+      INSERT INTO scheduled_workouts (id, user_id, name, date, exercises, template_id)
+      VALUES (${id}, ${workout.userId || null}, ${workout.name}, ${dateStr}::timestamp, ${exercisesJson}::jsonb, ${workout.templateId || null})
     `;
     return {
       id,
+      userId: workout.userId || null,
       name: workout.name,
       date: workout.date instanceof Date ? workout.date : new Date(workout.date),
       exercises: workout.exercises || [],
@@ -373,23 +391,62 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getCompletedWorkouts(): Promise<CompletedWorkout[]> {
+  async getCompletedWorkouts(userId?: string): Promise<CompletedWorkout[]> {
     try {
-      const results = await neonClient`
-        SELECT 
-          id, 
-          display_id as "displayId", 
-          name, 
-          exercises, 
-          completed_at as "completedAt"
-        FROM completed_workouts 
-        ORDER BY completed_at DESC
-      `;
+      const results = userId
+        ? await neonClient`
+            SELECT 
+              id, 
+              user_id as "userId",
+              display_id as "displayId", 
+              name, 
+              exercises, 
+              completed_at as "completedAt",
+              calendar_event_id as "calendarEventId"
+            FROM completed_workouts 
+            WHERE user_id = ${userId}
+            ORDER BY completed_at DESC
+          `
+        : await neonClient`
+            SELECT 
+              id, 
+              user_id as "userId",
+              display_id as "displayId", 
+              name, 
+              exercises, 
+              completed_at as "completedAt",
+              calendar_event_id as "calendarEventId"
+            FROM completed_workouts 
+            ORDER BY completed_at DESC
+          `;
       return (results || []) as CompletedWorkout[];
     } catch (error: any) {
       if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
         console.warn("Known Neon empty result issue, returning empty array");
         return [];
+      }
+      throw error;
+    }
+  }
+
+  async getCompletedWorkout(id: string): Promise<CompletedWorkout | undefined> {
+    try {
+      const results = await neonClient`
+        SELECT 
+          id, 
+          user_id as "userId",
+          display_id as "displayId", 
+          name, 
+          exercises, 
+          completed_at as "completedAt",
+          calendar_event_id as "calendarEventId"
+        FROM completed_workouts 
+        WHERE id = ${id}
+      `;
+      return results?.[0] as CompletedWorkout | undefined;
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return undefined;
       }
       throw error;
     }
@@ -403,17 +460,25 @@ export class DatabaseStorage implements IStorage {
       : (workout.completedAt || new Date().toISOString());
     
     await neonClient`
-      INSERT INTO completed_workouts (id, display_id, name, exercises, completed_at)
-      VALUES (${id}, ${workout.displayId}, ${workout.name}, ${exercisesJson}::jsonb, ${completedAtStr}::timestamp)
+      INSERT INTO completed_workouts (id, user_id, display_id, name, exercises, completed_at)
+      VALUES (${id}, ${workout.userId || null}, ${workout.displayId}, ${workout.name}, ${exercisesJson}::jsonb, ${completedAtStr}::timestamp)
     `;
     
     return {
       id,
+      userId: workout.userId || null,
       displayId: workout.displayId,
       name: workout.name,
       exercises: workout.exercises,
       completedAt: workout.completedAt instanceof Date ? workout.completedAt : new Date(completedAtStr),
+      calendarEventId: null,
     };
+  }
+
+  async updateCompletedWorkoutCalendarEventId(id: string, calendarEventId: string): Promise<void> {
+    await neonClient`
+      UPDATE completed_workouts SET calendar_event_id = ${calendarEventId} WHERE id = ${id}
+    `;
   }
 
   async deleteCompletedWorkout(id: string): Promise<boolean> {

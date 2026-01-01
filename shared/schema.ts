@@ -14,12 +14,14 @@ export const exercises = pgTable("exercises", {
 
 export const workoutTemplates = pgTable("workout_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   name: text("name").notNull(),
   exercises: jsonb("exercises").notNull(),
 });
 
 export const scheduledWorkouts = pgTable("scheduled_workouts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   templateId: varchar("template_id"),
   name: text("name").notNull(),
   date: timestamp("date").notNull(),
@@ -28,10 +30,12 @@ export const scheduledWorkouts = pgTable("scheduled_workouts", {
 
 export const completedWorkouts = pgTable("completed_workouts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   displayId: text("display_id").notNull(),
   name: text("name").notNull(),
   exercises: jsonb("exercises").notNull(),
   completedAt: timestamp("completed_at").notNull().default(sql`now()`),
+  calendarEventId: varchar("calendar_event_id"),
 });
 
 export const insertExerciseSchema = createInsertSchema(exercises).omit({ id: true });
@@ -49,3 +53,4 @@ export type InsertScheduledWorkout = z.infer<typeof insertScheduledWorkoutSchema
 export type InsertCompletedWorkout = z.infer<typeof insertCompletedWorkoutSchema>;
 
 export * from "./models/chat";
+export * from "./models/auth";

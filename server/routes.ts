@@ -4,12 +4,17 @@ import { storage, seedBuiltInExercises } from "./storage";
 import { insertExerciseSchema, insertWorkoutTemplateSchema, insertScheduledWorkoutSchema, insertCompletedWorkoutSchema } from "@shared/schema";
 import { registerImageRoutes, openai } from "./replit_integrations/image";
 import { registerObjectStorageRoutes, ObjectStorageService, objectStorageClient } from "./replit_integrations/object_storage";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { createCalendarEvent, deleteCalendarEvent } from "./replit_integrations/google-calendar";
 import * as fs from "fs";
 import * as path from "path";
 
 const objectStorageService = new ObjectStorageService();
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication first (before other routes)
+  await setupAuth(app);
+  registerAuthRoutes(app);
   // Database status and manual seed endpoint
   app.get("/api/db-status", async (req, res) => {
     try {
@@ -531,19 +536,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Workout Templates
-  app.get("/api/workout-templates", async (req, res) => {
+  // Workout Templates (requires authentication)
+  app.get("/api/workout-templates", isAuthenticated, async (req: any, res) => {
     try {
-      const templates = await storage.getWorkoutTemplates();
+      const userId = req.user?.claims?.sub;
+      const templates = await storage.getWorkoutTemplates(userId);
       res.json(templates);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch workout templates" });
     }
   });
 
-  app.post("/api/workout-templates", async (req, res) => {
+  app.post("/api/workout-templates", isAuthenticated, async (req: any, res) => {
     try {
-      const parsed = insertWorkoutTemplateSchema.safeParse(req.body);
+      const userId = req.user?.claims?.sub;
+      const parsed = insertWorkoutTemplateSchema.safeParse({ ...req.body, userId });
       if (!parsed.success) {
         console.error("Workout template validation error:", parsed.error.message);
         return res.status(400).json({ error: parsed.error.message });
@@ -556,26 +563,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/workout-templates/:id", async (req, res) => {
+  app.put("/api/workout-templates/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      
+      // Verify ownership before updating
+      const existing = await storage.getWorkoutTemplate(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      if (existing.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
       const parsed = insertWorkoutTemplateSchema.partial().safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
       const template = await storage.updateWorkoutTemplate(id, parsed.data);
-      if (!template) {
-        return res.status(404).json({ error: "Template not found" });
-      }
       res.json(template);
     } catch (error) {
       res.status(500).json({ error: "Failed to update workout template" });
     }
   });
 
-  app.delete("/api/workout-templates/:id", async (req, res) => {
+  app.delete("/api/workout-templates/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      
+      // Verify ownership before deleting
+      const existing = await storage.getWorkoutTemplate(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      if (existing.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
       const deleted = await storage.deleteWorkoutTemplate(id);
       if (!deleted) {
         return res.status(404).json({ error: "Template not found" });
@@ -586,20 +612,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Scheduled Workouts
-  app.get("/api/scheduled-workouts", async (req, res) => {
+  // Scheduled Workouts (requires authentication)
+  app.get("/api/scheduled-workouts", isAuthenticated, async (req: any, res) => {
     try {
-      const workouts = await storage.getScheduledWorkouts();
+      const userId = req.user?.claims?.sub;
+      const workouts = await storage.getScheduledWorkouts(userId);
       res.json(workouts);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch scheduled workouts" });
     }
   });
 
-  app.post("/api/scheduled-workouts", async (req, res) => {
+  app.post("/api/scheduled-workouts", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
       const body = {
         ...req.body,
+        userId,
         date: new Date(req.body.date),
       };
       const parsed = insertScheduledWorkoutSchema.safeParse(body);
@@ -615,9 +644,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/scheduled-workouts/:id", async (req, res) => {
+  app.put("/api/scheduled-workouts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      
+      // Verify ownership before updating
+      const existing = await storage.getScheduledWorkout(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Workout not found" });
+      }
+      if (existing.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
       const body = {
         ...req.body,
         date: req.body.date ? new Date(req.body.date) : undefined,
@@ -627,18 +667,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: parsed.error.message });
       }
       const workout = await storage.updateScheduledWorkout(id, parsed.data);
-      if (!workout) {
-        return res.status(404).json({ error: "Workout not found" });
-      }
       res.json(workout);
     } catch (error) {
       res.status(500).json({ error: "Failed to update scheduled workout" });
     }
   });
 
-  app.delete("/api/scheduled-workouts/:id", async (req, res) => {
+  app.delete("/api/scheduled-workouts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      
+      // Verify ownership before deleting
+      const existing = await storage.getScheduledWorkout(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Workout not found" });
+      }
+      if (existing.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
       const deleted = await storage.deleteScheduledWorkout(id);
       if (!deleted) {
         return res.status(404).json({ error: "Workout not found" });
@@ -649,30 +697,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Completed Workouts
-  app.get("/api/completed-workouts", async (req, res) => {
+  // Completed Workouts (requires authentication)
+  app.get("/api/completed-workouts", isAuthenticated, async (req: any, res) => {
     try {
-      const workouts = await storage.getCompletedWorkouts();
+      const userId = req.user?.claims?.sub;
+      const workouts = await storage.getCompletedWorkouts(userId);
       res.json(workouts);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch completed workouts" });
     }
   });
 
-  app.post("/api/completed-workouts", async (req, res) => {
+  app.post("/api/completed-workouts", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
       const { displayId, name, exercises, completedAt } = req.body;
       
       if (!displayId || !name || !exercises) {
         return res.status(400).json({ error: "Missing required fields: displayId, name, exercises" });
       }
       
+      const completedDate = completedAt ? new Date(completedAt) : new Date();
       const workout = await storage.createCompletedWorkout({
+        userId,
         displayId,
         name,
         exercises,
-        completedAt: completedAt ? new Date(completedAt) : new Date(),
+        completedAt: completedDate,
       });
+      
+      // Sync to Google Calendar in background (don't block response)
+      createCalendarEvent(name, completedDate)
+        .then(async (eventId) => {
+          if (eventId) {
+            await storage.updateCompletedWorkoutCalendarEventId(workout.id, eventId);
+            console.log(`Synced workout "${name}" to Google Calendar: ${eventId}`);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to sync to Google Calendar:", err);
+        });
+      
       res.status(201).json(workout);
     } catch (error) {
       console.error("Failed to create completed workout:", error);
@@ -680,9 +745,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/completed-workouts/:id", async (req, res) => {
+  app.delete("/api/completed-workouts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      
+      // Get the workout to check for ownership and calendar event
+      const workout = await storage.getCompletedWorkout(id);
+      if (!workout) {
+        return res.status(404).json({ error: "Workout not found" });
+      }
+      
+      // Verify ownership before deleting
+      if (workout.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      // Delete from Google Calendar if linked
+      if (workout.calendarEventId) {
+        deleteCalendarEvent(workout.calendarEventId).catch((err) => {
+          console.error("Failed to delete calendar event:", err);
+        });
+      }
+      
       const deleted = await storage.deleteCompletedWorkout(id);
       if (!deleted) {
         return res.status(404).json({ error: "Workout not found" });
