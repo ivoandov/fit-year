@@ -36,12 +36,26 @@ interface ScheduledWorkout {
   name: string;
   date: Date;
   exercises: Exercise[];
+  templateId?: string;
+}
+
+interface WorkoutTemplate {
+  id: string;
+  name: string;
+  exercises: Exercise[];
 }
 
 interface DBScheduledWorkout {
   id: string;
   name: string;
   date: string;
+  exercises: any;
+  templateId?: string;
+}
+
+interface DBWorkoutTemplate {
+  id: string;
+  name: string;
   exercises: any;
 }
 
@@ -59,12 +73,17 @@ export default function WorkoutsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showEditorDialog, setShowEditorDialog] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<ScheduledWorkout | null>(null);
-  const [workoutToDelete, setWorkoutToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [workoutToDelete, setWorkoutToDelete] = useState<{ id: string; name: string; isTemplate?: boolean } | null>(null);
   const { toast } = useToast();
   const { startWorkout, isWorkoutCompleted, completedWorkouts, restartWorkout } = useWorkout();
 
   const { data: dbWorkouts = [], isLoading } = useQuery<DBScheduledWorkout[]>({
     queryKey: ["/api/scheduled-workouts"],
+  });
+
+  const { data: dbTemplates = [], isLoading: isLoadingTemplates } = useQuery<DBWorkoutTemplate[]>({
+    queryKey: ["/api/workout-templates"],
   });
 
   const { data: dbExercises = [] } = useQuery<DBExercise[]>({
@@ -88,14 +107,74 @@ export default function WorkoutsPage() {
       ...ex,
       muscleGroups: ex.muscleGroups || [],
     })) as Exercise[],
+    templateId: w.templateId,
   }));
 
+  const workoutTemplates: WorkoutTemplate[] = dbTemplates.map((t) => ({
+    id: t.id,
+    name: t.name,
+    exercises: (t.exercises as any[]).map((ex: any) => ({
+      ...ex,
+      muscleGroups: ex.muscleGroups || [],
+    })) as Exercise[],
+  }));
+
+  const createTemplateMutation = useMutation({
+    mutationFn: async (template: { name: string; exercises: Exercise[] }) => {
+      return apiRequest("POST", "/api/workout-templates", {
+        name: template.name,
+        exercises: template.exercises,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workout-templates"] });
+    },
+    onError: (error) => {
+      console.error("Failed to create workout template:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create workout. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateTemplateMutation = useMutation({
+    mutationFn: async ({ id, ...template }: { id: string; name: string; exercises: Exercise[] }) => {
+      return apiRequest("PUT", `/api/workout-templates/${id}`, {
+        name: template.name,
+        exercises: template.exercises,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workout-templates"] });
+    },
+    onError: (error) => {
+      console.error("Failed to update workout template:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update workout. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/workout-templates/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/workout-templates"] });
+    },
+  });
+
   const createMutation = useMutation({
-    mutationFn: async (workout: { name: string; date: Date; exercises: Exercise[] }) => {
+    mutationFn: async (workout: { name: string; date: Date; exercises: Exercise[]; templateId?: string }) => {
       return apiRequest("POST", "/api/scheduled-workouts", {
         name: workout.name,
         date: workout.date.toISOString(),
         exercises: workout.exercises,
+        templateId: workout.templateId,
       });
     },
     onSuccess: () => {
@@ -105,7 +184,7 @@ export default function WorkoutsPage() {
       console.error("Failed to create workout:", error);
       toast({
         title: "Error",
-        description: "Failed to create workout. Please try again.",
+        description: "Failed to schedule workout. Please try again.",
         variant: "destructive",
       });
     },
@@ -155,8 +234,21 @@ export default function WorkoutsPage() {
     }
   };
 
-  const handleSaveWorkout = (data: WorkoutData) => {
-    if (data.id) {
+  const handleSaveWorkout = async (data: WorkoutData) => {
+    if (editingTemplateId) {
+      // Editing an existing template
+      updateTemplateMutation.mutate({
+        id: editingTemplateId,
+        name: data.name,
+        exercises: data.exercises,
+      });
+      toast({
+        title: "Workout Updated",
+        description: `${data.name} has been updated successfully.`,
+      });
+      setEditingTemplateId(null);
+    } else if (data.id) {
+      // Editing an existing scheduled workout
       updateMutation.mutate({
         id: data.id,
         name: data.name,
@@ -168,15 +260,36 @@ export default function WorkoutsPage() {
         description: `${data.name} has been updated successfully.`,
       });
     } else {
-      createMutation.mutate({
-        name: data.name,
-        date: data.date,
-        exercises: data.exercises,
-      });
-      toast({
-        title: "Workout Created",
-        description: `${data.name} scheduled for ${format(data.date, "PPP")}`,
-      });
+      // Create both a template AND schedule the workout
+      try {
+        const templateRes = await apiRequest("POST", "/api/workout-templates", {
+          name: data.name,
+          exercises: data.exercises,
+        });
+        const template = await templateRes.json();
+        
+        // Schedule the workout linked to the template
+        createMutation.mutate({
+          name: data.name,
+          date: data.date,
+          exercises: data.exercises,
+          templateId: template.id,
+        });
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/workout-templates"] });
+        
+        toast({
+          title: "Workout Created",
+          description: `${data.name} scheduled for ${format(data.date, "PPP")}`,
+        });
+      } catch (error) {
+        console.error("Failed to create workout:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create workout. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
     setEditingWorkout(null);
   };
@@ -195,11 +308,19 @@ export default function WorkoutsPage() {
 
   const confirmDeleteWorkout = () => {
     if (workoutToDelete) {
-      deleteMutation.mutate(workoutToDelete.id);
-      toast({
-        title: "Workout Deleted",
-        description: "The workout has been removed from your schedule.",
-      });
+      if (workoutToDelete.isTemplate) {
+        deleteTemplateMutation.mutate(workoutToDelete.id);
+        toast({
+          title: "Workout Deleted",
+          description: "The workout has been removed from your library.",
+        });
+      } else {
+        deleteMutation.mutate(workoutToDelete.id);
+        toast({
+          title: "Workout Deleted",
+          description: "The workout has been removed from your schedule.",
+        });
+      }
       setWorkoutToDelete(null);
     }
   };
@@ -212,6 +333,39 @@ export default function WorkoutsPage() {
   const handleRestartWorkout = (completedWorkout: typeof completedWorkouts[0]) => {
     restartWorkout(completedWorkout);
     setLocation("/track");
+  };
+
+  const handleStartFromTemplate = (templateId: string) => {
+    const template = workoutTemplates.find(t => t.id === templateId);
+    if (template) {
+      // Start workout directly from template (no scheduling needed)
+      startWorkout({
+        id: templateId,
+        displayId: `template-${templateId}-${Date.now()}`,
+        name: template.name,
+        exercises: template.exercises,
+      });
+      setLocation("/track");
+    }
+  };
+
+  const handleEditTemplate = (templateId: string) => {
+    const template = workoutTemplates.find(t => t.id === templateId);
+    if (template) {
+      // Track that we're editing a template
+      setEditingTemplateId(templateId);
+      setEditingWorkout({
+        id: template.id,
+        name: template.name,
+        date: new Date(), // Default to today for the date picker
+        exercises: template.exercises,
+      });
+      setShowEditorDialog(true);
+    }
+  };
+
+  const handleDeleteTemplate = (templateId: string, templateName: string) => {
+    setWorkoutToDelete({ id: templateId, name: templateName, isTemplate: true });
   };
 
   const getDisplayedWorkouts = () => {
@@ -547,28 +701,28 @@ export default function WorkoutsPage() {
               Your workout library
             </p>
           </div>
-          {scheduledWorkouts.length > 0 ? (
+          {workoutTemplates.length > 0 ? (
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {scheduledWorkouts.map((workout) => (
+              {workoutTemplates.map((template) => (
                 <Card 
-                  key={workout.id}
+                  key={template.id}
                   className="hover-elevate"
-                  data-testid={`card-library-workout-${workout.id}`}
+                  data-testid={`card-library-workout-${template.id}`}
                 >
                   <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-base sm:text-lg font-semibold truncate">
-                        {workout.name}
+                        {template.name}
                       </CardTitle>
                       <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                        {format(workout.date, "PPP")}
+                        {template.exercises.length} exercises
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <Button
                         size="icon"
-                        onClick={() => handleStartWorkout(workout.id)}
-                        data-testid={`button-start-library-workout-${workout.id}`}
+                        onClick={() => handleStartFromTemplate(template.id)}
+                        data-testid={`button-start-library-workout-${template.id}`}
                       >
                         <Play className="h-4 w-4" />
                       </Button>
@@ -577,23 +731,23 @@ export default function WorkoutsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            data-testid={`button-library-workout-menu-${workout.id}`}
+                            data-testid={`button-library-workout-menu-${template.id}`}
                           >
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => handleEditWorkout(workout.id)}
-                            data-testid={`button-edit-library-workout-${workout.id}`}
+                            onClick={() => handleEditTemplate(template.id)}
+                            data-testid={`button-edit-library-workout-${template.id}`}
                           >
                             <Pencil className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleDeleteWorkout(workout.id, workout.name)}
+                            onClick={() => handleDeleteTemplate(template.id, template.name)}
                             className="text-destructive"
-                            data-testid={`button-delete-library-workout-${workout.id}`}
+                            data-testid={`button-delete-library-workout-${template.id}`}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
@@ -603,18 +757,15 @@ export default function WorkoutsPage() {
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-                    <div className="text-xs sm:text-sm text-muted-foreground">
-                      {workout.exercises.length} exercises
-                    </div>
                     <div className="flex flex-wrap gap-1 mt-2">
-                      {workout.exercises.slice(0, 3).map((ex) => (
+                      {template.exercises.slice(0, 3).map((ex) => (
                         <span key={ex.id} className="text-xs bg-accent px-2 py-0.5 rounded">
                           {ex.name}
                         </span>
                       ))}
-                      {workout.exercises.length > 3 && (
+                      {template.exercises.length > 3 && (
                         <span className="text-xs text-muted-foreground">
-                          +{workout.exercises.length - 3} more
+                          +{template.exercises.length - 3} more
                         </span>
                       )}
                     </div>
@@ -637,6 +788,7 @@ export default function WorkoutsPage() {
           onClose={() => {
             setShowEditorDialog(false);
             setEditingWorkout(null);
+            setEditingTemplateId(null);
           }}
           onSave={handleSaveWorkout}
           initialData={editingWorkout ? { ...editingWorkout, repeatType: "none" as const } : null}
