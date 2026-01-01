@@ -13,7 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, X } from "lucide-react";
+import { Plus, Pencil, X, RefreshCw } from "lucide-react";
 
 interface ExerciseCardProps {
   id: string;
@@ -23,9 +23,11 @@ interface ExerciseCardProps {
   imageUrl?: string;
   exerciseType?: string;
   isEditable?: boolean;
+  isRegenerating?: boolean;
   onAdd?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onRegenerateImage?: (id: string) => void;
 }
 
 export function ExerciseCard({
@@ -35,9 +37,11 @@ export function ExerciseCard({
   description,
   imageUrl,
   isEditable = false,
+  isRegenerating = false,
   onEdit,
   onAdd,
   onDelete,
+  onRegenerateImage,
 }: ExerciseCardProps) {
   const [showImageDialog, setShowImageDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -74,6 +78,19 @@ export function ExerciseCard({
             >
               <X className="h-6 w-6" strokeWidth={3} />
             </button>
+            {onRegenerateImage && (
+              <button
+                className="absolute bottom-2 left-2 text-white drop-shadow-lg hover:text-primary transition-colors z-10 p-1 rounded-full bg-black/30 backdrop-blur-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRegenerateImage(id);
+                }}
+                disabled={isRegenerating}
+                data-testid={`button-regenerate-image-${id}`}
+              >
+                <RefreshCw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} strokeWidth={2.5} />
+              </button>
+            )}
           </div>
         ) : (
           <button

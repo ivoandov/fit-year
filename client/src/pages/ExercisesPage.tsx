@@ -28,6 +28,7 @@ export default function ExercisesPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingExercise, setEditingExercise] = useState<ExerciseFormData | null>(null);
   const [exerciseToAddToWorkout, setExerciseToAddToWorkout] = useState<Exercise | null>(null);
+  const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { muscleGroups: userMuscleGroups } = useSettings();
   const muscleGroups = ["All", ...userMuscleGroups];
@@ -121,6 +122,37 @@ export default function ExercisesPage() {
     },
   });
 
+  const handleRegenerateImage = async (id: string) => {
+    setRegeneratingIds(prev => new Set(prev).add(id));
+    try {
+      await apiRequest("POST", `/api/exercises/${id}/regenerate-image`);
+      toast({
+        title: "Regenerating Image",
+        description: "A new AI image is being generated. It will appear in a few seconds.",
+      });
+      // Refresh after a delay to pick up the generated image
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
+        setRegeneratingIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(id);
+          return newSet;
+        });
+      }, 10000);
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to regenerate image. Please try again.",
+        variant: "destructive",
+      });
+      setRegeneratingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+    }
+  };
+
   const filteredExercises = allExercises.filter((exercise) => {
     const matchesMuscleGroup = selectedMuscleGroup === "All" || exercise.muscleGroups.includes(selectedMuscleGroup);
     const matchesSearch = exercise.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -213,9 +245,11 @@ export default function ExercisesPage() {
               key={exercise.id}
               {...exercise}
               isEditable={true}
+              isRegenerating={regeneratingIds.has(exercise.id)}
               onAdd={handleAddExercise}
               onEdit={handleEditExercise}
               onDelete={handleDeleteExercise}
+              onRegenerateImage={customExerciseIds.has(exercise.id) ? handleRegenerateImage : undefined}
             />
           ))}
         </div>
