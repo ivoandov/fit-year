@@ -45,15 +45,20 @@ export async function seedBuiltInExercises(): Promise<void> {
           `;
           console.log(`Seeded exercise: ${exercise.name}`);
         } else if (innerError?.code === '23505') {
-          console.log(`Exercise already exists: ${exercise.name}`);
+          // Exercise already exists, skip silently
         } else {
           throw innerError;
         }
       }
     }
     console.log("Built-in exercises seeding complete.");
-  } catch (error) {
-    console.error("Error seeding built-in exercises:", error);
+  } catch (error: any) {
+    // Don't crash the app if seeding fails - log and continue
+    if (error?.message?.includes('fetch failed') || error?.code === 'EAI_AGAIN') {
+      console.warn("Database connection failed during seeding - will retry on next request");
+    } else {
+      console.error("Error seeding built-in exercises:", error);
+    }
   }
 }
 

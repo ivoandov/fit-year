@@ -1,0 +1,168 @@
+2025-12-31 17:15:58.21
+e2bdffb9
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-12-31 17:15:58.21
+e2bdffb9
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2025-12-31 17:15:58.21
+e2bdffb9
+System
+starting up user application
+2025-12-31 17:15:59.18
+e2bdffb9
+User
+> rest-express@1.0.0 start
+2025-12-31 17:15:59.18
+e2bdffb9
+User
+> NODE_ENV=production node dist/index.js
+2025-12-31 17:15:59.86
+e2bdffb9
+User
+Checking for built-in exercises to seed...
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+position: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+where: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+detail: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+at async seedBuiltInExercises (file:///home/runner/workspace/dist/index.js:196:26)
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+[cause]: Error: getaddrinfo EAI_AGAIN helium
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+file: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+}
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+column: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26) {
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+schema: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+at async file:///home/runner/workspace/dist/index.js:842:3 {
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+constraint: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+code: 'EAI_AGAIN',
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+hint: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+syscall: 'getaddrinfo',
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+Error seeding built-in exercises: NeonDbError: Error connecting to database: fetch failed
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+at node:internal/deps/undici/undici:13510:13
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+code: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+at execute (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1549:24)
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+at async execute (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1548:15)
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+errno: -3001,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+at async file:///home/runner/workspace/dist/index.js:842:3 {
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+sourceError: TypeError: fetch failed
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+at async seedBuiltInExercises (file:///home/runner/workspace/dist/index.js:196:26)
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+dataType: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+}
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+internalPosition: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+line: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+table: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+severity: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+hostname: 'helium'
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+routine: undefined,
+2025-12-31 17:15:59.92
+e2bdffb9
+User
+internalQuery: undefined,
+2025-12-31 17:15:59.98
+e2bdffb9
+User
+1:15:59 AM [express] serving on port 5000
