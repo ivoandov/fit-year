@@ -4,12 +4,15 @@ import { eq, desc, sql as drizzleSql } from "drizzle-orm";
 import * as schema from "@shared/schema";
 import {
   exercises,
+  workoutTemplates,
   scheduledWorkouts,
   completedWorkouts,
   type Exercise,
+  type WorkoutTemplate,
   type ScheduledWorkout,
   type CompletedWorkout,
   type InsertExercise,
+  type InsertWorkoutTemplate,
   type InsertScheduledWorkout,
   type InsertCompletedWorkout,
 } from "@shared/schema";
@@ -70,6 +73,12 @@ export interface IStorage {
   createExerciseWithId(id: string, exercise: InsertExercise): Promise<Exercise>;
   updateExercise(id: string, exercise: Partial<InsertExercise>): Promise<Exercise | undefined>;
   deleteExercise(id: string): Promise<boolean>;
+  
+  getWorkoutTemplates(): Promise<WorkoutTemplate[]>;
+  getWorkoutTemplate(id: string): Promise<WorkoutTemplate | undefined>;
+  createWorkoutTemplate(template: InsertWorkoutTemplate): Promise<WorkoutTemplate>;
+  updateWorkoutTemplate(id: string, template: Partial<InsertWorkoutTemplate>): Promise<WorkoutTemplate | undefined>;
+  deleteWorkoutTemplate(id: string): Promise<boolean>;
   
   getScheduledWorkouts(): Promise<ScheduledWorkout[]>;
   getScheduledWorkout(id: string): Promise<ScheduledWorkout | undefined>;
@@ -241,6 +250,59 @@ export class DatabaseStorage implements IStorage {
       return true;
     } catch (error) {
       console.error("Error deleting exercise:", error);
+      return false;
+    }
+  }
+
+  async getWorkoutTemplates(): Promise<WorkoutTemplate[]> {
+    try {
+      const results = await neonClient`
+        SELECT id, name, exercises 
+        FROM workout_templates 
+        ORDER BY name
+      `;
+      return (results || []) as WorkoutTemplate[];
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        console.warn("Known Neon empty result issue, returning empty array");
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async getWorkoutTemplate(id: string): Promise<WorkoutTemplate | undefined> {
+    try {
+      const results = await neonClient`
+        SELECT id, name, exercises 
+        FROM workout_templates 
+        WHERE id = ${id}
+      `;
+      return results?.[0] as WorkoutTemplate | undefined;
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
+  async createWorkoutTemplate(template: InsertWorkoutTemplate): Promise<WorkoutTemplate> {
+    const results = await db.insert(workoutTemplates).values(template).returning();
+    return results[0];
+  }
+
+  async updateWorkoutTemplate(id: string, template: Partial<InsertWorkoutTemplate>): Promise<WorkoutTemplate | undefined> {
+    const results = await db.update(workoutTemplates).set(template).where(eq(workoutTemplates.id, id)).returning();
+    return results[0];
+  }
+
+  async deleteWorkoutTemplate(id: string): Promise<boolean> {
+    try {
+      await neonClient`DELETE FROM workout_templates WHERE id = ${id}`;
+      return true;
+    } catch (error) {
+      console.error("Error deleting workout template:", error);
       return false;
     }
   }

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, seedBuiltInExercises } from "./storage";
-import { insertExerciseSchema, insertScheduledWorkoutSchema, insertCompletedWorkoutSchema } from "@shared/schema";
+import { insertExerciseSchema, insertWorkoutTemplateSchema, insertScheduledWorkoutSchema, insertCompletedWorkoutSchema } from "@shared/schema";
 import { registerImageRoutes, openai } from "./replit_integrations/image";
 import * as fs from "fs";
 import * as path from "path";
@@ -419,6 +419,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error regenerating image:", error);
       res.status(500).json({ error: "Failed to regenerate image" });
+    }
+  });
+
+  // Workout Templates
+  app.get("/api/workout-templates", async (req, res) => {
+    try {
+      const templates = await storage.getWorkoutTemplates();
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch workout templates" });
+    }
+  });
+
+  app.post("/api/workout-templates", async (req, res) => {
+    try {
+      const parsed = insertWorkoutTemplateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        console.error("Workout template validation error:", parsed.error.message);
+        return res.status(400).json({ error: parsed.error.message });
+      }
+      const template = await storage.createWorkoutTemplate(parsed.data);
+      res.status(201).json(template);
+    } catch (error) {
+      console.error("Failed to create workout template:", error);
+      res.status(500).json({ error: "Failed to create workout template" });
+    }
+  });
+
+  app.put("/api/workout-templates/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const parsed = insertWorkoutTemplateSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.message });
+      }
+      const template = await storage.updateWorkoutTemplate(id, parsed.data);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.json(template);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update workout template" });
+    }
+  });
+
+  app.delete("/api/workout-templates/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteWorkoutTemplate(id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete workout template" });
     }
   });
 
