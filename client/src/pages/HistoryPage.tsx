@@ -10,19 +10,39 @@ export default function HistoryPage() {
   const { completedWorkouts } = useWorkout();
   const { weekStart: weekStartDay, muscleGroups } = useSettings();
 
-  const historyData = completedWorkouts.map((workout, index) => ({
-    id: `${workout.displayId}-${index}`,
-    workoutName: workout.name,
-    date: workout.completedAt,
-    duration: Math.floor(Math.random() * 30 + 30),
-    exerciseCount: workout.exercises.length,
-    totalVolume: 0,
-    exercises: workout.exercises.map((ex: any) => ({
-      name: ex.name,
-      muscleGroups: ex.muscleGroups || [],
-      sets: ex.setsData || [],
-    })),
-  }));
+  const historyData = completedWorkouts.map((workout, index) => {
+    // Calculate total volume from actual set data (weight × reps)
+    let workoutVolume = 0;
+    let totalSets = 0;
+    
+    const exercises = workout.exercises.map((ex: any) => {
+      const sets = ex.setsData || [];
+      sets.forEach((set: any) => {
+        if (set.completed && set.weight && set.reps) {
+          workoutVolume += set.weight * set.reps;
+        }
+        if (set.completed) {
+          totalSets++;
+        }
+      });
+      return {
+        name: ex.name,
+        muscleGroups: ex.muscleGroups || [],
+        sets,
+      };
+    });
+
+    return {
+      id: `${workout.displayId}-${index}`,
+      workoutName: workout.name,
+      date: workout.completedAt,
+      duration: 0, // Duration tracking not yet implemented
+      exerciseCount: workout.exercises.length,
+      totalVolume: workoutVolume,
+      totalSets,
+      exercises,
+    };
+  });
 
   const now = new Date();
   const weekStartsOn = weekStartDay === "monday" ? 1 : 0;
@@ -40,6 +60,7 @@ export default function HistoryPage() {
   const totalWorkouts = historyData.length;
 
   const totalVolume = historyData.reduce((sum, w) => sum + w.totalVolume, 0);
+  const totalSetsCompleted = historyData.reduce((sum, w) => sum + w.totalSets, 0);
 
   const calculateWeeklySetsByMuscle = () => {
     const setsByMuscle: { [key: string]: number } = {};
@@ -67,7 +88,7 @@ export default function HistoryPage() {
     { label: "Total Workouts", value: totalWorkouts.toString(), icon: Calendar, testId: "total-workouts" },
     { label: "This Week", value: workoutsThisWeek.toString(), icon: Flame, testId: "this-week" },
     { label: "This Month", value: workoutsThisMonth.toString(), icon: Activity, testId: "this-month" },
-    { label: "Total Volume", value: totalVolume > 0 ? `${(totalVolume / 1000).toFixed(1)}K` : "0", icon: TrendingUp, testId: "total-volume" },
+    { label: "Total Sets", value: totalSetsCompleted.toString(), icon: TrendingUp, testId: "total-sets" },
   ];
 
   return (
