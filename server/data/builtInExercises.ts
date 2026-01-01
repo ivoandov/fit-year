@@ -13,7 +13,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Barbell Squat",
     muscleGroups: ["Legs", "Core"],
     description: "Compound lower body exercise targeting quads, glutes, and hamstrings. Stand with barbell on upper back, squat down keeping chest up.",
-    imageUrl: "/generated_images/Barbell_squat_exercise_photo_39428c05.png",
+    imageUrl: "/objects/public/exercises/Barbell_squat_exercise_photo_39428c05.png",
     exerciseType: "weight_reps",
   },
   {
@@ -21,7 +21,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Bench Press",
     muscleGroups: ["Chest", "Triceps", "Shoulders"],
     description: "Upper body pressing movement for chest, shoulders, and triceps. Lie on bench and press barbell from chest to full extension.",
-    imageUrl: "/generated_images/Bench_press_exercise_photo_6f5085c2.png",
+    imageUrl: "/objects/public/exercises/Bench_press_exercise_photo_6f5085c2.png",
     exerciseType: "weight_reps",
   },
   {
@@ -29,7 +29,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Deadlift",
     muscleGroups: ["Back", "Legs", "Core"],
     description: "Full body compound exercise emphasizing posterior chain. Lift barbell from floor to standing position with proper hip hinge.",
-    imageUrl: "/generated_images/Deadlift_exercise_photo_0ef501a3.png",
+    imageUrl: "/objects/public/exercises/Deadlift_exercise_photo_0ef501a3.png",
     exerciseType: "weight_reps",
   },
   {
@@ -37,7 +37,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Treadmill Run",
     muscleGroups: ["Cardio"],
     description: "Cardiovascular endurance training on treadmill. Adjust speed and incline for varying intensity levels.",
-    imageUrl: "/generated_images/Treadmill_running_exercise_photo_b0cf7ff7.png",
+    imageUrl: "/objects/public/exercises/Treadmill_running_exercise_photo_b0cf7ff7.png",
     exerciseType: "distance_time",
   },
   {
@@ -45,7 +45,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Pull-ups",
     muscleGroups: ["Back", "Biceps"],
     description: "Bodyweight exercise for back and biceps. Hang from bar and pull body up until chin clears the bar.",
-    imageUrl: "/generated_images/Pull-ups_exercise_photo_303dd425.png",
+    imageUrl: "/objects/public/exercises/Pull-ups_exercise_photo_303dd425.png",
     exerciseType: "weight_reps",
   },
   {
@@ -53,7 +53,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Plank",
     muscleGroups: ["Core"],
     description: "Isometric core strengthening exercise. Hold body in straight line position supported by forearms and toes.",
-    imageUrl: "/generated_images/Plank_exercise_photo_3a52c638.png",
+    imageUrl: "/objects/public/exercises/Plank_exercise_photo_3a52c638.png",
     exerciseType: "distance_time",
   },
   {
@@ -61,7 +61,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Shoulder Press",
     muscleGroups: ["Shoulders", "Triceps"],
     description: "Overhead pressing movement for shoulders and triceps. Press weight from shoulder level to full arm extension overhead.",
-    imageUrl: "/generated_images/female_shoulder_press_exercise.png",
+    imageUrl: "/objects/public/exercises/female_shoulder_press_exercise.png",
     exerciseType: "weight_reps",
   },
   {
@@ -69,7 +69,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Bicep Curls",
     muscleGroups: ["Biceps"],
     description: "Isolation exercise for biceps. Curl weight from extended arm position to shoulder level while keeping elbows stationary.",
-    imageUrl: "/generated_images/male_bicep_curls_exercise.png",
+    imageUrl: "/objects/public/exercises/male_bicep_curls_exercise.png",
     exerciseType: "weight_reps",
   },
   {
@@ -77,7 +77,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Tricep Dips",
     muscleGroups: ["Triceps"],
     description: "Bodyweight exercise for triceps. Lower body by bending arms, then push back up to starting position.",
-    imageUrl: "/generated_images/female_tricep_dips_exercise.png",
+    imageUrl: "/objects/public/exercises/female_tricep_dips_exercise.png",
     exerciseType: "weight_reps",
   },
   {
@@ -85,7 +85,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Lunges",
     muscleGroups: ["Legs", "Core"],
     description: "Unilateral leg exercise for quads, glutes, and balance. Step forward and lower back knee toward ground.",
-    imageUrl: "/generated_images/male_lunges_exercise.png",
+    imageUrl: "/objects/public/exercises/male_lunges_exercise.png",
     exerciseType: "weight_reps",
   },
   {
@@ -93,7 +93,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Lat Pulldown",
     muscleGroups: ["Back", "Biceps"],
     description: "Cable machine exercise for back and biceps. Pull bar down to chest level while keeping torso upright.",
-    imageUrl: "/generated_images/female_lat_pulldown_exercise.png",
+    imageUrl: "/objects/public/exercises/female_lat_pulldown_exercise.png",
     exerciseType: "weight_reps",
   },
   {
@@ -101,7 +101,7 @@ export const builtInExercises: BuiltInExercise[] = [
     name: "Cable Fly",
     muscleGroups: ["Chest"],
     description: "Isolation exercise for chest using cable machine. Bring handles together in front of body with slight arm bend.",
-    imageUrl: "/generated_images/male_cable_fly_exercise.png",
+    imageUrl: "/objects/public/exercises/male_cable_fly_exercise.png",
     exerciseType: "weight_reps",
   },
 ];
