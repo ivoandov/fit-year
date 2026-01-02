@@ -69,12 +69,13 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   }));
 
   const createCompletedMutation = useMutation({
-    mutationFn: async (workout: { displayId: string; name: string; exercises: Exercise[]; completedAt: Date }) => {
+    mutationFn: async (workout: { displayId: string; name: string; exercises: Exercise[]; completedAt: Date; scheduledWorkoutId?: string }) => {
       return apiRequest("POST", "/api/completed-workouts", {
         displayId: workout.displayId,
         name: workout.name,
         exercises: workout.exercises,
         completedAt: workout.completedAt.toISOString(),
+        scheduledWorkoutId: workout.scheduledWorkoutId,
       });
     },
     onSuccess: () => {
@@ -154,6 +155,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         name: activeWorkout.name,
         exercises: exercisesWithSets,
         completedAt: new Date(),
+        scheduledWorkoutId: activeWorkout.scheduledWorkoutId,
       });
       
       // Delete the scheduled workout if this was a scheduled workout

@@ -826,6 +826,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       
+      // Delete the calendar event if one exists
+      if (existing.calendarEventId) {
+        const userSettings = await storage.getUserSettings(userId);
+        const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+        deleteCalendarEvent(existing.calendarEventId, selectedCalendarId)
+          .then((deleted) => {
+            if (deleted) {
+              console.log(`Deleted scheduled calendar event: ${existing.calendarEventId}`);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to delete scheduled calendar event:", err);
+          });
+      }
+      
       const deleted = await storage.deleteScheduledWorkout(id);
       if (!deleted) {
         return res.status(404).json({ error: "Workout not found" });
@@ -850,7 +865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/completed-workouts", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      const { displayId, name, exercises, completedAt } = req.body;
+      const { displayId, name, exercises, completedAt, scheduledWorkoutId } = req.body;
       
       if (!displayId || !name || !exercises) {
         return res.status(400).json({ error: "Missing required fields: displayId, name, exercises" });
@@ -869,12 +884,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userSettings = await storage.getUserSettings(userId);
       const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
       
-      // Sync to Google Calendar in background (don't block response)
+      // If this was from a scheduled workout, delete the "(Scheduled)" calendar event
+      if (scheduledWorkoutId) {
+        const scheduledWorkout = await storage.getScheduledWorkout(scheduledWorkoutId);
+        if (scheduledWorkout?.calendarEventId) {
+          deleteCalendarEvent(scheduledWorkout.calendarEventId, selectedCalendarId)
+            .then((deleted) => {
+              if (deleted) {
+                console.log(`Deleted scheduled calendar event: ${scheduledWorkout.calendarEventId}`);
+              }
+            })
+            .catch((err) => {
+              console.error("Failed to delete scheduled calendar event:", err);
+            });
+        }
+      }
+      
+      // Sync completed workout to Google Calendar (just the workout name, no "(Scheduled)" suffix)
       createCalendarEvent(name, completedDate, selectedCalendarId)
         .then(async (eventId) => {
           if (eventId) {
             await storage.updateCompletedWorkoutCalendarEventId(workout.id, eventId);
-            console.log(`Synced workout "${name}" to Google Calendar (${selectedCalendarId || 'primary'}): ${eventId}`);
+            console.log(`Synced completed workout "${name}" to Google Calendar (${selectedCalendarId || 'primary'}): ${eventId}`);
           }
         })
         .catch((err) => {
