@@ -87,6 +87,7 @@ export interface IStorage {
   getScheduledWorkout(id: string): Promise<ScheduledWorkout | undefined>;
   createScheduledWorkout(workout: InsertScheduledWorkout): Promise<ScheduledWorkout>;
   updateScheduledWorkout(id: string, workout: Partial<InsertScheduledWorkout>): Promise<ScheduledWorkout | undefined>;
+  updateScheduledWorkoutCalendarEventId(id: string, calendarEventId: string | null): Promise<void>;
   deleteScheduledWorkout(id: string): Promise<boolean>;
   
   getCompletedWorkouts(userId?: string): Promise<CompletedWorkout[]>;
@@ -337,13 +338,13 @@ export class DatabaseStorage implements IStorage {
     try {
       const results = userId
         ? await neonClient`
-            SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises 
+            SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises, calendar_event_id as "calendarEventId"
             FROM scheduled_workouts 
             WHERE user_id = ${userId}
             ORDER BY date
           `
         : await neonClient`
-            SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises 
+            SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises, calendar_event_id as "calendarEventId"
             FROM scheduled_workouts 
             ORDER BY date
           `;
@@ -377,12 +378,19 @@ export class DatabaseStorage implements IStorage {
       date: workout.date instanceof Date ? workout.date : new Date(workout.date),
       exercises: workout.exercises || [],
       templateId: workout.templateId || null,
+      calendarEventId: null,
     };
   }
 
   async updateScheduledWorkout(id: string, workout: Partial<InsertScheduledWorkout>): Promise<ScheduledWorkout | undefined> {
     const results = await db.update(scheduledWorkouts).set(workout).where(eq(scheduledWorkouts.id, id)).returning();
     return results[0];
+  }
+
+  async updateScheduledWorkoutCalendarEventId(id: string, calendarEventId: string | null): Promise<void> {
+    await neonClient`
+      UPDATE scheduled_workouts SET calendar_event_id = ${calendarEventId} WHERE id = ${id}
+    `;
   }
 
   async deleteScheduledWorkout(id: string): Promise<boolean> {
