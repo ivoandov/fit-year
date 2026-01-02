@@ -265,7 +265,7 @@ export function WorkoutEditorDialog({
                     No exercises added yet. Select from below.
                   </div>
                 ) : (
-                  <ScrollArea className="h-[120px] sm:h-[150px] border rounded-md">
+                  <ScrollArea className="h-[240px] sm:h-[300px] border rounded-md">
                     <div className="p-2 space-y-1">
                       {selectedExercises.map((exercise, index) => (
                         <div
