@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type DragEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -56,6 +56,8 @@ export function WorkoutEditorDialog({
   const [selectedExercises, setSelectedExercises] = useState<Exercise[]>([]);
   const [activeTab, setActiveTab] = useState("details");
   const [showCalendar, setShowCalendar] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -104,6 +106,45 @@ export function WorkoutEditorDialog({
     const newExercises = [...selectedExercises];
     [newExercises[index], newExercises[newIndex]] = [newExercises[newIndex], newExercises[index]];
     setSelectedExercises(newExercises);
+  };
+
+  const handleDragStart = (e: DragEvent<HTMLDivElement>, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (draggedIndex !== null && index !== draggedIndex) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newExercises = [...selectedExercises];
+    const [draggedItem] = newExercises.splice(draggedIndex, 1);
+    newExercises.splice(dropIndex, 0, draggedItem);
+    setSelectedExercises(newExercises);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const isEditing = !!initialData?.id;
@@ -229,10 +270,20 @@ export function WorkoutEditorDialog({
                       {selectedExercises.map((exercise, index) => (
                         <div
                           key={exercise.id}
-                          className="flex items-center gap-2 p-2 bg-accent rounded-md"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, index)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, index)}
+                          onDragEnd={handleDragEnd}
+                          className={`flex items-center gap-2 p-2 bg-accent rounded-md transition-all ${
+                            draggedIndex === index ? "opacity-50" : ""
+                          } ${
+                            dragOverIndex === index ? "ring-2 ring-primary ring-offset-1" : ""
+                          }`}
                           data-testid={`selected-exercise-${exercise.id}`}
                         >
-                          <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" />
                           <span className="flex-1 text-sm truncate">{exercise.name}</span>
                           <Badge variant="outline" className="text-xs hidden sm:flex">
                             {exercise.muscleGroups[0] || ""}
