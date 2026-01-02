@@ -26,6 +26,7 @@ export const scheduledWorkouts = pgTable("scheduled_workouts", {
   name: text("name").notNull(),
   date: timestamp("date").notNull(),
   exercises: jsonb("exercises").notNull(),
+  calendarEventId: varchar("calendar_event_id"),
 });
 
 export const completedWorkouts = pgTable("completed_workouts", {
