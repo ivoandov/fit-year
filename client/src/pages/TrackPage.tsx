@@ -5,9 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RestTimer } from "@/components/RestTimer";
-import { ChevronRight, ChevronLeft, Check, Plus } from "lucide-react";
+import { WorkoutEditorDialog, WorkoutData } from "@/components/WorkoutEditorDialog";
+import { ChevronRight, ChevronLeft, Check, Plus, Pencil } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useWorkout } from "@/context/WorkoutContext";
+import { useQuery } from "@tanstack/react-query";
+import type { Exercise } from "@shared/schema";
 
 interface SetData {
   setNumber: number;
@@ -22,13 +25,18 @@ type TrackingState = "not_started" | "in_set" | "resting";
 
 export default function TrackPage() {
   const [, setLocation] = useLocation();
-  const { activeWorkout, endWorkout, completeWorkout } = useWorkout();
+  const { activeWorkout, endWorkout, completeWorkout, updateActiveWorkout } = useWorkout();
   
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [trackingState, setTrackingState] = useState<TrackingState>("not_started");
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [restTimerDuration, setRestTimerDuration] = useState(90);
   const [exerciseSets, setExerciseSets] = useState<Map<number, SetData[]>>(new Map());
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  const { data: exercises = [] } = useQuery<Exercise[]>({
+    queryKey: ["/api/exercises"],
+  });
 
   const getDefaultSets = (): SetData[] => [
     { setNumber: 1, weight: 135, reps: 10, distance: 1, time: 30, completed: false },
@@ -147,6 +155,17 @@ export default function TrackPage() {
   const handleEndWorkout = () => {
     endWorkout();
     setLocation("/");
+  };
+
+  const handleEditSave = (data: WorkoutData) => {
+    updateActiveWorkout(data.name, data.exercises);
+    setIsEditDialogOpen(false);
+    // Reset to first exercise if current exercise was removed
+    if (currentExerciseIndex >= data.exercises.length) {
+      setCurrentExerciseIndex(Math.max(0, data.exercises.length - 1));
+      setCurrentSetIndex(0);
+      setTrackingState("not_started");
+    }
   };
 
   const getPrimaryButtonText = () => {
@@ -367,11 +386,30 @@ export default function TrackPage() {
           </CardContent>
         </Card>
 
-        <div className="flex gap-2 sm:gap-4">
-          <Button variant="outline" className="flex-1 text-sm" onClick={handleEndWorkout} data-testid="button-end-workout">
+        <div className="flex flex-col gap-2 sm:gap-3">
+          <Button variant="outline" className="w-full text-sm" onClick={() => setIsEditDialogOpen(true)} data-testid="button-edit-workout">
+            <Pencil className="h-4 w-4 mr-2" />
+            Edit Workout
+          </Button>
+          <Button variant="outline" className="w-full text-sm" onClick={handleEndWorkout} data-testid="button-end-workout">
             End Workout
           </Button>
         </div>
+
+        <WorkoutEditorDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          onSave={handleEditSave}
+          initialData={{
+            id: activeWorkout.id,
+            name: activeWorkout.name,
+            exercises: activeWorkout.exercises,
+            date: new Date(),
+            repeatType: "none",
+            repeatInterval: 1,
+          }}
+          availableExercises={exercises}
+        />
 
         <RestTimer
           isOpen={trackingState === "resting"}

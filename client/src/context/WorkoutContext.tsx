@@ -45,6 +45,7 @@ interface WorkoutContextType {
   restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
   updateCompletedWorkout: (id: string, name: string) => void;
   deleteCompletedWorkout: (id: string) => void;
+  updateActiveWorkout: (name: string, exercises: Exercise[]) => void;
 }
 
 const WorkoutContext = createContext<WorkoutContextType | null>(null);
@@ -188,6 +189,21 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     deleteCompletedMutation.mutate(id);
   };
 
+  const updateActiveWorkout = (name: string, exercises: Exercise[]) => {
+    if (activeWorkout) {
+      setActiveWorkout({
+        ...activeWorkout,
+        name,
+        exercises: exercises.map(ex => ({
+          ...ex,
+          sets: 3,
+          defaultWeight: 135,
+          defaultReps: 10,
+        })),
+      });
+    }
+  };
+
   return (
     <WorkoutContext.Provider value={{ 
       activeWorkout, 
@@ -200,6 +216,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       restartWorkout,
       updateCompletedWorkout,
       deleteCompletedWorkout,
+      updateActiveWorkout,
     }}>
       {children}
     </WorkoutContext.Provider>
