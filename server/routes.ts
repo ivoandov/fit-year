@@ -759,6 +759,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: parsed.error.message });
       }
       const workout = await storage.createScheduledWorkout(parsed.data);
+      
+      // Get user's selected calendar and create "(Scheduled)" event
+      const userSettings = await storage.getUserSettings(userId);
+      const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+      const scheduledEventName = `${workout.name} (Scheduled)`;
+      
+      createCalendarEvent(scheduledEventName, workout.date, selectedCalendarId)
+        .then(async (eventId) => {
+          if (eventId) {
+            await storage.updateScheduledWorkoutCalendarEventId(workout.id, eventId);
+            console.log(`Created scheduled workout calendar event "${scheduledEventName}": ${eventId}`);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to create scheduled workout calendar event:", err);
+        });
+      
       res.status(201).json(workout);
     } catch (error) {
       console.error("Failed to create scheduled workout:", error);
