@@ -77,16 +77,31 @@ export async function listCalendars(): Promise<CalendarInfo[]> {
   }
 }
 
-export async function createCalendarEvent(workoutName: string, completedDate: Date, calendarId?: string): Promise<string | null> {
+export async function createCalendarEvent(workoutName: string, completedDate: Date, calendarId?: string, localDateStr?: string): Promise<string | null> {
   try {
     const calendar = await getGoogleCalendarClient();
     
-    const startDateStr = completedDate.toISOString().split('T')[0];
+    let startDateStr: string;
+    let endDateStr: string;
     
-    // For all-day events, end date must be the day AFTER the event (exclusive)
-    const endDate = new Date(completedDate);
-    endDate.setDate(endDate.getDate() + 1);
-    const endDateStr = endDate.toISOString().split('T')[0];
+    if (localDateStr) {
+      // Use the local date string sent from the client (YYYY-MM-DD format)
+      startDateStr = localDateStr;
+      // Parse the local date and add one day for the end date
+      const [year, month, day] = localDateStr.split('-').map(Number);
+      const endDate = new Date(year, month - 1, day + 1);
+      endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+    } else {
+      // Fallback: use server's interpretation of the date (may be wrong for late night workouts)
+      const year = completedDate.getFullYear();
+      const month = String(completedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(completedDate.getDate()).padStart(2, '0');
+      startDateStr = `${year}-${month}-${day}`;
+      
+      const endDate = new Date(completedDate);
+      endDate.setDate(endDate.getDate() + 1);
+      endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+    }
     
     const event = {
       summary: workoutName,

@@ -865,7 +865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/completed-workouts", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      const { displayId, name, exercises, completedAt, scheduledWorkoutId } = req.body;
+      const { displayId, name, exercises, completedAt, localDate, scheduledWorkoutId } = req.body;
       
       if (!displayId || !name || !exercises) {
         return res.status(400).json({ error: "Missing required fields: displayId, name, exercises" });
@@ -900,8 +900,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Sync completed workout to Google Calendar (just the workout name, no "(Scheduled)" suffix)
-      createCalendarEvent(name, completedDate, selectedCalendarId)
+      // Sync completed workout to Google Calendar using the user's local date
+      createCalendarEvent(name, completedDate, selectedCalendarId, localDate)
         .then(async (eventId) => {
           if (eventId) {
             await storage.updateCompletedWorkoutCalendarEventId(workout.id, eventId);

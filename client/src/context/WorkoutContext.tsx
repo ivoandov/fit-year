@@ -108,11 +108,16 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
 
   const createCompletedMutation = useMutation({
     mutationFn: async (workout: { displayId: string; name: string; exercises: Exercise[]; completedAt: Date; scheduledWorkoutId?: string }) => {
+      // Send both UTC timestamp and local date string for calendar
+      const localDate = workout.completedAt;
+      const localDateStr = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
+      
       return apiRequest("POST", "/api/completed-workouts", {
         displayId: workout.displayId,
         name: workout.name,
         exercises: workout.exercises,
         completedAt: workout.completedAt.toISOString(),
+        localDate: localDateStr,
         scheduledWorkoutId: workout.scheduledWorkoutId,
       });
     },
