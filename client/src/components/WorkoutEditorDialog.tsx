@@ -328,7 +328,7 @@ export function WorkoutEditorDialog({
 
               <div className="space-y-2">
                 <Label className="text-sm">Available Exercises ({availableExercises.length})</Label>
-                <ScrollArea className="h-[280px] border rounded-md">
+                <ScrollArea className="h-[240px] sm:h-[300px] border rounded-md">
                   <div className="p-2 space-y-1">
                     {[...availableExercises]
                       .sort((a, b) => {
