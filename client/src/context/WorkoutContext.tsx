@@ -134,7 +134,17 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     mutationFn: async ({ id, name, exercises }: { id: string; name: string; exercises?: any[] }) => {
       return apiRequest("PUT", `/api/completed-workouts/${id}`, { name, exercises });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // Update cache immediately for instant UI feedback
+      queryClient.setQueryData(["/api/completed-workouts"], (oldData: any[] | undefined) => {
+        if (!oldData) return oldData;
+        return oldData.map(workout => 
+          workout.id === variables.id 
+            ? { ...workout, name: variables.name, exercises: variables.exercises || workout.exercises }
+            : workout
+        );
+      });
+      // Also invalidate to ensure consistency with server
       queryClient.invalidateQueries({ queryKey: ["/api/completed-workouts"] });
     },
   });

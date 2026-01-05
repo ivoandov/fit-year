@@ -57,10 +57,16 @@ export function WorkoutHistoryCard({
   );
 
   const startEditing = () => {
-    setEditedExercises(exercises.map(ex => ({
-      ...ex,
-      sets: ex.sets.map(s => ({ ...s })),
-    })));
+    setEditedExercises(exercises.map(ex => {
+      // If exercise has no sets, seed with one empty set so user can add data
+      const sets = ex.sets.length > 0 
+        ? ex.sets.map(s => ({ ...s }))
+        : [{ setNumber: 1, weight: 0, reps: 0, completed: true }];
+      return {
+        ...ex,
+        sets,
+      };
+    }));
     setIsEditing(true);
   };
 
@@ -155,15 +161,18 @@ export function WorkoutHistoryCard({
             <div className="space-y-3 sm:space-y-4">
               {displayExercises.map((exercise, exIdx) => {
                 const completedSetsForExercise = exercise.sets.filter(s => s.completed);
-                if (completedSetsForExercise.length === 0) return null;
+                // In edit mode, show exercises even with no completed sets so user can add data
+                // In view mode, skip exercises with no completed sets
+                if (completedSetsForExercise.length === 0 && !isEditing) return null;
                 
+                const setsToDisplay = isEditing ? exercise.sets : completedSetsForExercise;
                 const isCardioStyle = exercise.sets.some(s => s.distance || s.time);
                 
                 return (
                   <div key={exIdx} className="border-l-2 border-primary pl-3 sm:pl-4">
                     <h4 className="font-semibold text-sm sm:text-base mb-1 sm:mb-2">{exercise.name}</h4>
                     <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
-                      {completedSetsForExercise.map((set, setIdx) => {
+                      {setsToDisplay.map((set, setIdx) => {
                         const originalSetIdx = exercise.sets.findIndex(s => s === set);
                         
                         if (isEditing) {
