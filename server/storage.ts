@@ -495,16 +495,18 @@ export class DatabaseStorage implements IStorage {
     if (!existing) return undefined;
     
     const name = workout.name !== undefined ? workout.name : existing.name;
+    const exercises = workout.exercises !== undefined ? workout.exercises : existing.exercises;
     
     await neonClient`
       UPDATE completed_workouts 
-      SET name = ${name}
+      SET name = ${name}, exercises = ${JSON.stringify(exercises)}
       WHERE id = ${id}
     `;
     
     return {
       ...existing,
       name,
+      exercises,
     };
   }
 
