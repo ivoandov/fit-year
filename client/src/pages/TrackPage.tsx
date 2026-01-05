@@ -25,7 +25,7 @@ type TrackingState = "not_started" | "in_set" | "resting";
 
 export default function TrackPage() {
   const [, setLocation] = useLocation();
-  const { activeWorkout, endWorkout, completeWorkout, updateActiveWorkout } = useWorkout();
+  const { activeWorkout, endWorkout, completeWorkout, updateActiveWorkout, completedWorkouts } = useWorkout();
   
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [trackingState, setTrackingState] = useState<TrackingState>("not_started");
@@ -38,14 +38,54 @@ export default function TrackPage() {
     queryKey: ["/api/exercises"],
   });
 
-  const getDefaultSets = (): SetData[] => [
-    { setNumber: 1, weight: 135, reps: 10, distance: 1, time: 30, completed: false },
-    { setNumber: 2, weight: 135, reps: 10, distance: 1, time: 30, completed: false },
-    { setNumber: 3, weight: 135, reps: 10, distance: 1, time: 30, completed: false },
-  ];
+  // Find the last recorded weight/reps for an exercise from completed workouts
+  const getLastRecordedValues = (exerciseId: string): { weight: number; reps: number; distance: number; time: number } | null => {
+    // Sort completed workouts by date descending to get most recent first
+    const sortedWorkouts = [...completedWorkouts].sort((a, b) => 
+      b.completedAt.getTime() - a.completedAt.getTime()
+    );
+    
+    for (const workout of sortedWorkouts) {
+      const exercise = workout.exercises.find(ex => ex.id === exerciseId) as any;
+      if (exercise?.setsData && exercise.setsData.length > 0) {
+        // Get the last completed set's values
+        const completedSets = exercise.setsData.filter((s: any) => s.completed);
+        if (completedSets.length > 0) {
+          const lastSet = completedSets[completedSets.length - 1];
+          return {
+            weight: lastSet.weight || 0,
+            reps: lastSet.reps || 0,
+            distance: lastSet.distance || 0,
+            time: lastSet.time || 0,
+          };
+        }
+      }
+    }
+    return null;
+  };
+
+  const getDefaultSets = (exerciseId?: string): SetData[] => {
+    const lastValues = exerciseId ? getLastRecordedValues(exerciseId) : null;
+    
+    if (lastValues) {
+      return [
+        { setNumber: 1, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
+        { setNumber: 2, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
+        { setNumber: 3, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
+      ];
+    }
+    
+    // Default to blank values (0) if no history
+    return [
+      { setNumber: 1, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
+      { setNumber: 2, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
+      { setNumber: 3, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
+    ];
+  };
 
   const getCurrentSets = (): SetData[] => {
-    return exerciseSets.get(currentExerciseIndex) || getDefaultSets();
+    const currentExercise = activeWorkout?.exercises[currentExerciseIndex];
+    return exerciseSets.get(currentExerciseIndex) || getDefaultSets(currentExercise?.id);
   };
 
   const setCurrentSets = (sets: SetData[]) => {
@@ -55,12 +95,13 @@ export default function TrackPage() {
   };
 
   useEffect(() => {
-    if (!exerciseSets.has(currentExerciseIndex)) {
+    if (!exerciseSets.has(currentExerciseIndex) && activeWorkout) {
+      const currentEx = activeWorkout.exercises[currentExerciseIndex];
       const newMap = new Map(exerciseSets);
-      newMap.set(currentExerciseIndex, getDefaultSets());
+      newMap.set(currentExerciseIndex, getDefaultSets(currentEx?.id));
       setExerciseSets(newMap);
     }
-  }, [currentExerciseIndex]);
+  }, [currentExerciseIndex, activeWorkout]);
 
   if (!activeWorkout) {
     return (
@@ -408,7 +449,7 @@ export default function TrackPage() {
             repeatType: "none",
             repeatInterval: 1,
           }}
-          availableExercises={exercises}
+          availableExercises={exercises as Exercise[]}
         />
 
         <RestTimer
