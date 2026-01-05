@@ -138,7 +138,7 @@ export default function HistoryPage() {
 
         <Card>
           <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-base sm:text-lg">Sets by Muscle Group (Last 7 Days)</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Weekly Sets by Muscle Group (last 7 days)</CardTitle>
             <p className="text-xs sm:text-sm text-muted-foreground">
               Track your training volume across different muscle groups
             </p>
