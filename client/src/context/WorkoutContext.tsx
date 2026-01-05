@@ -50,8 +50,29 @@ interface WorkoutContextType {
 
 const WorkoutContext = createContext<WorkoutContextType | null>(null);
 
+const ACTIVE_WORKOUT_STORAGE_KEY = "active_workout";
+
 export function WorkoutProvider({ children }: { children: ReactNode }) {
-  const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(null);
+  const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(() => {
+    try {
+      const saved = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error("Failed to load active workout:", e);
+    }
+    return null;
+  });
+
+  // Persist active workout to localStorage whenever it changes
+  useEffect(() => {
+    if (activeWorkout) {
+      localStorage.setItem(ACTIVE_WORKOUT_STORAGE_KEY, JSON.stringify(activeWorkout));
+    } else {
+      localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY);
+    }
+  }, [activeWorkout]);
 
   const { data: completedWorkoutsData = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/completed-workouts"],
