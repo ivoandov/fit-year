@@ -23,6 +23,16 @@ interface SetData {
 
 type TrackingState = "not_started" | "in_set" | "resting";
 
+const TRACKING_STORAGE_KEY = "workout_tracking_progress";
+
+interface SavedTrackingProgress {
+  workoutDisplayId: string;
+  exerciseSets: [number, SetData[]][];
+  currentExerciseIndex: number;
+  currentSetIndex: number;
+  restTimerDuration: number;
+}
+
 export default function TrackPage() {
   const [, setLocation] = useLocation();
   const { activeWorkout, endWorkout, completeWorkout, updateActiveWorkout, completedWorkouts } = useWorkout();
@@ -33,10 +43,51 @@ export default function TrackPage() {
   const [restTimerDuration, setRestTimerDuration] = useState(90);
   const [exerciseSets, setExerciseSets] = useState<Map<number, SetData[]>>(new Map());
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [hasLoadedSavedProgress, setHasLoadedSavedProgress] = useState(false);
 
   const { data: exercises = [] } = useQuery<Exercise[]>({
     queryKey: ["/api/exercises"],
   });
+
+  // Load saved progress on mount
+  useEffect(() => {
+    if (activeWorkout && !hasLoadedSavedProgress) {
+      try {
+        const saved = localStorage.getItem(TRACKING_STORAGE_KEY);
+        if (saved) {
+          const progress: SavedTrackingProgress = JSON.parse(saved);
+          if (progress.workoutDisplayId === activeWorkout.displayId) {
+            setExerciseSets(new Map(progress.exerciseSets));
+            setCurrentExerciseIndex(progress.currentExerciseIndex);
+            setCurrentSetIndex(progress.currentSetIndex);
+            setRestTimerDuration(progress.restTimerDuration);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load saved progress:", e);
+      }
+      setHasLoadedSavedProgress(true);
+    }
+  }, [activeWorkout, hasLoadedSavedProgress]);
+
+  // Auto-save progress whenever tracking state changes
+  useEffect(() => {
+    if (activeWorkout && hasLoadedSavedProgress) {
+      const progress: SavedTrackingProgress = {
+        workoutDisplayId: activeWorkout.displayId,
+        exerciseSets: Array.from(exerciseSets.entries()),
+        currentExerciseIndex,
+        currentSetIndex,
+        restTimerDuration,
+      };
+      localStorage.setItem(TRACKING_STORAGE_KEY, JSON.stringify(progress));
+    }
+  }, [activeWorkout, exerciseSets, currentExerciseIndex, currentSetIndex, restTimerDuration, hasLoadedSavedProgress]);
+
+  // Clear saved progress when workout ends
+  const clearSavedProgress = () => {
+    localStorage.removeItem(TRACKING_STORAGE_KEY);
+  };
 
   // Find the last recorded weight/reps for an exercise from completed workouts
   const getLastRecordedValues = (exerciseId: string): { weight: number; reps: number; distance: number; time: number } | null => {
@@ -145,6 +196,7 @@ export default function TrackPage() {
 
   const handleFinishExercise = () => {
     if (isLastExercise) {
+      clearSavedProgress();
       completeWorkout(exerciseSets);
       setLocation("/");
     } else {
@@ -194,6 +246,7 @@ export default function TrackPage() {
   };
 
   const handleEndWorkout = () => {
+    clearSavedProgress();
     endWorkout();
     setLocation("/");
   };
