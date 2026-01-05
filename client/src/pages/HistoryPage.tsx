@@ -48,15 +48,20 @@ export default function HistoryPage() {
   const now = new Date();
   const todayEnd = endOfDay(now);
   const weekStartsOn = weekStartDay === "monday" ? 1 : 0;
-  const weekStart = startOfWeek(now, { weekStartsOn });
+  const calendarWeekStart = startOfWeek(now, { weekStartsOn });
   const monthStart = startOfMonth(now);
+  
+  // Last 7 days (rolling window) for muscle group stats
+  const last7DaysStart = new Date(now);
+  last7DaysStart.setDate(last7DaysStart.getDate() - 6);
+  last7DaysStart.setHours(0, 0, 0, 0);
 
   const isWithinRange = (date: Date, start: Date, end: Date) => {
     return (isAfter(date, start) || isEqual(date, start)) && (isBefore(date, end) || isEqual(date, end));
   };
 
   const workoutsThisWeek = historyData.filter((w) =>
-    isWithinRange(w.date, weekStart, todayEnd)
+    isWithinRange(w.date, calendarWeekStart, todayEnd)
   ).length;
 
   const workoutsThisMonth = historyData.filter((w) =>
@@ -72,7 +77,7 @@ export default function HistoryPage() {
     const setsByMuscle: { [key: string]: number } = {};
 
     historyData.forEach((workout) => {
-      if (isWithinRange(workout.date, weekStart, todayEnd)) {
+      if (isWithinRange(workout.date, last7DaysStart, todayEnd)) {
         workout.exercises?.forEach((exercise) => {
           const completedSetCount = exercise.sets?.filter((s: any) => s.completed).length || 0;
           exercise.muscleGroups?.forEach((muscle: string) => {
@@ -133,7 +138,7 @@ export default function HistoryPage() {
 
         <Card>
           <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-base sm:text-lg">Weekly Sets by Muscle Group</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Sets by Muscle Group (Last 7 Days)</CardTitle>
             <p className="text-xs sm:text-sm text-muted-foreground">
               Track your training volume across different muscle groups
             </p>
