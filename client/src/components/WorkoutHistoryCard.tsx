@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Dumbbell, TrendingUp, Pencil, Check, X } from "lucide-react";
+import { Calendar, Dumbbell, TrendingUp, Pencil, Check, X, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -97,6 +97,35 @@ export function WorkoutHistoryCard({
       const sets = [...exercise.sets];
       sets[setIdx] = { ...sets[setIdx], [field]: value };
       exercise.sets = sets;
+      newExercises[exerciseIdx] = exercise;
+      return newExercises;
+    });
+  };
+
+  const addSet = (exerciseIdx: number) => {
+    setEditedExercises(prev => {
+      const newExercises = [...prev];
+      const exercise = { ...newExercises[exerciseIdx] };
+      const isCardioStyle = exercise.sets.some(s => s.distance || s.time);
+      const newSetNumber = exercise.sets.length + 1;
+      const newSet: SetDetail = isCardioStyle
+        ? { setNumber: newSetNumber, distance: 0, time: 0, completed: true }
+        : { setNumber: newSetNumber, weight: 0, reps: 0, completed: true };
+      exercise.sets = [...exercise.sets, newSet];
+      newExercises[exerciseIdx] = exercise;
+      return newExercises;
+    });
+  };
+
+  const removeSet = (exerciseIdx: number, setIdx: number) => {
+    setEditedExercises(prev => {
+      const newExercises = [...prev];
+      const exercise = { ...newExercises[exerciseIdx] };
+      // Don't allow removing the last set
+      if (exercise.sets.length <= 1) return prev;
+      const sets = exercise.sets.filter((_, idx) => idx !== setIdx);
+      // Renumber sets
+      exercise.sets = sets.map((s, idx) => ({ ...s, setNumber: idx + 1 }));
       newExercises[exerciseIdx] = exercise;
       return newExercises;
     });
@@ -219,6 +248,17 @@ export function WorkoutHistoryCard({
                                   <span>reps</span>
                                 </>
                               )}
+                              {exercise.sets.length > 1 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:text-destructive"
+                                  onClick={() => removeSet(exIdx, originalSetIdx)}
+                                  data-testid={`button-remove-set-${id}-${exIdx}-${setIdx}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           );
                         }
@@ -235,6 +275,18 @@ export function WorkoutHistoryCard({
                           </div>
                         );
                       })}
+                      {isEditing && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => addSet(exIdx)}
+                          data-testid={`button-add-set-${id}-${exIdx}`}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add Set
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
