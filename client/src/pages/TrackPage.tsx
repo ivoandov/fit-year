@@ -300,10 +300,10 @@ export default function TrackPage() {
                         <Input
                           type="number"
                           step="0.1"
-                          value={set.distance}
+                          value={set.distance || ""}
                           onChange={(e) => {
                             const newSets = [...sets];
-                            newSets[index].distance = parseFloat(e.target.value) || 0;
+                            newSets[index].distance = e.target.value === "" ? 0 : parseFloat(e.target.value);
                             setCurrentSets(newSets);
                           }}
                           className="text-center text-sm h-9 sm:h-10"
@@ -311,10 +311,10 @@ export default function TrackPage() {
                         />
                         <Input
                           type="number"
-                          value={set.time}
+                          value={set.time || ""}
                           onChange={(e) => {
                             const newSets = [...sets];
-                            newSets[index].time = parseInt(e.target.value) || 0;
+                            newSets[index].time = e.target.value === "" ? 0 : parseInt(e.target.value);
                             setCurrentSets(newSets);
                           }}
                           className="text-center text-sm h-9 sm:h-10"
@@ -355,10 +355,10 @@ export default function TrackPage() {
                         <div className="font-medium text-sm sm:text-base">{set.setNumber}</div>
                         <Input
                           type="number"
-                          value={set.weight}
+                          value={set.weight || ""}
                           onChange={(e) => {
                             const newSets = [...sets];
-                            newSets[index].weight = parseInt(e.target.value) || 0;
+                            newSets[index].weight = e.target.value === "" ? 0 : parseInt(e.target.value);
                             setCurrentSets(newSets);
                           }}
                           className="text-center text-sm h-9 sm:h-10"
@@ -366,10 +366,10 @@ export default function TrackPage() {
                         />
                         <Input
                           type="number"
-                          value={set.reps}
+                          value={set.reps || ""}
                           onChange={(e) => {
                             const newSets = [...sets];
-                            newSets[index].reps = parseInt(e.target.value) || 0;
+                            newSets[index].reps = e.target.value === "" ? 0 : parseInt(e.target.value);
                             setCurrentSets(newSets);
                           }}
                           className="text-center text-sm h-9 sm:h-10"
