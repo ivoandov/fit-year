@@ -237,8 +237,8 @@ export default function WorkoutsPage() {
 
   const handleSaveWorkout = async (data: WorkoutData) => {
     if (editingCompletedWorkout) {
-      // Editing a completed workout - only name can be changed to preserve set data
-      updateCompletedWorkout(editingCompletedWorkout.id, data.name);
+      // Editing a completed workout - update name and exercises
+      updateCompletedWorkout(editingCompletedWorkout.id, data.name, data.exercises);
       toast({
         title: "Workout Updated",
         description: `${data.name} has been updated successfully.`,
