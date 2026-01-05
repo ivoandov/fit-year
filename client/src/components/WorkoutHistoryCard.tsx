@@ -21,6 +21,7 @@ interface ExerciseDetail {
   id?: string;
   name: string;
   muscleGroups?: string[];
+  exerciseType?: string;
   sets: SetDetail[];
   setsData?: SetDetail[];
 }
@@ -82,6 +83,7 @@ export function WorkoutHistoryCard({
       id: ex.id,
       name: ex.name,
       muscleGroups: ex.muscleGroups || [],
+      exerciseType: ex.exerciseType || 'weight_reps',
       setsData: ex.sets,
     }));
     
@@ -106,7 +108,7 @@ export function WorkoutHistoryCard({
     setEditedExercises(prev => {
       const newExercises = [...prev];
       const exercise = { ...newExercises[exerciseIdx] };
-      const isCardioStyle = exercise.sets.some(s => s.distance || s.time);
+      const isCardioStyle = exercise.exerciseType === 'time_distance';
       const newSetNumber = exercise.sets.length + 1;
       const newSet: SetDetail = isCardioStyle
         ? { setNumber: newSetNumber, distance: 0, time: 0, completed: true }
@@ -195,7 +197,7 @@ export function WorkoutHistoryCard({
                 if (completedSetsForExercise.length === 0 && !isEditing) return null;
                 
                 const setsToDisplay = isEditing ? exercise.sets : completedSetsForExercise;
-                const isCardioStyle = exercise.sets.some(s => s.distance || s.time);
+                const isCardioStyle = exercise.exerciseType === 'time_distance';
                 
                 return (
                   <div key={exIdx} className="border-l-2 border-primary pl-3 sm:pl-4">
