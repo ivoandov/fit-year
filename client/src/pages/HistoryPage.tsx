@@ -34,6 +34,7 @@ export default function HistoryPage() {
 
     return {
       id: `${workout.displayId}-${index}`,
+      workoutId: workout.id,
       workoutName: workout.name,
       date: workout.completedAt,
       duration: 0, // Duration tracking not yet implemented

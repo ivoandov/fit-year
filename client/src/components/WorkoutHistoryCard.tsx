@@ -1,12 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Dumbbell, TrendingUp } from "lucide-react";
+import { Calendar, Dumbbell, TrendingUp, Pencil, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { useWorkout } from "@/context/WorkoutContext";
 
 interface SetDetail {
+  setNumber?: number;
   weight?: number;
   reps?: number;
   distance?: number;
@@ -15,12 +18,16 @@ interface SetDetail {
 }
 
 interface ExerciseDetail {
+  id?: string;
   name: string;
+  muscleGroups?: string[];
   sets: SetDetail[];
+  setsData?: SetDetail[];
 }
 
 interface WorkoutHistoryCardProps {
   id: string;
+  workoutId?: string;
   workoutName: string;
   date: Date;
   duration: number;
@@ -32,6 +39,7 @@ interface WorkoutHistoryCardProps {
 
 export function WorkoutHistoryCard({
   id,
+  workoutId,
   workoutName,
   date,
   exerciseCount,
@@ -40,11 +48,55 @@ export function WorkoutHistoryCard({
   exercises = [],
 }: WorkoutHistoryCardProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedExercises, setEditedExercises] = useState<ExerciseDetail[]>([]);
+  const { updateCompletedWorkout } = useWorkout();
 
-  // Count completed sets from exercises
   const completedSets = totalSets || exercises.reduce((total, ex) => 
     total + ex.sets.filter(s => s.completed).length, 0
   );
+
+  const startEditing = () => {
+    setEditedExercises(exercises.map(ex => ({
+      ...ex,
+      sets: ex.sets.map(s => ({ ...s })),
+    })));
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditedExercises([]);
+  };
+
+  const saveEditing = () => {
+    if (!workoutId) return;
+    
+    const updatedExercises = editedExercises.map(ex => ({
+      id: ex.id,
+      name: ex.name,
+      muscleGroups: ex.muscleGroups || [],
+      setsData: ex.sets,
+    }));
+    
+    updateCompletedWorkout(workoutId, workoutName, updatedExercises);
+    setIsEditing(false);
+    setEditedExercises([]);
+  };
+
+  const updateSet = (exerciseIdx: number, setIdx: number, field: keyof SetDetail, value: number) => {
+    setEditedExercises(prev => {
+      const newExercises = [...prev];
+      const exercise = { ...newExercises[exerciseIdx] };
+      const sets = [...exercise.sets];
+      sets[setIdx] = { ...sets[setIdx], [field]: value };
+      exercise.sets = sets;
+      newExercises[exerciseIdx] = exercise;
+      return newExercises;
+    });
+  };
+
+  const displayExercises = isEditing ? editedExercises : exercises;
 
   return (
     <Card data-testid={`card-history-${id}`}>
@@ -81,26 +133,99 @@ export function WorkoutHistoryCard({
         </CardHeader>
         <CollapsibleContent>
           <CardContent className="p-4 sm:p-6 pt-0">
+            <div className="flex justify-end mb-3 gap-2">
+              {isEditing ? (
+                <>
+                  <Button variant="ghost" size="sm" onClick={cancelEditing} data-testid={`button-cancel-edit-${id}`}>
+                    <X className="h-4 w-4 mr-1" />
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={saveEditing} data-testid={`button-save-edit-${id}`}>
+                    <Check className="h-4 w-4 mr-1" />
+                    Save
+                  </Button>
+                </>
+              ) : (
+                <Button variant="ghost" size="sm" onClick={startEditing} data-testid={`button-edit-${id}`}>
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit Sets
+                </Button>
+              )}
+            </div>
             <div className="space-y-3 sm:space-y-4">
-              {exercises.map((exercise, idx) => {
+              {displayExercises.map((exercise, exIdx) => {
                 const completedSetsForExercise = exercise.sets.filter(s => s.completed);
                 if (completedSetsForExercise.length === 0) return null;
                 
+                const isCardioStyle = exercise.sets.some(s => s.distance || s.time);
+                
                 return (
-                  <div key={idx} className="border-l-2 border-primary pl-3 sm:pl-4">
+                  <div key={exIdx} className="border-l-2 border-primary pl-3 sm:pl-4">
                     <h4 className="font-semibold text-sm sm:text-base mb-1 sm:mb-2">{exercise.name}</h4>
-                    <div className="space-y-0.5 sm:space-y-1 text-xs sm:text-sm text-muted-foreground">
-                      {completedSetsForExercise.map((set, setIdx) => (
-                        <div key={setIdx}>
-                          {set.weight && set.reps ? (
-                            `Set ${setIdx + 1}: ${set.weight} lbs × ${set.reps}`
-                          ) : set.distance && set.time ? (
-                            `Set ${setIdx + 1}: ${set.distance} mi in ${set.time} min`
-                          ) : (
-                            `Set ${setIdx + 1}: Completed`
-                          )}
-                        </div>
-                      ))}
+                    <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-muted-foreground">
+                      {completedSetsForExercise.map((set, setIdx) => {
+                        const originalSetIdx = exercise.sets.findIndex(s => s === set);
+                        
+                        if (isEditing) {
+                          return (
+                            <div key={setIdx} className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium w-12">Set {setIdx + 1}:</span>
+                              {isCardioStyle ? (
+                                <>
+                                  <Input
+                                    type="number"
+                                    step="0.1"
+                                    value={set.distance || ""}
+                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'distance', parseFloat(e.target.value) || 0)}
+                                    className="w-16 h-8 text-center"
+                                    data-testid={`input-distance-${id}-${exIdx}-${setIdx}`}
+                                  />
+                                  <span>mi in</span>
+                                  <Input
+                                    type="number"
+                                    value={set.time || ""}
+                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'time', parseInt(e.target.value) || 0)}
+                                    className="w-16 h-8 text-center"
+                                    data-testid={`input-time-${id}-${exIdx}-${setIdx}`}
+                                  />
+                                  <span>min</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Input
+                                    type="number"
+                                    value={set.weight || ""}
+                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'weight', parseInt(e.target.value) || 0)}
+                                    className="w-16 h-8 text-center"
+                                    data-testid={`input-weight-${id}-${exIdx}-${setIdx}`}
+                                  />
+                                  <span>lbs ×</span>
+                                  <Input
+                                    type="number"
+                                    value={set.reps || ""}
+                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'reps', parseInt(e.target.value) || 0)}
+                                    className="w-16 h-8 text-center"
+                                    data-testid={`input-reps-${id}-${exIdx}-${setIdx}`}
+                                  />
+                                  <span>reps</span>
+                                </>
+                              )}
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <div key={setIdx} data-testid={`text-set-${id}-${exIdx}-${setIdx}`}>
+                            {set.weight && set.reps ? (
+                              `Set ${setIdx + 1}: ${set.weight} lbs × ${set.reps}`
+                            ) : set.distance && set.time ? (
+                              `Set ${setIdx + 1}: ${set.distance} mi in ${set.time} min`
+                            ) : (
+                              `Set ${setIdx + 1}: Completed`
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
