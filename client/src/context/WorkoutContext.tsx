@@ -78,17 +78,33 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/completed-workouts"],
   });
 
-  const completedWorkouts: CompletedWorkoutRecord[] = completedWorkoutsData.map((w: any) => ({
-    id: w.id,
-    displayId: w.displayId,
-    name: w.name,
-    exercises: (w.exercises as any[]).map((ex: any) => ({
-      ...ex,
-      muscleGroups: ex.muscleGroups || [],
-      setsData: ex.setsData || [],
-    })) as Exercise[],
-    completedAt: new Date(w.completedAt),
-  }));
+  const completedWorkouts: CompletedWorkoutRecord[] = completedWorkoutsData.map((w: any) => {
+    // Parse the date ensuring it's treated as local time if no timezone is specified
+    let completedAt: Date;
+    if (w.completedAt) {
+      const dateStr = w.completedAt;
+      // If the date string doesn't have timezone info, treat it as UTC and convert to local
+      if (!dateStr.includes('Z') && !dateStr.includes('+') && !dateStr.includes('-', 10)) {
+        completedAt = new Date(dateStr + 'Z');
+      } else {
+        completedAt = new Date(dateStr);
+      }
+    } else {
+      completedAt = new Date();
+    }
+    
+    return {
+      id: w.id,
+      displayId: w.displayId,
+      name: w.name,
+      exercises: (w.exercises as any[]).map((ex: any) => ({
+        ...ex,
+        muscleGroups: ex.muscleGroups || [],
+        setsData: ex.setsData || [],
+      })) as Exercise[],
+      completedAt,
+    };
+  });
 
   const createCompletedMutation = useMutation({
     mutationFn: async (workout: { displayId: string; name: string; exercises: Exercise[]; completedAt: Date; scheduledWorkoutId?: string }) => {
