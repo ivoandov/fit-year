@@ -10,8 +10,8 @@
 
 ## Typography System
 
-**Font Family:** Inter (via Google Fonts CDN)
-- Primary: Inter (weights: 400, 500, 600, 700)
+**Font Family:** DM Sans (via Google Fonts CDN)
+- Primary: DM Sans (weights: 400, 500, 600, 700)
 
 **Hierarchy:**
 - Page Headers: text-3xl font-bold (Workout Plan, Exercise Library)

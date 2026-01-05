@@ -133,5 +133,6 @@ Preferred communication style: Simple, everyday language.
 - Calendar events are deleted when workouts are removed
 
 **Font Loading**
-- Google Fonts CDN for Inter, DM Sans, Fira Code, and Geist Mono font families
-- Architects Daughter font for potential handwritten elements
+- Google Fonts CDN for DM Sans (primary), JetBrains Mono (monospace), and other font families
+- Primary font changed from Inter to DM Sans
+- Color scheme: Primary #F7C564 (gold), Secondary #B3E0B9 (mint), Tertiary #141318 (dark charcoal)
