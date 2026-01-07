@@ -748,8 +748,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/scheduled-workouts", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
+      const { localDate, ...restBody } = req.body;
       const body = {
-        ...req.body,
+        ...restBody,
         userId,
         date: new Date(req.body.date),
       };
@@ -765,7 +766,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
       const scheduledEventName = `${workout.name} (Scheduled)`;
       
-      createCalendarEvent(scheduledEventName, workout.date, selectedCalendarId)
+      // Pass the localDate from client to ensure correct calendar date
+      createCalendarEvent(scheduledEventName, workout.date, selectedCalendarId, localDate)
         .then(async (eventId) => {
           if (eventId) {
             await storage.updateScheduledWorkoutCalendarEventId(workout.id, eventId);

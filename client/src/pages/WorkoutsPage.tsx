@@ -171,9 +171,12 @@ export default function WorkoutsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (workout: { name: string; date: Date; exercises: Exercise[]; templateId?: string }) => {
+      // Send both UTC timestamp and local date string for correct calendar sync
+      const localDate = `${workout.date.getFullYear()}-${String(workout.date.getMonth() + 1).padStart(2, '0')}-${String(workout.date.getDate()).padStart(2, '0')}`;
       return apiRequest("POST", "/api/scheduled-workouts", {
         name: workout.name,
         date: workout.date.toISOString(),
+        localDate,
         exercises: workout.exercises,
         templateId: workout.templateId,
       });
@@ -260,9 +263,11 @@ export default function WorkoutsPage() {
           
           for (let i = 0; i < numOccurrences; i++) {
             const workoutDate = addDays(data.date, intervalDays * i);
+            const localDate = `${workoutDate.getFullYear()}-${String(workoutDate.getMonth() + 1).padStart(2, '0')}-${String(workoutDate.getDate()).padStart(2, '0')}`;
             await apiRequest("POST", "/api/scheduled-workouts", {
               name: data.name,
               date: workoutDate.toISOString(),
+              localDate,
               exercises: data.exercises,
               templateId: template.id,
             });
@@ -333,9 +338,11 @@ export default function WorkoutsPage() {
           
           for (let i = 0; i < numOccurrences; i++) {
             const workoutDate = addDays(data.date, intervalDays * i);
+            const localDate = `${workoutDate.getFullYear()}-${String(workoutDate.getMonth() + 1).padStart(2, '0')}-${String(workoutDate.getDate()).padStart(2, '0')}`;
             await apiRequest("POST", "/api/scheduled-workouts", {
               name: data.name,
               date: workoutDate.toISOString(),
+              localDate,
               exercises: data.exercises,
               templateId: template.id,
             });
