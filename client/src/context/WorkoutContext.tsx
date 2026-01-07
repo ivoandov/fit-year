@@ -128,6 +128,18 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
 
   // Debounced save to server whenever workout or tracking progress changes
   const saveToServer = useCallback((workout: ActiveWorkout | null, progress: TrackingProgress | null) => {
+    // Always save to localStorage first (synchronous backup)
+    if (workout) {
+      localStorage.setItem(ACTIVE_WORKOUT_STORAGE_KEY, JSON.stringify(workout));
+      if (progress) {
+        localStorage.setItem(TRACKING_STORAGE_KEY, JSON.stringify(progress));
+      }
+    } else {
+      localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY);
+      localStorage.removeItem(TRACKING_STORAGE_KEY);
+    }
+    
+    // Only save to server if user is authenticated
     if (!user) return;
     
     // Clear any pending save
@@ -135,24 +147,19 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       clearTimeout(saveTimeoutRef.current);
     }
     
-    // Debounce saves to avoid hammering the server
+    // Debounce server saves to avoid hammering the server
     saveTimeoutRef.current = setTimeout(() => {
       if (workout) {
         apiRequest("PUT", "/api/active-workout", {
           workoutData: workout,
           trackingProgress: progress,
-        }).catch(err => console.error("Failed to save to server:", err));
-        
-        // Also save to localStorage as backup
-        localStorage.setItem(ACTIVE_WORKOUT_STORAGE_KEY, JSON.stringify(workout));
-        if (progress) {
-          localStorage.setItem(TRACKING_STORAGE_KEY, JSON.stringify(progress));
-        }
+        }).catch(err => {
+          console.error("Failed to save to server:", err);
+          // Local backup already saved, so data is safe
+        });
       } else {
         apiRequest("DELETE", "/api/active-workout")
           .catch(err => console.error("Failed to delete from server:", err));
-        localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY);
-        localStorage.removeItem(TRACKING_STORAGE_KEY);
       }
     }, 500);
   }, [user]);
@@ -162,14 +169,12 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     if (hasLoadedFromServer) {
       saveToServer(activeWorkout, trackingProgress);
     }
-  }, [activeWorkout, hasLoadedFromServer, saveToServer]);
+  }, [activeWorkout, hasLoadedFromServer, saveToServer, trackingProgress]);
 
   const saveTrackingProgress = useCallback((progress: TrackingProgress) => {
     setTrackingProgress(progress);
-    if (hasLoadedFromServer) {
-      saveToServer(activeWorkout, progress);
-    }
-  }, [activeWorkout, hasLoadedFromServer, saveToServer]);
+    // Don't call saveToServer here - the useEffect above will handle it
+  }, []);
 
   const clearTrackingProgress = useCallback(() => {
     setTrackingProgress(null);

@@ -504,7 +504,12 @@ export default function TrackPage() {
             repeatType: "none",
             repeatInterval: 1,
           }}
-          availableExercises={exercises as Exercise[]}
+          availableExercises={exercises.map(ex => ({ 
+            ...ex, 
+            muscleGroups: (ex.muscleGroups || []) as string[],
+            imageUrl: ex.imageUrl ?? undefined,
+            exerciseType: ex.exerciseType as "weight_reps" | "distance_time" | undefined,
+          }))}
         />
 
         <RestTimer
