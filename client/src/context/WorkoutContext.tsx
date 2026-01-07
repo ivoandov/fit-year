@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { type Exercise } from "@/data/exercises";
+import { useAuth } from "@/hooks/use-auth";
 
 interface WorkoutExercise extends Exercise {
   sets: number;
@@ -34,10 +35,19 @@ interface ExerciseSetData {
   completed: boolean;
 }
 
+interface TrackingProgress {
+  workoutDisplayId: string;
+  exerciseSets: [number, ExerciseSetData[]][];
+  currentExerciseIndex: number;
+  currentSetIndex: number;
+  restTimerDuration: number;
+}
+
 interface WorkoutContextType {
   activeWorkout: ActiveWorkout | null;
   completedWorkouts: CompletedWorkoutRecord[];
   isLoading: boolean;
+  trackingProgress: TrackingProgress | null;
   startWorkout: (workout: { id: string; displayId: string; scheduledWorkoutId?: string; name: string; exercises: Exercise[] }) => void;
   endWorkout: () => void;
   completeWorkout: (exerciseSets?: Map<number, ExerciseSetData[]>) => void;
@@ -46,33 +56,124 @@ interface WorkoutContextType {
   updateCompletedWorkout: (id: string, name: string, exercises?: any[]) => void;
   deleteCompletedWorkout: (id: string) => void;
   updateActiveWorkout: (name: string, exercises: Exercise[]) => void;
+  saveTrackingProgress: (progress: TrackingProgress) => void;
+  clearTrackingProgress: () => void;
 }
 
 const WorkoutContext = createContext<WorkoutContextType | null>(null);
 
 const ACTIVE_WORKOUT_STORAGE_KEY = "active_workout";
+const TRACKING_STORAGE_KEY = "workout_tracking_progress";
 
 export function WorkoutProvider({ children }: { children: ReactNode }) {
-  const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(() => {
-    try {
-      const saved = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error("Failed to load active workout:", e);
-    }
-    return null;
-  });
+  const { user } = useAuth();
+  const [activeWorkout, setActiveWorkout] = useState<ActiveWorkout | null>(null);
+  const [trackingProgress, setTrackingProgress] = useState<TrackingProgress | null>(null);
+  const [hasLoadedFromServer, setHasLoadedFromServer] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Persist active workout to localStorage whenever it changes
+  // Load active workout from server when user is authenticated
   useEffect(() => {
-    if (activeWorkout) {
-      localStorage.setItem(ACTIVE_WORKOUT_STORAGE_KEY, JSON.stringify(activeWorkout));
-    } else {
-      localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY);
+    if (user && !hasLoadedFromServer) {
+      // First try to load from server
+      fetch("/api/active-workout", { credentials: "include" })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && data.workoutData) {
+            console.log("Restored active workout from server:", data.workoutData.name);
+            setActiveWorkout(data.workoutData);
+            if (data.trackingProgress) {
+              setTrackingProgress(data.trackingProgress);
+            }
+          } else {
+            // Fall back to localStorage for backward compatibility
+            try {
+              const saved = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY);
+              if (saved) {
+                const localWorkout = JSON.parse(saved);
+                setActiveWorkout(localWorkout);
+                // Also load tracking progress from localStorage
+                const trackingSaved = localStorage.getItem(TRACKING_STORAGE_KEY);
+                if (trackingSaved) {
+                  const trackingData = JSON.parse(trackingSaved);
+                  if (trackingData.workoutDisplayId === localWorkout.displayId) {
+                    setTrackingProgress(trackingData);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("Failed to load from localStorage:", e);
+            }
+          }
+          setHasLoadedFromServer(true);
+        })
+        .catch(err => {
+          console.error("Failed to load active workout from server:", err);
+          // Fall back to localStorage
+          try {
+            const saved = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY);
+            if (saved) {
+              setActiveWorkout(JSON.parse(saved));
+            }
+          } catch (e) {
+            console.error("Failed to load from localStorage:", e);
+          }
+          setHasLoadedFromServer(true);
+        });
+    } else if (!user) {
+      // User logged out - don't clear workout, just reset server load state
+      setHasLoadedFromServer(false);
     }
-  }, [activeWorkout]);
+  }, [user, hasLoadedFromServer]);
+
+  // Debounced save to server whenever workout or tracking progress changes
+  const saveToServer = useCallback((workout: ActiveWorkout | null, progress: TrackingProgress | null) => {
+    if (!user) return;
+    
+    // Clear any pending save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    // Debounce saves to avoid hammering the server
+    saveTimeoutRef.current = setTimeout(() => {
+      if (workout) {
+        apiRequest("PUT", "/api/active-workout", {
+          workoutData: workout,
+          trackingProgress: progress,
+        }).catch(err => console.error("Failed to save to server:", err));
+        
+        // Also save to localStorage as backup
+        localStorage.setItem(ACTIVE_WORKOUT_STORAGE_KEY, JSON.stringify(workout));
+        if (progress) {
+          localStorage.setItem(TRACKING_STORAGE_KEY, JSON.stringify(progress));
+        }
+      } else {
+        apiRequest("DELETE", "/api/active-workout")
+          .catch(err => console.error("Failed to delete from server:", err));
+        localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY);
+        localStorage.removeItem(TRACKING_STORAGE_KEY);
+      }
+    }, 500);
+  }, [user]);
+
+  // Save whenever activeWorkout changes (after initial load)
+  useEffect(() => {
+    if (hasLoadedFromServer) {
+      saveToServer(activeWorkout, trackingProgress);
+    }
+  }, [activeWorkout, hasLoadedFromServer, saveToServer]);
+
+  const saveTrackingProgress = useCallback((progress: TrackingProgress) => {
+    setTrackingProgress(progress);
+    if (hasLoadedFromServer) {
+      saveToServer(activeWorkout, progress);
+    }
+  }, [activeWorkout, hasLoadedFromServer, saveToServer]);
+
+  const clearTrackingProgress = useCallback(() => {
+    setTrackingProgress(null);
+  }, []);
 
   const { data: completedWorkoutsData = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/completed-workouts"],
@@ -181,6 +282,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
 
   const endWorkout = () => {
     setActiveWorkout(null);
+    setTrackingProgress(null);
   };
 
   const completeWorkout = (exerciseSets?: Map<number, ExerciseSetData[]>) => {
@@ -208,7 +310,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         name: activeWorkout.name,
         exercises: exercisesWithSets,
         completedAt: new Date(),
-        scheduledWorkoutId: activeWorkout.scheduledWorkoutId,
+        scheduledWorkoutId: activeWorkout.scheduledWorkoutId || undefined,
       });
       
       // Delete the scheduled workout if this was a scheduled workout
@@ -261,6 +363,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       activeWorkout, 
       completedWorkouts,
       isLoading,
+      trackingProgress,
       startWorkout, 
       endWorkout,
       completeWorkout,
@@ -269,6 +372,8 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       updateCompletedWorkout,
       deleteCompletedWorkout,
       updateActiveWorkout,
+      saveTrackingProgress,
+      clearTrackingProgress,
     }}>
       {children}
     </WorkoutContext.Provider>
