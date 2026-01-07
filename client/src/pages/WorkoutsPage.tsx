@@ -239,10 +239,56 @@ export default function WorkoutsPage() {
     if (editingCompletedWorkout) {
       // Editing a completed workout - update name and exercises
       updateCompletedWorkout(editingCompletedWorkout.id, data.name, data.exercises);
-      toast({
-        title: "Workout Updated",
-        description: `${data.name} has been updated successfully.`,
-      });
+      
+      // If repeat is set, schedule future workouts
+      if (data.repeatType && data.repeatType !== "none") {
+        try {
+          // First, create or find a template for this workout
+          const templateRes = await apiRequest("POST", "/api/workout-templates", {
+            name: data.name,
+            exercises: data.exercises,
+          });
+          const template = await templateRes.json();
+          
+          // Calculate dates for recurring workouts
+          const intervalDays = data.repeatType === "daily" ? 1 
+            : data.repeatType === "weekly" ? 7 
+            : (data.repeatInterval || 1);
+          
+          // Schedule next 4 occurrences starting from the selected date
+          const numOccurrences = data.repeatType === "daily" ? 7 : 4;
+          
+          for (let i = 0; i < numOccurrences; i++) {
+            const workoutDate = addDays(data.date, intervalDays * i);
+            await apiRequest("POST", "/api/scheduled-workouts", {
+              name: data.name,
+              date: workoutDate.toISOString(),
+              exercises: data.exercises,
+              templateId: template.id,
+            });
+          }
+          
+          queryClient.invalidateQueries({ queryKey: ["/api/workout-templates"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
+          
+          toast({
+            title: "Workout Updated & Scheduled",
+            description: `${data.name} updated and ${numOccurrences} future workouts scheduled.`,
+          });
+        } catch (error) {
+          console.error("Failed to schedule recurring workouts:", error);
+          toast({
+            title: "Workout Updated",
+            description: `${data.name} updated, but failed to schedule recurring workouts.`,
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Workout Updated",
+          description: `${data.name} has been updated successfully.`,
+        });
+      }
       setEditingCompletedWorkout(null);
     } else if (editingTemplateId) {
       // Editing an existing template
@@ -269,7 +315,7 @@ export default function WorkoutsPage() {
         description: `${data.name} has been updated successfully.`,
       });
     } else {
-      // Create both a template AND schedule the workout
+      // Create both a template AND schedule the workout(s)
       try {
         const templateRes = await apiRequest("POST", "/api/workout-templates", {
           name: data.name,
@@ -277,20 +323,46 @@ export default function WorkoutsPage() {
         });
         const template = await templateRes.json();
         
-        // Schedule the workout linked to the template
-        createMutation.mutate({
-          name: data.name,
-          date: data.date,
-          exercises: data.exercises,
-          templateId: template.id,
-        });
+        // Calculate dates for recurring workouts
+        if (data.repeatType && data.repeatType !== "none") {
+          const intervalDays = data.repeatType === "daily" ? 1 
+            : data.repeatType === "weekly" ? 7 
+            : (data.repeatInterval || 1);
+          
+          const numOccurrences = data.repeatType === "daily" ? 7 : 4;
+          
+          for (let i = 0; i < numOccurrences; i++) {
+            const workoutDate = addDays(data.date, intervalDays * i);
+            await apiRequest("POST", "/api/scheduled-workouts", {
+              name: data.name,
+              date: workoutDate.toISOString(),
+              exercises: data.exercises,
+              templateId: template.id,
+            });
+          }
+          
+          queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
+          
+          toast({
+            title: "Workout Created",
+            description: `${data.name} scheduled with ${numOccurrences} occurrences.`,
+          });
+        } else {
+          // Single workout
+          createMutation.mutate({
+            name: data.name,
+            date: data.date,
+            exercises: data.exercises,
+            templateId: template.id,
+          });
+          
+          toast({
+            title: "Workout Created",
+            description: `${data.name} scheduled for ${format(data.date, "PPP")}`,
+          });
+        }
         
         queryClient.invalidateQueries({ queryKey: ["/api/workout-templates"] });
-        
-        toast({
-          title: "Workout Created",
-          description: `${data.name} scheduled for ${format(data.date, "PPP")}`,
-        });
       } catch (error) {
         console.error("Failed to create workout:", error);
         toast({
