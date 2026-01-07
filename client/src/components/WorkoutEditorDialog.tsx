@@ -256,8 +256,8 @@ export function WorkoutEditorDialog({
             </div>
           </TabsContent>
 
-          <TabsContent value="exercises" className="flex-1 overflow-hidden mt-4 flex flex-col">
-            <div className="flex-1 overflow-hidden flex flex-col gap-4">
+          <TabsContent value="exercises" className="flex-1 overflow-y-auto mt-4">
+            <div className="flex flex-col gap-4">
               <div className="space-y-2">
                 <Label className="text-sm">Selected Exercises</Label>
                 {selectedExercises.length === 0 ? (
@@ -265,7 +265,7 @@ export function WorkoutEditorDialog({
                     No exercises added yet. Select from below.
                   </div>
                 ) : (
-                  <ScrollArea className="h-[240px] sm:h-[300px] border rounded-md">
+                  <div className="border rounded-md max-h-[200px] sm:max-h-[280px] overflow-y-auto">
                     <div className="p-2 space-y-1">
                       {selectedExercises.map((exercise, index) => (
                         <div
@@ -322,13 +322,13 @@ export function WorkoutEditorDialog({
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label className="text-sm">Available Exercises ({availableExercises.length})</Label>
-                <ScrollArea className="h-[240px] sm:h-[300px] border rounded-md">
+                <div className="border rounded-md max-h-[300px] sm:max-h-[350px] overflow-y-auto">
                   <div className="p-2 space-y-1">
                     {[...availableExercises]
                       .sort((a, b) => {
@@ -359,7 +359,7 @@ export function WorkoutEditorDialog({
                       );
                     })}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
             </div>
           </TabsContent>
