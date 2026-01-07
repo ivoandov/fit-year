@@ -1030,6 +1030,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Active workout persistence endpoints (survives page refresh)
+  app.get("/api/active-workout", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const activeWorkout = await storage.getActiveWorkout(userId);
+      res.json(activeWorkout || null);
+    } catch (error) {
+      console.error("Failed to get active workout:", error);
+      res.status(500).json({ error: "Failed to get active workout" });
+    }
+  });
+
+  app.put("/api/active-workout", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const { workoutData, trackingProgress } = req.body;
+      
+      if (!workoutData) {
+        return res.status(400).json({ error: "workoutData is required" });
+      }
+      
+      const result = await storage.upsertActiveWorkout(userId, workoutData, trackingProgress);
+      res.json(result);
+    } catch (error) {
+      console.error("Failed to save active workout:", error);
+      res.status(500).json({ error: "Failed to save active workout" });
+    }
+  });
+
+  app.delete("/api/active-workout", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      await storage.deleteActiveWorkout(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete active workout:", error);
+      res.status(500).json({ error: "Failed to delete active workout" });
+    }
+  });
+
   // Register image generation routes
   registerImageRoutes(app);
 
