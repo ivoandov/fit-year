@@ -378,7 +378,17 @@ export default function TrackPage() {
                         <div className="flex justify-center">
                           <Checkbox
                             checked={set.completed}
-                            disabled
+                            onCheckedChange={(checked) => {
+                              const newSets = [...sets];
+                              newSets[index].completed = !!checked;
+                              setCurrentSets(newSets);
+                              if (checked && index === currentSetIndex) {
+                                if (currentSetIndex < sets.length - 1) {
+                                  setCurrentSetIndex(currentSetIndex + 1);
+                                }
+                                setTrackingState("not_started");
+                              }
+                            }}
                             data-testid={`checkbox-complete-${set.setNumber}`}
                             className="h-5 w-5 sm:h-6 sm:w-6"
                           />
@@ -433,7 +443,17 @@ export default function TrackPage() {
                         <div className="flex justify-center">
                           <Checkbox
                             checked={set.completed}
-                            disabled
+                            onCheckedChange={(checked) => {
+                              const newSets = [...sets];
+                              newSets[index].completed = !!checked;
+                              setCurrentSets(newSets);
+                              if (checked && index === currentSetIndex) {
+                                if (currentSetIndex < sets.length - 1) {
+                                  setCurrentSetIndex(currentSetIndex + 1);
+                                }
+                                setTrackingState("not_started");
+                              }
+                            }}
                             data-testid={`checkbox-complete-${set.setNumber}`}
                             className="h-5 w-5 sm:h-6 sm:w-6"
                           />
