@@ -1,4 +1,5 @@
 import { Switch, Route } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -21,6 +22,34 @@ import TrackPage from "@/pages/TrackPage";
 import HistoryPage from "@/pages/HistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
 import LandingPage from "@/pages/LandingPage";
+
+function useAppDiagnostics() {
+  useEffect(() => {
+    const mountTime = new Date().toISOString();
+    console.log(`[FitYear] App mounted at ${mountTime}`);
+    
+    const handleVisibilityChange = () => {
+      console.log(`[FitYear] Visibility changed: ${document.visibilityState} at ${new Date().toISOString()}`);
+    };
+    
+    const handleOnline = () => console.log(`[FitYear] Network: online at ${new Date().toISOString()}`);
+    const handleOffline = () => console.log(`[FitYear] Network: offline at ${new Date().toISOString()}`);
+    const handleBeforeUnload = () => console.log(`[FitYear] beforeunload at ${new Date().toISOString()}`);
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      console.log(`[FitYear] App unmounting at ${new Date().toISOString()}`);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+}
 
 function Router() {
   return (
@@ -107,6 +136,7 @@ function AuthenticatedApp() {
 
 function AppContent() {
   const { isLoading, isAuthenticated } = useAuth();
+  useAppDiagnostics();
 
   if (isLoading) {
     return (
