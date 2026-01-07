@@ -46,22 +46,33 @@ export const userSettings = pgTable("user_settings", {
   selectedCalendarName: text("selected_calendar_name"),
 });
 
+export const activeWorkouts = pgTable("active_workouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  workoutData: jsonb("workout_data").notNull(),
+  trackingProgress: jsonb("tracking_progress"),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 export const insertExerciseSchema = createInsertSchema(exercises).omit({ id: true });
 export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({ id: true });
 export const insertWorkoutTemplateSchema = createInsertSchema(workoutTemplates).omit({ id: true });
 export const insertScheduledWorkoutSchema = createInsertSchema(scheduledWorkouts).omit({ id: true });
 export const insertCompletedWorkoutSchema = createInsertSchema(completedWorkouts).omit({ id: true });
+export const insertActiveWorkoutSchema = createInsertSchema(activeWorkouts).omit({ id: true });
 
 export type Exercise = typeof exercises.$inferSelect;
 export type WorkoutTemplate = typeof workoutTemplates.$inferSelect;
 export type ScheduledWorkout = typeof scheduledWorkouts.$inferSelect;
 export type CompletedWorkout = typeof completedWorkouts.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;
+export type ActiveWorkout = typeof activeWorkouts.$inferSelect;
 export type InsertExercise = z.infer<typeof insertExerciseSchema>;
 export type InsertWorkoutTemplate = z.infer<typeof insertWorkoutTemplateSchema>;
 export type InsertScheduledWorkout = z.infer<typeof insertScheduledWorkoutSchema>;
 export type InsertCompletedWorkout = z.infer<typeof insertCompletedWorkoutSchema>;
 export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
+export type InsertActiveWorkout = z.infer<typeof insertActiveWorkoutSchema>;
 
 export * from "./models/chat";
 export * from "./models/auth";

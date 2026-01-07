@@ -8,16 +8,19 @@ import {
   scheduledWorkouts,
   completedWorkouts,
   userSettings,
+  activeWorkouts,
   type Exercise,
   type WorkoutTemplate,
   type ScheduledWorkout,
   type CompletedWorkout,
   type UserSettings,
+  type ActiveWorkout,
   type InsertExercise,
   type InsertWorkoutTemplate,
   type InsertScheduledWorkout,
   type InsertCompletedWorkout,
   type InsertUserSettings,
+  type InsertActiveWorkout,
 } from "@shared/schema";
 import { builtInExercises } from "./data/builtInExercises";
 
@@ -99,6 +102,10 @@ export interface IStorage {
   
   getUserSettings(userId: string): Promise<UserSettings | undefined>;
   upsertUserSettings(userId: string, settings: Partial<InsertUserSettings>): Promise<UserSettings>;
+  
+  getActiveWorkout(userId: string): Promise<ActiveWorkout | undefined>;
+  upsertActiveWorkout(userId: string, workoutData: any, trackingProgress?: any): Promise<ActiveWorkout>;
+  deleteActiveWorkout(userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -573,6 +580,74 @@ export class DatabaseStorage implements IStorage {
         selectedCalendarId: calendarId,
         selectedCalendarName: calendarName,
       };
+    }
+  }
+
+  async getActiveWorkout(userId: string): Promise<ActiveWorkout | undefined> {
+    try {
+      const results = await neonClient`
+        SELECT 
+          id,
+          user_id as "userId",
+          workout_data as "workoutData",
+          tracking_progress as "trackingProgress",
+          updated_at as "updatedAt"
+        FROM active_workouts 
+        WHERE user_id = ${userId}
+      `;
+      return results?.[0] as ActiveWorkout | undefined;
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
+  async upsertActiveWorkout(userId: string, workoutData: any, trackingProgress?: any): Promise<ActiveWorkout> {
+    const existing = await this.getActiveWorkout(userId);
+    const workoutDataJson = JSON.stringify(workoutData);
+    const trackingProgressJson = trackingProgress ? JSON.stringify(trackingProgress) : null;
+    
+    if (existing) {
+      const results = await neonClient`
+        UPDATE active_workouts 
+        SET 
+          workout_data = ${workoutDataJson}::jsonb,
+          tracking_progress = ${trackingProgressJson}::jsonb,
+          updated_at = NOW()
+        WHERE user_id = ${userId}
+        RETURNING 
+          id,
+          user_id as "userId",
+          workout_data as "workoutData",
+          tracking_progress as "trackingProgress",
+          updated_at as "updatedAt"
+      `;
+      return results[0] as ActiveWorkout;
+    } else {
+      const id = crypto.randomUUID();
+      await neonClient`
+        INSERT INTO active_workouts (id, user_id, workout_data, tracking_progress, updated_at)
+        VALUES (${id}, ${userId}, ${workoutDataJson}::jsonb, ${trackingProgressJson}::jsonb, NOW())
+      `;
+      return {
+        id,
+        userId,
+        workoutData,
+        trackingProgress,
+        updatedAt: new Date(),
+      };
+    }
+  }
+
+  async deleteActiveWorkout(userId: string): Promise<boolean> {
+    try {
+      await neonClient`DELETE FROM active_workouts WHERE user_id = ${userId}`;
+      return true;
+    } catch (error) {
+      console.error("Error deleting active workout:", error);
+      return false;
     }
   }
 }
