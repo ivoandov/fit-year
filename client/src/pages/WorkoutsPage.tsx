@@ -25,6 +25,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { MoreVertical } from "lucide-react";
 import { type Exercise } from "@/data/exercises";
 import { useWorkout } from "@/context/WorkoutContext";
@@ -78,6 +86,8 @@ export default function WorkoutsPage() {
   const { toast } = useToast();
   const { startWorkout, isWorkoutCompleted, completedWorkouts, restartWorkout, updateCompletedWorkout, deleteCompletedWorkout } = useWorkout();
   const [editingCompletedWorkout, setEditingCompletedWorkout] = useState<{ id: string; name: string; exercises: Exercise[] } | null>(null);
+  const [scheduleAgainWorkout, setScheduleAgainWorkout] = useState<{ name: string; exercises: Exercise[]; templateId?: string } | null>(null);
+  const [scheduleAgainDate, setScheduleAgainDate] = useState<Date>(new Date());
 
   const { data: dbWorkouts = [], isLoading } = useQuery<DBScheduledWorkout[]>({
     queryKey: ["/api/scheduled-workouts"],
@@ -477,6 +487,39 @@ export default function WorkoutsPage() {
     setWorkoutToDelete({ id, name, isTemplate: false, isCompleted: true });
   };
 
+  const handleScheduleAgain = (workout: { name: string; exercises: Exercise[]; templateId?: string }) => {
+    setScheduleAgainWorkout(workout);
+    setScheduleAgainDate(addDays(new Date(), 1)); // Default to tomorrow
+  };
+
+  const confirmScheduleAgain = async () => {
+    if (scheduleAgainWorkout) {
+      const localDate = `${scheduleAgainDate.getFullYear()}-${String(scheduleAgainDate.getMonth() + 1).padStart(2, '0')}-${String(scheduleAgainDate.getDate()).padStart(2, '0')}`;
+      try {
+        await apiRequest("POST", "/api/scheduled-workouts", {
+          name: scheduleAgainWorkout.name,
+          date: scheduleAgainDate.toISOString(),
+          localDate,
+          exercises: scheduleAgainWorkout.exercises,
+          templateId: scheduleAgainWorkout.templateId,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
+        toast({
+          title: "Workout Scheduled",
+          description: `${scheduleAgainWorkout.name} scheduled for ${format(scheduleAgainDate, "PPP")}`,
+        });
+      } catch (error) {
+        console.error("Failed to schedule workout:", error);
+        toast({
+          title: "Error",
+          description: "Failed to schedule workout. Please try again.",
+          variant: "destructive",
+        });
+      }
+      setScheduleAgainWorkout(null);
+    }
+  };
+
   const getDisplayedWorkouts = () => {
     const workouts: (ScheduledWorkout & { displayId: string })[] = [];
 
@@ -790,6 +833,13 @@ export default function WorkoutsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
+                            onClick={() => handleScheduleAgain(workout)}
+                            data-testid={`button-schedule-again-${index}`}
+                          >
+                            <CalendarIcon className="h-4 w-4 mr-2" />
+                            Schedule Again
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => handleEditCompletedWorkout(workout)}
                             data-testid={`button-edit-recent-workout-${index}`}
                           >
@@ -955,6 +1005,34 @@ export default function WorkoutsPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <Dialog open={!!scheduleAgainWorkout} onOpenChange={(open) => { if (!open) { setScheduleAgainWorkout(null); setScheduleAgainDate(addDays(new Date(), 1)); } }}>
+          <DialogContent data-testid="dialog-schedule-again">
+            <DialogHeader>
+              <DialogTitle>Schedule Again</DialogTitle>
+              <DialogDescription>
+                Pick a date to schedule "{scheduleAgainWorkout?.name}"
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Calendar
+                mode="single"
+                selected={scheduleAgainDate}
+                onSelect={(date) => date && setScheduleAgainDate(date)}
+                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                className="rounded-md border mx-auto"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setScheduleAgainWorkout(null)} data-testid="button-cancel-schedule-again">
+                Cancel
+              </Button>
+              <Button onClick={confirmScheduleAgain} data-testid="button-confirm-schedule-again">
+                Schedule for {format(scheduleAgainDate, "MMM d")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
