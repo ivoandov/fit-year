@@ -661,20 +661,6 @@ export default function WorkoutsPage() {
                         </DropdownMenu>
                       </div>
                     </CardHeader>
-                    <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-                      <div className="flex flex-wrap gap-1">
-                        {workout.exercises.slice(0, 3).map((ex) => (
-                          <span key={ex.id} className="text-xs bg-accent px-2 py-0.5 rounded">
-                            {ex.name}
-                          </span>
-                        ))}
-                        {workout.exercises.length > 3 && (
-                          <span className="text-xs text-muted-foreground">
-                            +{workout.exercises.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    </CardContent>
                   </Card>
                 );
               })}
@@ -755,20 +741,6 @@ export default function WorkoutsPage() {
                         </DropdownMenu>
                       </div>
                     </CardHeader>
-                    <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-                      <div className="flex flex-wrap gap-1">
-                        {workout.exercises.slice(0, 3).map((ex) => (
-                          <span key={ex.id} className="text-xs bg-accent px-2 py-0.5 rounded">
-                            {ex.name}
-                          </span>
-                        ))}
-                        {workout.exercises.length > 3 && (
-                          <span className="text-xs text-muted-foreground">
-                            +{workout.exercises.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    </CardContent>
                   </Card>
                 );
               })}
@@ -864,23 +836,6 @@ export default function WorkoutsPage() {
                       </DropdownMenu>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-                    <div className="text-xs sm:text-sm text-muted-foreground">
-                      {workout.exercises.length} exercises
-                    </div>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {workout.exercises.slice(0, 3).map((ex) => (
-                        <span key={ex.id} className="text-xs bg-accent px-2 py-0.5 rounded">
-                          {ex.name}
-                        </span>
-                      ))}
-                      {workout.exercises.length > 3 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{workout.exercises.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
                 </Card>
               ))}
             </div>
@@ -951,20 +906,6 @@ export default function WorkoutsPage() {
                       </DropdownMenu>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {template.exercises.slice(0, 3).map((ex) => (
-                        <span key={ex.id} className="text-xs bg-accent px-2 py-0.5 rounded">
-                          {ex.name}
-                        </span>
-                      ))}
-                      {template.exercises.length > 3 && (
-                        <span className="text-xs text-muted-foreground">
-                          +{template.exercises.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
                 </Card>
               ))}
             </div>
