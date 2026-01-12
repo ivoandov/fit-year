@@ -122,7 +122,7 @@ export default function HistoryPage() {
           {stats.map((stat) => (
             <Card key={stat.label} data-testid={`card-stat-${stat.testId}`}>
               <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 p-3 sm:p-4 pb-1 sm:pb-2">
-                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-xs sm:text-sm font-medium">
                   {stat.label}
                 </CardTitle>
                 <stat.icon className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
