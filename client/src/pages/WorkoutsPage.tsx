@@ -597,7 +597,7 @@ export default function WorkoutsPage() {
         {todayWorkouts.length > 0 && (
           <div className="space-y-3 sm:space-y-4">
             <h2 className="text-lg sm:text-xl font-semibold">Today</h2>
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
               {todayWorkouts.map((workout) => {
                 const isCompleted = isWorkoutCompleted(workout.displayId);
                 return (
@@ -685,7 +685,7 @@ export default function WorkoutsPage() {
         {upcomingWorkouts.length > 0 && (
           <div className="space-y-3 sm:space-y-4">
             <h2 className="text-lg sm:text-xl font-semibold">Upcoming</h2>
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
               {upcomingWorkouts.map((workout) => {
                 const isCompleted = isWorkoutCompleted(workout.displayId);
                 const isPastDue = !isCompleted && isBefore(startOfDay(workout.date), startOfDay(new Date()));
@@ -800,7 +800,7 @@ export default function WorkoutsPage() {
                 Your completed sessions
               </p>
             </div>
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
               {completedWorkouts.slice(0, 6).map((workout, index) => (
                 <Card 
                   key={`${workout.displayId}-${index}`}
@@ -897,7 +897,7 @@ export default function WorkoutsPage() {
             </p>
           </div>
           {workoutTemplates.length > 0 ? (
-            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
               {workoutTemplates.map((template) => (
                 <Card 
                   key={template.id}
