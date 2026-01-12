@@ -1,5 +1,6 @@
 import { useLocation, Link } from "wouter";
-import { Home, PersonStanding, ClipboardList, BarChart3, Dumbbell } from "lucide-react";
+import { Home, ClipboardList, BarChart3, Dumbbell } from "lucide-react";
+import { GiWeightLiftingUp } from "react-icons/gi";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -18,7 +19,7 @@ const navItems = [
   {
     title: "Exercises",
     url: "/exercises",
-    icon: PersonStanding,
+    icon: GiWeightLiftingUp,
     testId: "nav-exercises",
   },
   {
