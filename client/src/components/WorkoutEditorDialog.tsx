@@ -58,6 +58,25 @@ export function WorkoutEditorDialog({
   const [showCalendar, setShowCalendar] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [selectedMuscleFilters, setSelectedMuscleFilters] = useState<string[]>([]);
+
+  const allMuscleGroups = [...new Set(
+    availableExercises.flatMap(e => e.muscleGroups || [])
+  )].sort();
+
+  const toggleMuscleFilter = (muscle: string) => {
+    setSelectedMuscleFilters(prev =>
+      prev.includes(muscle)
+        ? prev.filter(m => m !== muscle)
+        : [...prev, muscle]
+    );
+  };
+
+  const filteredExercises = selectedMuscleFilters.length === 0
+    ? availableExercises
+    : availableExercises.filter(e =>
+        e.muscleGroups?.some(mg => selectedMuscleFilters.includes(mg))
+      );
 
   useEffect(() => {
     if (initialData) {
@@ -75,6 +94,7 @@ export function WorkoutEditorDialog({
     }
     setActiveTab("details");
     setShowCalendar(false);
+    setSelectedMuscleFilters([]);
   }, [initialData, isOpen]);
 
   const handleSave = () => {
@@ -327,10 +347,33 @@ export function WorkoutEditorDialog({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm">Available Exercises ({availableExercises.length})</Label>
+                <Label className="text-sm">Available Exercises ({filteredExercises.length})</Label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {allMuscleGroups.map((muscle) => (
+                    <Badge
+                      key={muscle}
+                      variant={selectedMuscleFilters.includes(muscle) ? "default" : "outline"}
+                      className="cursor-pointer text-xs toggle-elevate"
+                      onClick={() => toggleMuscleFilter(muscle)}
+                      data-testid={`filter-muscle-${muscle.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      {muscle}
+                    </Badge>
+                  ))}
+                  {selectedMuscleFilters.length > 0 && (
+                    <Badge
+                      variant="ghost"
+                      className="cursor-pointer text-xs text-muted-foreground"
+                      onClick={() => setSelectedMuscleFilters([])}
+                      data-testid="button-clear-filters"
+                    >
+                      Clear all
+                    </Badge>
+                  )}
+                </div>
                 <div className="border rounded-md max-h-[300px] sm:max-h-[350px] overflow-y-auto">
                   <div className="p-2 space-y-1">
-                    {[...availableExercises]
+                    {[...filteredExercises]
                       .sort((a, b) => {
                         const muscleA = (a.muscleGroups[0] || "").toLowerCase();
                         const muscleB = (b.muscleGroups[0] || "").toLowerCase();
