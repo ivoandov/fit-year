@@ -603,64 +603,64 @@ export default function WorkoutsPage() {
                 return (
                   <Card 
                     key={workout.displayId}
-                    className={`hover-elevate ${isCompleted ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/20' : ''}`}
+                    className={`hover-elevate border-0 aspect-square flex flex-col ${isCompleted ? 'bg-green-950/20' : ''}`}
                     data-testid={`card-workout-${workout.displayId}`}
                   >
-                    <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-base sm:text-lg font-semibold truncate">
-                            {workout.name}
-                          </CardTitle>
-                          {isCompleted && (
-                            <Badge variant="outline" className="text-green-600 border-green-500 shrink-0">
-                              <Check className="h-3 w-3 mr-1" />
-                              Done
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                          {format(workout.date, "PPP")}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          size="icon"
-                          onClick={() => handleStartWorkout(workout.displayId)}
-                          data-testid={`button-start-workout-${workout.displayId}`}
-                        >
-                          <Play className="h-4 w-4" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              data-testid={`button-workout-menu-${workout.displayId}`}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleEditWorkout(workout.displayId)}
-                              data-testid={`button-edit-workout-${workout.displayId}`}
-                            >
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
-                              className="text-destructive"
-                              data-testid={`button-delete-workout-${workout.displayId}`}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardHeader>
+                    <div className="flex items-start justify-between p-3 sm:p-4">
+                      <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
+                        {workout.name}
+                      </CardTitle>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            data-testid={`button-workout-menu-${workout.displayId}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleEditWorkout(workout.displayId)}
+                            data-testid={`button-edit-workout-${workout.displayId}`}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
+                            className="text-destructive"
+                            data-testid={`button-delete-workout-${workout.displayId}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="px-3 sm:px-4 flex-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {format(workout.date, "PPP")}
+                      </p>
+                      {isCompleted && (
+                        <Badge variant="outline" className="text-green-500 border-green-500 mt-2">
+                          <Check className="h-3 w-3 mr-1" />
+                          Done
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="p-3 sm:p-4 flex justify-end">
+                      <Button
+                        size="icon"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => handleStartWorkout(workout.displayId)}
+                        data-testid={`button-start-workout-${workout.displayId}`}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </Card>
                 );
               })}
@@ -678,69 +678,69 @@ export default function WorkoutsPage() {
                 return (
                   <Card 
                     key={workout.displayId}
-                    className={`hover-elevate ${isCompleted ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/20' : isPastDue ? 'border-red-500/50' : ''}`}
+                    className={`hover-elevate border-0 aspect-square flex flex-col ${isCompleted ? 'bg-green-950/20' : ''}`}
                     data-testid={`card-workout-${workout.displayId}`}
                   >
-                    <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <CardTitle className="text-base sm:text-lg font-semibold truncate">
-                            {workout.name}
-                          </CardTitle>
-                          {isCompleted && (
-                            <Badge variant="outline" className="text-green-600 border-green-500 shrink-0">
-                              <Check className="h-3 w-3 mr-1" />
-                              Done
-                            </Badge>
-                          )}
-                          {isPastDue && (
-                            <Badge variant="outline" className="text-red-600 border-red-500 bg-red-50 dark:bg-red-950/30 shrink-0">
-                              Past Due
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                          {format(workout.date, "PPP")}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          size="icon"
-                          onClick={() => handleStartWorkout(workout.displayId)}
-                          data-testid={`button-start-workout-${workout.displayId}`}
-                        >
-                          <Play className="h-4 w-4" />
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              data-testid={`button-workout-menu-${workout.displayId}`}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleEditWorkout(workout.displayId)}
-                              data-testid={`button-edit-workout-${workout.displayId}`}
-                            >
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
-                              className="text-destructive"
-                              data-testid={`button-delete-workout-${workout.displayId}`}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardHeader>
+                    <div className="flex items-start justify-between p-3 sm:p-4">
+                      <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
+                        {workout.name}
+                      </CardTitle>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            data-testid={`button-workout-menu-${workout.displayId}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleEditWorkout(workout.displayId)}
+                            data-testid={`button-edit-workout-${workout.displayId}`}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
+                            className="text-destructive"
+                            data-testid={`button-delete-workout-${workout.displayId}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="px-3 sm:px-4 flex-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {format(workout.date, "PPP")}
+                      </p>
+                      {isPastDue && (
+                        <Badge variant="outline" className="text-red-500 border-red-500 bg-red-950/30 mt-2">
+                          Past Due
+                        </Badge>
+                      )}
+                      {isCompleted && (
+                        <Badge variant="outline" className="text-green-500 border-green-500 mt-2">
+                          <Check className="h-3 w-3 mr-1" />
+                          Done
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="p-3 sm:p-4 flex justify-end">
+                      <Button
+                        size="icon"
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() => handleStartWorkout(workout.displayId)}
+                        data-testid={`button-start-workout-${workout.displayId}`}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </Card>
                 );
               })}
@@ -776,66 +776,70 @@ export default function WorkoutsPage() {
               {completedWorkouts.slice(0, 6).map((workout, index) => (
                 <Card 
                   key={`${workout.displayId}-${index}`}
-                  className="hover-elevate border-green-500/30 bg-green-50/20 dark:bg-green-950/10"
+                  className="hover-elevate border-0 aspect-square flex flex-col bg-green-950/20"
                   data-testid={`card-recent-workout-${index}`}
                 >
-                  <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <CardTitle className="text-base sm:text-lg font-semibold truncate">
-                          {workout.name}
-                        </CardTitle>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground mt-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{format(workout.completedAt, "PP 'at' p")}</span>
-                      </div>
+                  <div className="flex items-start justify-between p-3 sm:p-4">
+                    <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
+                      {workout.name}
+                    </CardTitle>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          data-testid={`button-recent-workout-menu-${index}`}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleScheduleAgain(workout)}
+                          data-testid={`button-schedule-again-${index}`}
+                        >
+                          <CalendarIcon className="h-4 w-4 mr-2" />
+                          Schedule Again
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleEditCompletedWorkout(workout)}
+                          data-testid={`button-edit-recent-workout-${index}`}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteCompletedWorkout(workout.id, workout.name)}
+                          className="text-destructive"
+                          data-testid={`button-delete-recent-workout-${index}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="px-3 sm:px-4 flex-1">
+                    <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      <span>{format(workout.completedAt, "PP")}</span>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        size="icon"
-                        onClick={() => handleRestartWorkout(workout)}
-                        data-testid={`button-restart-workout-${index}`}
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            data-testid={`button-recent-workout-menu-${index}`}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleScheduleAgain(workout)}
-                            data-testid={`button-schedule-again-${index}`}
-                          >
-                            <CalendarIcon className="h-4 w-4 mr-2" />
-                            Schedule Again
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleEditCompletedWorkout(workout)}
-                            data-testid={`button-edit-recent-workout-${index}`}
-                          >
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteCompletedWorkout(workout.id, workout.name)}
-                            className="text-destructive"
-                            data-testid={`button-delete-recent-workout-${index}`}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
+                    <Badge variant="outline" className="text-green-500 border-green-500 mt-2">
+                      <Check className="h-3 w-3 mr-1" />
+                      Done
+                    </Badge>
+                  </div>
+                  <div className="p-3 sm:p-4 flex justify-end">
+                    <Button
+                      size="icon"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => handleRestartWorkout(workout)}
+                      data-testid={`button-restart-workout-${index}`}
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </Card>
               ))}
             </div>
@@ -856,61 +860,63 @@ export default function WorkoutsPage() {
               {workoutTemplates.map((template) => (
                 <Card 
                   key={template.id}
-                  className="hover-elevate"
+                  className="hover-elevate border-0 aspect-square flex flex-col"
                   data-testid={`card-library-workout-${template.id}`}
                 >
-                  <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base sm:text-lg font-semibold truncate">
-                        {template.name}
-                      </CardTitle>
-                      <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                        {template.exercises.length} exercises
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        size="icon"
-                        onClick={() => handleStartFromTemplate(template.id)}
-                        data-testid={`button-start-library-workout-${template.id}`}
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            data-testid={`button-library-workout-menu-${template.id}`}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleEditTemplate(template.id)}
-                            data-testid={`button-edit-library-workout-${template.id}`}
-                          >
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteTemplate(template.id, template.name)}
-                            className="text-destructive"
-                            data-testid={`button-delete-library-workout-${template.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
+                  <div className="flex items-start justify-between p-3 sm:p-4">
+                    <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
+                      {template.name}
+                    </CardTitle>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          data-testid={`button-library-workout-menu-${template.id}`}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleEditTemplate(template.id)}
+                          data-testid={`button-edit-library-workout-${template.id}`}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteTemplate(template.id, template.name)}
+                          className="text-destructive"
+                          data-testid={`button-delete-library-workout-${template.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="px-3 sm:px-4 flex-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      {template.exercises.length} exercises
+                    </p>
+                  </div>
+                  <div className="p-3 sm:p-4 flex justify-end">
+                    <Button
+                      size="icon"
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => handleStartFromTemplate(template.id)}
+                      data-testid={`button-start-library-workout-${template.id}`}
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </Card>
               ))}
             </div>
           ) : (
-            <Card className="p-6 sm:p-8">
+            <Card className="p-6 sm:p-8 border-0">
               <div className="text-center text-muted-foreground">
                 <p>No workouts created yet</p>
                 <p className="text-sm mt-1">Click "New Workout" to create your first workout</p>
