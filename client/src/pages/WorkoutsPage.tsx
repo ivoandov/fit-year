@@ -749,8 +749,7 @@ export default function WorkoutsPage() {
           <Card className="p-8 sm:p-12 text-center">
             <div className="text-muted-foreground">
               <CalendarIcon className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-base sm:text-lg font-semibold mb-2">No workouts scheduled</h3>
-              <p className="text-sm mb-4">Get started by creating your first workout.</p>
+              <h3 className="text-base sm:text-lg font-semibold mb-4">No workouts scheduled</h3>
               <Button onClick={handleNewWorkout} data-testid="button-create-first-workout">
                 <Plus className="h-4 w-4 mr-2" />
                 Create Workout
