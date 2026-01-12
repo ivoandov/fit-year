@@ -1,6 +1,5 @@
 import { useLocation, Link } from "wouter";
-import { Home, PersonStanding, ClipboardList, BarChart3 } from "lucide-react";
-import { GiMuscleUp } from "react-icons/gi";
+import { Home, PersonStanding, ClipboardList, BarChart3, Dumbbell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -13,7 +12,7 @@ const navItems = [
   {
     title: "Track",
     url: "/track",
-    icon: GiMuscleUp,
+    icon: Dumbbell,
     testId: "nav-track",
   },
   {
