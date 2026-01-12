@@ -6,7 +6,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SettingsProvider } from "@/components/SettingsProvider";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { BottomNav } from "@/components/BottomNav";
 import { WorkoutProvider } from "@/context/WorkoutContext";
 import { useAuth } from "@/hooks/use-auth";
@@ -163,7 +162,6 @@ function AuthenticatedApp() {
               <h1 className="text-lg font-semibold text-foreground">{getPageTitle()}</h1>
             )}
             <div className="flex items-center gap-2">
-              <ThemeToggle />
               <UserMenu />
             </div>
           </header>
