@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, Clock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, addDays } from "date-fns";
+import { format, addDays, isBefore, startOfDay } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -688,15 +688,16 @@ export default function WorkoutsPage() {
             <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {upcomingWorkouts.map((workout) => {
                 const isCompleted = isWorkoutCompleted(workout.displayId);
+                const isPastDue = !isCompleted && isBefore(startOfDay(workout.date), startOfDay(new Date()));
                 return (
                   <Card 
                     key={workout.displayId}
-                    className={`hover-elevate ${isCompleted ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/20' : ''}`}
+                    className={`hover-elevate ${isCompleted ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/20' : isPastDue ? 'border-red-500/50' : ''}`}
                     data-testid={`card-workout-${workout.displayId}`}
                   >
                     <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 p-4 sm:p-6 pb-2 sm:pb-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <CardTitle className="text-base sm:text-lg font-semibold truncate">
                             {workout.name}
                           </CardTitle>
@@ -704,6 +705,11 @@ export default function WorkoutsPage() {
                             <Badge variant="outline" className="text-green-600 border-green-500 shrink-0">
                               <Check className="h-3 w-3 mr-1" />
                               Done
+                            </Badge>
+                          )}
+                          {isPastDue && (
+                            <Badge variant="outline" className="text-red-600 border-red-500 bg-red-50 dark:bg-red-950/30 shrink-0">
+                              Past Due
                             </Badge>
                           )}
                         </div>
