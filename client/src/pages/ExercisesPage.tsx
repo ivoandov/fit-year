@@ -233,7 +233,7 @@ export default function ExercisesPage() {
                 <Badge
                   key={group}
                   variant={selectedMuscleGroup === group ? "default" : "outline"}
-                  className="cursor-pointer whitespace-nowrap hover-elevate active-elevate-2 text-xs sm:text-sm"
+                  className="cursor-pointer whitespace-nowrap hover-elevate active-elevate-2 text-xs sm:text-sm min-w-[5.5rem] justify-center"
                   onClick={() => setSelectedMuscleGroup(group)}
                   data-testid={`badge-muscle-group-${group.toLowerCase()}`}
                 >
