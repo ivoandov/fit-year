@@ -4,17 +4,17 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { SettingsProvider } from "@/components/SettingsProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { BottomNav } from "@/components/BottomNav";
 import { WorkoutProvider } from "@/context/WorkoutContext";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LogOut, Loader2 } from "lucide-react";
+import { LogOut, Loader2, Settings } from "lucide-react";
+import { Link } from "wouter";
 import NotFound from "@/pages/not-found";
 import WorkoutsPage from "@/pages/WorkoutsPage";
 import ExercisesPage from "@/pages/ExercisesPage";
@@ -88,6 +88,12 @@ function UserMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <Link href="/settings">
+          <DropdownMenuItem data-testid="link-settings">
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </DropdownMenuItem>
+        </Link>
         <DropdownMenuItem 
           onClick={() => logout()}
           disabled={isLoggingOut}
@@ -106,31 +112,22 @@ function UserMenu() {
 }
 
 function AuthenticatedApp() {
-  const style = {
-    "--sidebar-width": "16rem",
-    "--sidebar-width-icon": "3rem",
-  };
-
   return (
     <SettingsProvider>
       <WorkoutProvider>
-        <SidebarProvider style={style as React.CSSProperties}>
-          <div className="flex h-screen w-full">
-            <AppSidebar />
-            <div className="flex flex-col flex-1 min-w-0">
-              <header className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3 border-b">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <div className="flex items-center gap-2">
-                  <ThemeToggle />
-                  <UserMenu />
-                </div>
-              </header>
-              <main className="flex-1 overflow-hidden">
-                <Router />
-              </main>
+        <div className="flex flex-col h-screen w-full">
+          <header className="flex items-center justify-between px-4 py-3 border-b bg-card">
+            <h1 className="text-lg font-semibold text-foreground">Fit Year</h1>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <UserMenu />
             </div>
-          </div>
-        </SidebarProvider>
+          </header>
+          <main className="flex-1 overflow-auto pb-20">
+            <Router />
+          </main>
+          <BottomNav />
+        </div>
       </WorkoutProvider>
     </SettingsProvider>
   );
@@ -142,7 +139,7 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -158,7 +155,7 @@ function AppContent() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <AppContent />
           <Toaster />

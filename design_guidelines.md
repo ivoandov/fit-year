@@ -1,212 +1,185 @@
-# Fitness Tracking App Design Guidelines
+# Fit Year Fitness App - Design Guidelines
 
-## Design Approach
+## Design Philosophy
+Modern, energetic dark theme fitness application with neon yellow accents. The design emphasizes a bold, sporty aesthetic with high contrast and clean data visualization. Inspired by premium fitness apps with a focus on utility and ease of use.
 
-**System:** Material Design principles blended with fitness app best practices (inspired by Strong, Apple Fitness, Nike Training Club)
+---
 
-**Rationale:** This is a utility-focused productivity app requiring clear information hierarchy, efficient data entry, and seamless transitions between planning, tracking, and reviewing modes. Standard patterns optimized for usability.
+## Color Palette
+
+### Primary Colors
+- **Background**: Deep charcoal black (`hsl(60 5% 6%)` / ~#0F0F0E)
+- **Card Background**: Slightly elevated dark (`hsl(60 5% 10%)` / ~#1A1A18)
+- **Primary Accent**: Neon yellow/lime (`hsl(66 100% 50%)` / ~#E5FF00)
+
+### Text Colors
+- **Primary Text**: White (`hsl(0 0% 95%)`)
+- **Secondary/Muted Text**: Gray (`hsl(0 0% 60%)`)
+- **Accent Text**: Neon yellow for highlights and emphasis
+
+### Semantic Colors
+- **Success**: Neon yellow (primary)
+- **Destructive**: Red (`hsl(0 70% 50%)`)
+- **Border**: Subtle dark (`hsl(60 5% 15%)`)
+- **Input**: Dark gray (`hsl(60 5% 18%)`)
 
 ---
 
 ## Typography System
 
-**Font Family:** DM Sans (via Google Fonts CDN)
-- Primary: DM Sans (weights: 400, 500, 600, 700)
+### Font Family
+- **Primary**: DM Sans (via Google Fonts CDN)
+- **Monospace**: JetBrains Mono
 
-**Hierarchy:**
-- Page Headers: text-3xl font-bold (Workout Plan, Exercise Library)
-- Section Headers: text-xl font-semibold (Today's Workout, Exercise Categories)
-- Card Titles: text-lg font-semibold (Exercise names, Workout titles)
-- Body Text: text-base font-medium (Exercise descriptions, instructions)
-- Metadata/Labels: text-sm font-medium (Set numbers, rep counts, timestamps)
-- Helper Text: text-sm (Form hints, rest timer instructions)
+### Font Weights
+- Headings: 600-700 (semibold to bold)
+- Body: 400-500 (regular to medium)
+- Labels/Meta: 400 (regular)
+
+### Hierarchy
+- Page Headers: text-3xl font-bold
+- Section Headers: text-xl font-semibold
+- Card Titles: text-lg font-semibold
+- Body Text: text-base font-medium
+- Metadata/Labels: text-sm font-medium
+- Helper Text: text-sm text-muted-foreground
 
 ---
 
 ## Layout System
 
-**Spacing Units:** Tailwind spacing scale focusing on 2, 3, 4, 6, 8, 12, 16
-- Component padding: p-4, p-6
-- Section spacing: space-y-6, space-y-8
-- Card gaps: gap-4, gap-6
-- Tight spacing (lists): space-y-2, space-y-3
+### Spacing Scale
+- xs: 4px (gap-1)
+- sm: 8px (gap-2)
+- md: 12px (gap-3)
+- lg: 16px (gap-4)
+- xl: 24px (gap-6)
 
-**Container Strategy:**
-- App Container: max-w-7xl mx-auto px-4
-- Content Cards: max-w-4xl for workout details
-- Narrow Forms: max-w-md for focused inputs
-- Full-width: Calendar views and active workout tracking
+### Border Radius
+- Large elements (cards, modals): 14px (`rounded-xl`)
+- Medium elements (buttons, inputs): 9px (`rounded-lg`)
+- Small elements (badges, chips): 6px (`rounded-md`)
+- Pills/active tabs: Full rounded (`rounded-full`)
+
+### Container Strategy
+- App Container: Full width with bottom nav
+- Content padding: px-4 py-4
+- Bottom padding: pb-20 (to clear nav bar)
 
 ---
 
 ## Navigation Structure
 
-**Primary Navigation:** Bottom tab bar (mobile-first) with 4 main sections:
-1. **Workouts** (home icon) - Browse scheduled workouts
-2. **Exercises** (database icon) - Exercise library
-3. **Track** (play icon) - Active workout mode
-4. **History** (chart icon) - Past workouts
+### Bottom Tab Bar (Primary Navigation)
+Fixed to bottom of screen with 5 items:
+1. **Home** (Home icon) - Workouts/Dashboard
+2. **Track** (Dumbbell/Muscle icon) - Active workout mode
+3. **Exercises** (PersonStanding icon) - Exercise library
+4. **Routines** (ClipboardList icon) - Multi-day programs
+5. **History** (BarChart3 icon) - Past workouts and stats
 
-**Desktop:** Side navigation (left sidebar, w-64) with same sections, collapsible
+**Styling:**
+- Dark background matching card color
+- Icons only, no labels
+- Active state: Neon yellow circular background with dark icon
+- Inactive state: Muted gray icons
 
-**Top Bar:** 
-- Title of current section
-- Action buttons (+ Add Workout, Calendar Sync status)
-- Profile/Settings icon (right-aligned)
+### Header Bar
+- App title (left)
+- Theme toggle and user menu (right)
+- Settings accessible via user dropdown
 
 ---
 
 ## Core Components
 
-### Exercise Database
-**Layout:** Grid-based browsing
-- Desktop: grid-cols-3 gap-6
-- Tablet: grid-cols-2 gap-4
-- Mobile: grid-cols-1 gap-4
+### Cards
+- Dark background (`bg-card`)
+- Subtle border (`border-border`)
+- Generous padding (p-4 to p-6)
+- Large rounded corners (`rounded-xl`)
+- No heavy shadows (dark theme)
 
-**Exercise Cards:**
-- Rounded corners (rounded-lg)
-- Border treatment (border-2)
-- Padding: p-4
-- Structure: Icon/category badge (top), exercise name (text-lg font-semibold), muscle group tags, brief description (text-sm), "Add to Workout" button
+### Buttons
+- **Primary**: Neon yellow background with dark text
+- **Secondary**: Dark background with subtle border, light text
+- **Ghost**: Transparent, light text, subtle hover elevation
+- **Destructive**: Red background with white text
+- Pill-shaped for navigation, rounded-lg for actions
 
-**Category Filters:** Horizontal scrollable chips (px-4 py-2, rounded-full)
+### Filter Chips/Pills
+- Active: Neon yellow fill (`bg-primary`) with dark text
+- Inactive: Dark fill with border, light text
+- Fully rounded (`rounded-full`)
+- Horizontal scrollable list
 
-### Workout Builder
-**Layout:** Two-column split (desktop)
-- Left (w-2/3): Selected exercises list (drag-and-drop reorderable)
-- Right (w-1/3): Sticky exercise database browser
-
-**Exercise List Items:**
-- Drag handle (left, heroicons bars-3 icon)
-- Exercise name and image thumbnail
-- Set/Rep input fields (inline, text-base, w-16)
-- Remove button (right, heroicons x-mark icon)
-
-### Workout Scheduler
-**Calendar View:**
-- Full-width monthly grid
-- Date cells: aspect-square, padding p-2
-- Workout indicators: Small pills with workout names (text-xs, truncate)
-- Add workout: Click empty date to create
-
-**Weekly View (Alternative):**
-- 7-column grid showing week at a glance
-- Larger workout cards with preview (exercise count, estimated duration)
-
-### Active Workout Tracker
-**Full-Screen Mode:**
-- Top: Exercise name (text-2xl font-bold), current set indicator
-- Center: Large set/rep input fields
-  - Number inputs with +/- buttons (text-3xl font-bold for numbers)
-  - Quick-tap buttons for common weights
-- Bottom: Rest timer (when activated)
-  - Circular progress indicator
-  - Large countdown (text-4xl)
-  - Skip/Pause buttons
-
-**Set Log Table:**
-- Simple rows: Set number | Weight | Reps | Complete checkbox
-- Alternating subtle backgrounds for readability
-- Compact spacing (py-2)
-
-### Rest Timer
-**Overlay Component:**
-- Bottom sheet style (mobile) or modal (desktop)
-- Large circular progress ring
-- Center: Countdown text (text-5xl font-bold)
-- Controls: Pause, +15s, Skip buttons (icon buttons, large touch targets p-4)
-- Haptic feedback on completion (browser vibration API)
-
-### Workout History
-**List View:**
-- Card-based chronological list (space-y-4)
-- Each card: Date header, workout name, duration, exercise count, total volume
-- Expandable to show set-by-set details
-
-**Metrics Display:**
-- Key stats in grid: grid-cols-3 gap-4
-- Each metric: Number (text-2xl font-bold), label (text-sm), trend indicator
-
----
-
-## Form Elements
-
-**Input Fields:**
-- Standard height: h-12
+### Inputs
+- Dark background (`bg-input`)
+- Subtle border
+- Height: h-10 to h-12
 - Padding: px-4
-- Border width: border-2
 - Rounded: rounded-lg
-- Number inputs (sets/reps): Larger text (text-xl), centered, w-20
 
-**Buttons:**
-- Primary CTA: px-6 py-3, rounded-lg, font-semibold
-- Secondary: px-4 py-2, rounded-lg, border-2
-- Icon buttons: p-3, rounded-full
-- Large touch targets for workout tracking: min-h-14
-
-**Checkboxes (Set Completion):**
-- Large size (w-6 h-6)
-- Rounded: rounded-md
-- Clear checked state
+### Data Visualization
+- Charts use neon yellow as primary color
+- Subtle grid lines in muted colors
+- Progress rings with yellow fill
+- Bar charts with gradient yellow tones
 
 ---
 
-## Icons
+## Interactive States
 
-**Library:** Heroicons (via CDN)
-- Navigation: home, folder, play-circle, chart-bar
-- Actions: plus, x-mark, check, chevron-right
-- Workout: clock, fire, trophy
-- UI: bars-3 (drag), ellipsis-vertical (menu)
+### Hover
+- Subtle brightness increase
+- Use built-in `hover-elevate` utility
 
----
+### Active/Pressed
+- More pronounced brightness increase
+- Use built-in `active-elevate-2` utility
 
-## Images
+### Selected/Active Tab
+- Neon yellow circular background
+- Dark text (primary-foreground)
 
-**Exercise Thumbnails:**
-- Ratio: aspect-video or aspect-square
-- Size: Small (w-16 h-16) for list items, Medium (w-full max-h-48) for cards
-- Rounded: rounded-md
-- Placeholder: Use exercise type icon on solid background if no image
-
-**No Hero Section:** This is a productivity app, not marketing - launch directly into functional interface
+### Disabled
+- Reduced opacity (50%)
+- No cursor interaction
 
 ---
 
-## Responsive Breakpoints
-
-**Mobile-First Approach:**
-- Base (mobile): Single column, bottom nav, full-width cards
-- md (768px): Two columns for exercise grid, side-by-side layouts
-- lg (1024px): Three columns, persistent sidebar navigation, workout builder split view
+## Dark Theme Notes
+- This is a dark-first design - the app defaults to dark mode
+- All colors are designed for maximum contrast on dark backgrounds
+- Yellow accent provides energy and visibility without being harsh
+- Cards and surfaces use subtle elevation via background color, not shadows
 
 ---
 
 ## Accessibility
-
-- All interactive elements: min-height h-12 (48px touch target)
+- All interactive elements: min-height h-10 (40px touch target)
 - Form labels: Visible and associated with inputs
-- Focus states: Clear focus rings (ring-2 ring-offset-2)
-- Timer alerts: Visual and text-based countdown
-- Screen reader announcements for set completion
+- Focus states: Clear focus rings (`ring-2 ring-ring`)
+- High contrast text on dark backgrounds
 - Keyboard navigation: All features accessible without mouse
 
 ---
 
 ## Key UX Patterns
 
-**State Management:**
-- Empty states: Encouraging illustrations with "Add your first workout" CTAs
-- Loading states: Skeleton screens for exercise grid
-- Success feedback: Checkmarks and subtle notifications for completed sets
+### Empty States
+- Encouraging messaging with "Add your first..." CTAs
+- Icon or illustration with muted colors
 
-**Progressive Disclosure:**
-- Collapsed exercise details in lists
-- Expand cards to show full instructions
-- Drawer pattern for exercise selection during workout
+### Loading States
+- Spinner with primary color
+- Skeleton screens for lists
 
-**Quick Actions:**
-- Swipe gestures: Swipe exercise card left to delete
-- Long-press: Quick add from exercise database
-- Floating action button: Start workout (bottom-right, fixed)
+### Success Feedback
+- Checkmarks with primary color
+- Toast notifications for actions
+
+### Quick Actions
+- Bottom sheet dialogs for mobile
+- Modal dialogs for complex forms
+- Inline editing where appropriate
