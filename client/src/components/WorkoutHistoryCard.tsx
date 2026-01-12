@@ -138,7 +138,7 @@ export function WorkoutHistoryCard({
   return (
     <Card data-testid={`card-history-${id}`}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="p-4 sm:p-6">
+        <CardHeader className="p-5 sm:p-7">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <CardTitle className="text-base sm:text-lg font-semibold mb-2 truncate" data-testid={`text-history-name-${id}`}>
@@ -169,7 +169,7 @@ export function WorkoutHistoryCard({
           </div>
         </CardHeader>
         <CollapsibleContent>
-          <CardContent className="p-4 sm:p-6 pt-0">
+          <CardContent className="p-5 sm:p-7 pt-0">
             <div className="flex justify-end mb-3 gap-2">
               {isEditing ? (
                 <>
