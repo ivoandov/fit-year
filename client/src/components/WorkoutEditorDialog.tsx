@@ -381,6 +381,7 @@ export function WorkoutEditorDialog({
             Cancel
           </Button>
           <Button
+            variant="default"
             onClick={handleSave}
             disabled={!workoutName || selectedExercises.length === 0}
             className="w-full sm:w-auto"
