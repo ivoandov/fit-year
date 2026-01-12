@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -112,12 +112,34 @@ function UserMenu() {
 }
 
 function AuthenticatedApp() {
+  const [location] = useLocation();
+  
+  const getPageTitle = () => {
+    switch (location) {
+      case "/":
+      case "/workouts":
+        return "Fit Year";
+      case "/track":
+        return "Track";
+      case "/exercises":
+        return "Exercises";
+      case "/routines":
+        return "Routines";
+      case "/history":
+        return "History";
+      case "/settings":
+        return "Settings";
+      default:
+        return "Fit Year";
+    }
+  };
+
   return (
     <SettingsProvider>
       <WorkoutProvider>
         <div className="flex flex-col h-screen w-full">
-          <header className="flex items-center justify-between px-4 py-3 border-b bg-card">
-            <h1 className="text-lg font-semibold text-foreground">Fit Year</h1>
+          <header className="flex items-center justify-between px-4 py-3 bg-background">
+            <h1 className="text-lg font-semibold text-foreground">{getPageTitle()}</h1>
             <div className="flex items-center gap-2">
               <ThemeToggle />
               <UserMenu />
