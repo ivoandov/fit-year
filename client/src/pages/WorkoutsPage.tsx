@@ -605,7 +605,7 @@ export default function WorkoutsPage() {
                     className={`hover-elevate border-0 aspect-square flex flex-col ${isCompleted ? 'bg-green-950/20' : ''}`}
                     data-testid={`card-workout-${workout.displayId}`}
                   >
-                    <div className="flex items-start justify-between p-3 sm:p-4">
+                    <div className="flex items-start justify-between p-4 sm:p-5">
                       <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
                         {workout.name}
                       </CardTitle>
@@ -639,7 +639,7 @@ export default function WorkoutsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <div className="px-3 sm:px-4 flex-1">
+                    <div className="px-4 sm:px-5 flex-1">
                       <p className="text-xs sm:text-sm text-muted-foreground">
                         {format(workout.date, "PPP")}
                       </p>
@@ -650,7 +650,7 @@ export default function WorkoutsPage() {
                         </Badge>
                       )}
                     </div>
-                    <div className="p-3 sm:p-4 flex justify-end">
+                    <div className="p-4 sm:p-5 flex justify-end">
                       <Button
                         size="icon"
                         onClick={() => handleStartWorkout(workout.displayId)}
@@ -679,7 +679,7 @@ export default function WorkoutsPage() {
                     className={`hover-elevate border-0 aspect-square flex flex-col ${isCompleted ? 'bg-green-950/20' : ''}`}
                     data-testid={`card-workout-${workout.displayId}`}
                   >
-                    <div className="flex items-start justify-between p-3 sm:p-4">
+                    <div className="flex items-start justify-between p-4 sm:p-5">
                       <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
                         {workout.name}
                       </CardTitle>
@@ -713,7 +713,7 @@ export default function WorkoutsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <div className="px-3 sm:px-4 flex-1">
+                    <div className="px-4 sm:px-5 flex-1">
                       <p className="text-xs sm:text-sm text-muted-foreground">
                         {format(workout.date, "PPP")}
                       </p>
@@ -729,7 +729,7 @@ export default function WorkoutsPage() {
                         </Badge>
                       )}
                     </div>
-                    <div className="p-3 sm:p-4 flex justify-end">
+                    <div className="p-4 sm:p-5 flex justify-end">
                       <Button
                         size="icon"
                         onClick={() => handleStartWorkout(workout.displayId)}
@@ -775,7 +775,7 @@ export default function WorkoutsPage() {
                   className="hover-elevate border-0 aspect-square flex flex-col bg-green-950/20"
                   data-testid={`card-recent-workout-${index}`}
                 >
-                  <div className="flex items-start justify-between p-3 sm:p-4">
+                  <div className="flex items-start justify-between p-4 sm:p-5">
                     <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
                       {workout.name}
                     </CardTitle>
@@ -816,7 +816,7 @@ export default function WorkoutsPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="px-3 sm:px-4 flex-1">
+                  <div className="px-4 sm:px-5 flex-1">
                     <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       <span>{format(workout.completedAt, "PP")}</span>
@@ -826,7 +826,7 @@ export default function WorkoutsPage() {
                       Done
                     </Badge>
                   </div>
-                  <div className="p-3 sm:p-4 flex justify-end">
+                  <div className="p-4 sm:p-5 flex justify-end">
                     <Button
                       size="icon"
                       onClick={() => handleRestartWorkout(workout)}
@@ -858,7 +858,7 @@ export default function WorkoutsPage() {
                   className="hover-elevate border-0 aspect-square flex flex-col"
                   data-testid={`card-library-workout-${template.id}`}
                 >
-                  <div className="flex items-start justify-between p-3 sm:p-4">
+                  <div className="flex items-start justify-between p-4 sm:p-5">
                     <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
                       {template.name}
                     </CardTitle>
@@ -892,12 +892,12 @@ export default function WorkoutsPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="px-3 sm:px-4 flex-1">
+                  <div className="px-4 sm:px-5 flex-1">
                     <p className="text-xs sm:text-sm text-muted-foreground">
                       {template.exercises.length} exercises
                     </p>
                   </div>
-                  <div className="p-3 sm:p-4 flex justify-end">
+                  <div className="p-4 sm:p-5 flex justify-end">
                     <Button
                       size="icon"
                       onClick={() => handleStartFromTemplate(template.id)}
