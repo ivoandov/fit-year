@@ -586,10 +586,9 @@ export default function WorkoutsPage() {
                 />
               </PopoverContent>
             </Popover>
-            <Button onClick={handleNewWorkout} data-testid="button-new-workout">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={handleNewWorkout} size="icon" className="sm:w-auto sm:px-4" data-testid="button-new-workout">
+              <Plus className="h-4 w-4 sm:mr-2" />
               <span className="hidden sm:inline">New Workout</span>
-              <span className="sm:hidden">New</span>
             </Button>
           </div>
         </div>
