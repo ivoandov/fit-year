@@ -606,7 +606,7 @@ export default function WorkoutsPage() {
                     data-testid={`card-workout-${workout.displayId}`}
                   >
                     <div className="flex items-start justify-between p-4 sm:p-5">
-                      <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
+                      <CardTitle className="text-base sm:text-xl font-semibold truncate flex-1">
                         {workout.name}
                       </CardTitle>
                       <DropdownMenu>
@@ -640,7 +640,7 @@ export default function WorkoutsPage() {
                       </DropdownMenu>
                     </div>
                     <div className="px-4 sm:px-5 flex-1">
-                      <p className="text-xs sm:text-sm text-muted-foreground">
+                      <p className="text-sm sm:text-base text-muted-foreground">
                         {format(workout.date, "PPP")}
                       </p>
                       {isCompleted && (
@@ -680,7 +680,7 @@ export default function WorkoutsPage() {
                     data-testid={`card-workout-${workout.displayId}`}
                   >
                     <div className="flex items-start justify-between p-4 sm:p-5">
-                      <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
+                      <CardTitle className="text-base sm:text-xl font-semibold truncate flex-1">
                         {workout.name}
                       </CardTitle>
                       <DropdownMenu>
@@ -714,7 +714,7 @@ export default function WorkoutsPage() {
                       </DropdownMenu>
                     </div>
                     <div className="px-4 sm:px-5 flex-1">
-                      <p className="text-xs sm:text-sm text-muted-foreground">
+                      <p className="text-sm sm:text-base text-muted-foreground">
                         {format(workout.date, "PPP")}
                       </p>
                       {isPastDue && (
@@ -776,7 +776,7 @@ export default function WorkoutsPage() {
                   data-testid={`card-recent-workout-${index}`}
                 >
                   <div className="flex items-start justify-between p-4 sm:p-5">
-                    <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
+                    <CardTitle className="text-base sm:text-xl font-semibold truncate flex-1">
                       {workout.name}
                     </CardTitle>
                     <DropdownMenu>
@@ -817,7 +817,7 @@ export default function WorkoutsPage() {
                     </DropdownMenu>
                   </div>
                   <div className="px-4 sm:px-5 flex-1">
-                    <div className="flex items-center gap-1 text-xs sm:text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1 text-sm sm:text-base text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       <span>{format(workout.completedAt, "PP")}</span>
                     </div>
@@ -859,7 +859,7 @@ export default function WorkoutsPage() {
                   data-testid={`card-library-workout-${template.id}`}
                 >
                   <div className="flex items-start justify-between p-4 sm:p-5">
-                    <CardTitle className="text-sm sm:text-base font-semibold truncate flex-1">
+                    <CardTitle className="text-base sm:text-xl font-semibold truncate flex-1">
                       {template.name}
                     </CardTitle>
                     <DropdownMenu>
@@ -893,7 +893,7 @@ export default function WorkoutsPage() {
                     </DropdownMenu>
                   </div>
                   <div className="px-4 sm:px-5 flex-1">
-                    <p className="text-xs sm:text-sm text-muted-foreground">
+                    <p className="text-sm sm:text-base text-muted-foreground">
                       {template.exercises.length} exercises
                     </p>
                   </div>
