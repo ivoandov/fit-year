@@ -654,7 +654,6 @@ export default function WorkoutsPage() {
                     <div className="p-3 sm:p-4 flex justify-end">
                       <Button
                         size="icon"
-                        className="bg-green-600 hover:bg-green-700 text-white"
                         onClick={() => handleStartWorkout(workout.displayId)}
                         data-testid={`button-start-workout-${workout.displayId}`}
                       >
@@ -734,7 +733,6 @@ export default function WorkoutsPage() {
                     <div className="p-3 sm:p-4 flex justify-end">
                       <Button
                         size="icon"
-                        className="bg-green-600 hover:bg-green-700 text-white"
                         onClick={() => handleStartWorkout(workout.displayId)}
                         data-testid={`button-start-workout-${workout.displayId}`}
                       >
@@ -833,7 +831,6 @@ export default function WorkoutsPage() {
                   <div className="p-3 sm:p-4 flex justify-end">
                     <Button
                       size="icon"
-                      className="bg-green-600 hover:bg-green-700 text-white"
                       onClick={() => handleRestartWorkout(workout)}
                       data-testid={`button-restart-workout-${index}`}
                     >
@@ -905,7 +902,6 @@ export default function WorkoutsPage() {
                   <div className="p-3 sm:p-4 flex justify-end">
                     <Button
                       size="icon"
-                      className="bg-green-600 hover:bg-green-700 text-white"
                       onClick={() => handleStartFromTemplate(template.id)}
                       data-testid={`button-start-library-workout-${template.id}`}
                     >
