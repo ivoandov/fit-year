@@ -113,6 +113,9 @@ function UserMenu() {
 
 function AuthenticatedApp() {
   const [location] = useLocation();
+  const { user } = useAuth();
+  
+  const isHomePage = location === "/" || location === "/workouts";
   
   const getPageTitle = () => {
     switch (location) {
@@ -134,12 +137,31 @@ function AuthenticatedApp() {
     }
   };
 
+  const userName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'User';
+  const initials = [user?.firstName, user?.lastName]
+    .filter(Boolean)
+    .map(n => n?.[0])
+    .join('') || user?.email?.[0]?.toUpperCase() || '?';
+
   return (
     <SettingsProvider>
       <WorkoutProvider>
         <div className="flex flex-col h-screen w-full">
           <header className="flex items-center justify-between px-4 py-3 bg-background">
-            <h1 className="text-lg font-semibold text-foreground">{getPageTitle()}</h1>
+            {isHomePage ? (
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={user?.profileImageUrl || undefined} alt={userName} />
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm text-muted-foreground">Welcome Back!</p>
+                  <p className="text-base font-semibold text-foreground">{userName}</p>
+                </div>
+              </div>
+            ) : (
+              <h1 className="text-lg font-semibold text-foreground">{getPageTitle()}</h1>
+            )}
             <div className="flex items-center gap-2">
               <ThemeToggle />
               <UserMenu />
