@@ -9,18 +9,24 @@ import {
   completedWorkouts,
   userSettings,
   activeWorkouts,
+  routines,
+  routineEntries,
   type Exercise,
   type WorkoutTemplate,
   type ScheduledWorkout,
   type CompletedWorkout,
   type UserSettings,
   type ActiveWorkout,
+  type Routine,
+  type RoutineEntry,
   type InsertExercise,
   type InsertWorkoutTemplate,
   type InsertScheduledWorkout,
   type InsertCompletedWorkout,
   type InsertUserSettings,
   type InsertActiveWorkout,
+  type InsertRoutine,
+  type InsertRoutineEntry,
 } from "@shared/schema";
 import { builtInExercises } from "./data/builtInExercises";
 
@@ -106,6 +112,19 @@ export interface IStorage {
   getActiveWorkout(userId: string): Promise<ActiveWorkout | undefined>;
   upsertActiveWorkout(userId: string, workoutData: any, trackingProgress?: any): Promise<ActiveWorkout>;
   deleteActiveWorkout(userId: string): Promise<boolean>;
+  
+  getRoutines(userId: string): Promise<Routine[]>;
+  getPublicRoutines(): Promise<Routine[]>;
+  getRoutine(id: string): Promise<Routine | undefined>;
+  createRoutine(routine: InsertRoutine): Promise<Routine>;
+  updateRoutine(id: string, routine: Partial<InsertRoutine>): Promise<Routine | undefined>;
+  deleteRoutine(id: string): Promise<boolean>;
+  
+  getRoutineEntries(routineId: string): Promise<RoutineEntry[]>;
+  createRoutineEntry(entry: InsertRoutineEntry): Promise<RoutineEntry>;
+  updateRoutineEntry(id: string, entry: Partial<InsertRoutineEntry>): Promise<RoutineEntry | undefined>;
+  deleteRoutineEntry(id: string): Promise<boolean>;
+  deleteRoutineEntriesByRoutineId(routineId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -647,6 +666,233 @@ export class DatabaseStorage implements IStorage {
       return true;
     } catch (error) {
       console.error("Error deleting active workout:", error);
+      return false;
+    }
+  }
+
+  async getRoutines(userId: string): Promise<Routine[]> {
+    try {
+      const results = await neonClient`
+        SELECT 
+          id,
+          user_id as "userId",
+          name,
+          description,
+          default_duration_days as "defaultDurationDays",
+          is_public as "isPublic",
+          created_at as "createdAt"
+        FROM routines 
+        WHERE user_id = ${userId}
+        ORDER BY created_at DESC
+      `;
+      return (results || []) as Routine[];
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async getPublicRoutines(): Promise<Routine[]> {
+    try {
+      const results = await neonClient`
+        SELECT 
+          id,
+          user_id as "userId",
+          name,
+          description,
+          default_duration_days as "defaultDurationDays",
+          is_public as "isPublic",
+          created_at as "createdAt"
+        FROM routines 
+        WHERE is_public = true
+        ORDER BY created_at DESC
+      `;
+      return (results || []) as Routine[];
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async getRoutine(id: string): Promise<Routine | undefined> {
+    try {
+      const results = await neonClient`
+        SELECT 
+          id,
+          user_id as "userId",
+          name,
+          description,
+          default_duration_days as "defaultDurationDays",
+          is_public as "isPublic",
+          created_at as "createdAt"
+        FROM routines 
+        WHERE id = ${id}
+      `;
+      return results?.[0] as Routine | undefined;
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
+  async createRoutine(routine: InsertRoutine): Promise<Routine> {
+    const id = crypto.randomUUID();
+    await neonClient`
+      INSERT INTO routines (id, user_id, name, description, default_duration_days, is_public)
+      VALUES (${id}, ${routine.userId}, ${routine.name}, ${routine.description || null}, ${routine.defaultDurationDays || 7}, ${routine.isPublic || false})
+    `;
+    return {
+      id,
+      userId: routine.userId,
+      name: routine.name,
+      description: routine.description || null,
+      defaultDurationDays: routine.defaultDurationDays || 7,
+      isPublic: routine.isPublic || false,
+      createdAt: new Date(),
+    };
+  }
+
+  async updateRoutine(id: string, routine: Partial<InsertRoutine>): Promise<Routine | undefined> {
+    const existing = await this.getRoutine(id);
+    if (!existing) return undefined;
+    
+    const name = routine.name !== undefined ? routine.name : existing.name;
+    const description = routine.description !== undefined ? routine.description : existing.description;
+    const defaultDurationDays = routine.defaultDurationDays !== undefined ? routine.defaultDurationDays : existing.defaultDurationDays;
+    const isPublic = routine.isPublic !== undefined ? routine.isPublic : existing.isPublic;
+    
+    await neonClient`
+      UPDATE routines 
+      SET 
+        name = ${name}, 
+        description = ${description}, 
+        default_duration_days = ${defaultDurationDays},
+        is_public = ${isPublic}
+      WHERE id = ${id}
+    `;
+    
+    return {
+      ...existing,
+      name,
+      description,
+      defaultDurationDays,
+      isPublic,
+    };
+  }
+
+  async deleteRoutine(id: string): Promise<boolean> {
+    try {
+      await this.deleteRoutineEntriesByRoutineId(id);
+      await neonClient`DELETE FROM routines WHERE id = ${id}`;
+      return true;
+    } catch (error) {
+      console.error("Error deleting routine:", error);
+      return false;
+    }
+  }
+
+  async getRoutineEntries(routineId: string): Promise<RoutineEntry[]> {
+    try {
+      const results = await neonClient`
+        SELECT 
+          id,
+          routine_id as "routineId",
+          day_index as "dayIndex",
+          workout_template_id as "workoutTemplateId",
+          workout_name as "workoutName",
+          exercises
+        FROM routine_entries 
+        WHERE routine_id = ${routineId}
+        ORDER BY day_index
+      `;
+      return (results || []) as RoutineEntry[];
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async createRoutineEntry(entry: InsertRoutineEntry): Promise<RoutineEntry> {
+    const id = crypto.randomUUID();
+    const exercisesJson = entry.exercises ? JSON.stringify(entry.exercises) : null;
+    await neonClient`
+      INSERT INTO routine_entries (id, routine_id, day_index, workout_template_id, workout_name, exercises)
+      VALUES (${id}, ${entry.routineId}, ${entry.dayIndex}, ${entry.workoutTemplateId || null}, ${entry.workoutName || null}, ${exercisesJson}::jsonb)
+    `;
+    return {
+      id,
+      routineId: entry.routineId,
+      dayIndex: entry.dayIndex,
+      workoutTemplateId: entry.workoutTemplateId || null,
+      workoutName: entry.workoutName || null,
+      exercises: entry.exercises || null,
+    };
+  }
+
+  async updateRoutineEntry(id: string, entry: Partial<InsertRoutineEntry>): Promise<RoutineEntry | undefined> {
+    const existingResults = await neonClient`
+      SELECT 
+        id,
+        routine_id as "routineId",
+        day_index as "dayIndex",
+        workout_template_id as "workoutTemplateId",
+        workout_name as "workoutName",
+        exercises
+      FROM routine_entries 
+      WHERE id = ${id}
+    `;
+    const existing = existingResults?.[0] as RoutineEntry | undefined;
+    if (!existing) return undefined;
+    
+    const dayIndex = entry.dayIndex !== undefined ? entry.dayIndex : existing.dayIndex;
+    const workoutTemplateId = entry.workoutTemplateId !== undefined ? entry.workoutTemplateId : existing.workoutTemplateId;
+    const workoutName = entry.workoutName !== undefined ? entry.workoutName : existing.workoutName;
+    const exercises = entry.exercises !== undefined ? entry.exercises : existing.exercises;
+    const exercisesJson = exercises ? JSON.stringify(exercises) : null;
+    
+    await neonClient`
+      UPDATE routine_entries 
+      SET 
+        day_index = ${dayIndex},
+        workout_template_id = ${workoutTemplateId},
+        workout_name = ${workoutName},
+        exercises = ${exercisesJson}::jsonb
+      WHERE id = ${id}
+    `;
+    
+    return {
+      ...existing,
+      dayIndex,
+      workoutTemplateId,
+      workoutName,
+      exercises,
+    };
+  }
+
+  async deleteRoutineEntry(id: string): Promise<boolean> {
+    try {
+      await neonClient`DELETE FROM routine_entries WHERE id = ${id}`;
+      return true;
+    } catch (error) {
+      console.error("Error deleting routine entry:", error);
+      return false;
+    }
+  }
+
+  async deleteRoutineEntriesByRoutineId(routineId: string): Promise<boolean> {
+    try {
+      await neonClient`DELETE FROM routine_entries WHERE routine_id = ${routineId}`;
+      return true;
+    } catch (error) {
+      console.error("Error deleting routine entries:", error);
       return false;
     }
   }

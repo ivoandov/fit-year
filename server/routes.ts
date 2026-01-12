@@ -1084,6 +1084,291 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Routines API - My Routines
+  app.get("/api/routines", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      const routines = await storage.getRoutines(userId);
+      res.json(routines);
+    } catch (error) {
+      console.error("Failed to get routines:", error);
+      res.status(500).json({ error: "Failed to get routines" });
+    }
+  });
+
+  // Routines API - Public Routines
+  app.get("/api/routines/public", isAuthenticated, async (req: any, res) => {
+    try {
+      const routines = await storage.getPublicRoutines();
+      res.json(routines);
+    } catch (error) {
+      console.error("Failed to get public routines:", error);
+      res.status(500).json({ error: "Failed to get public routines" });
+    }
+  });
+
+  // Routines API - Get single routine with entries
+  app.get("/api/routines/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const routine = await storage.getRoutine(req.params.id);
+      if (!routine) {
+        return res.status(404).json({ error: "Routine not found" });
+      }
+      
+      // Only allow access if user owns the routine or it's public
+      if (routine.userId !== userId && !routine.isPublic) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const entries = await storage.getRoutineEntries(req.params.id);
+      res.json({ ...routine, entries });
+    } catch (error) {
+      console.error("Failed to get routine:", error);
+      res.status(500).json({ error: "Failed to get routine" });
+    }
+  });
+
+  // Routines API - Create routine
+  app.post("/api/routines", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const { name, description, defaultDurationDays, isPublic, entries } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ error: "Routine name is required" });
+      }
+      
+      // Create the routine
+      const routine = await storage.createRoutine({
+        userId,
+        name,
+        description: description || null,
+        defaultDurationDays: defaultDurationDays || 7,
+        isPublic: isPublic || false,
+      });
+      
+      // Create entries if provided
+      if (entries && Array.isArray(entries)) {
+        for (const entry of entries) {
+          await storage.createRoutineEntry({
+            routineId: routine.id,
+            dayIndex: entry.dayIndex,
+            workoutTemplateId: entry.workoutTemplateId || null,
+            workoutName: entry.workoutName || null,
+            exercises: entry.exercises || null,
+          });
+        }
+      }
+      
+      const createdEntries = await storage.getRoutineEntries(routine.id);
+      res.status(201).json({ ...routine, entries: createdEntries });
+    } catch (error) {
+      console.error("Failed to create routine:", error);
+      res.status(500).json({ error: "Failed to create routine" });
+    }
+  });
+
+  // Routines API - Update routine
+  app.put("/api/routines/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const routine = await storage.getRoutine(req.params.id);
+      if (!routine) {
+        return res.status(404).json({ error: "Routine not found" });
+      }
+      
+      // Only owner can update
+      if (routine.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const { name, description, defaultDurationDays, isPublic, entries } = req.body;
+      
+      // Update routine
+      const updatedRoutine = await storage.updateRoutine(req.params.id, {
+        name: name !== undefined ? name : routine.name,
+        description: description !== undefined ? description : routine.description,
+        defaultDurationDays: defaultDurationDays !== undefined ? defaultDurationDays : routine.defaultDurationDays,
+        isPublic: isPublic !== undefined ? isPublic : routine.isPublic,
+      });
+      
+      // Update entries if provided - delete all and recreate
+      if (entries && Array.isArray(entries)) {
+        await storage.deleteRoutineEntriesByRoutineId(req.params.id);
+        for (const entry of entries) {
+          await storage.createRoutineEntry({
+            routineId: req.params.id,
+            dayIndex: entry.dayIndex,
+            workoutTemplateId: entry.workoutTemplateId || null,
+            workoutName: entry.workoutName || null,
+            exercises: entry.exercises || null,
+          });
+        }
+      }
+      
+      const updatedEntries = await storage.getRoutineEntries(req.params.id);
+      res.json({ ...updatedRoutine, entries: updatedEntries });
+    } catch (error) {
+      console.error("Failed to update routine:", error);
+      res.status(500).json({ error: "Failed to update routine" });
+    }
+  });
+
+  // Routines API - Delete routine
+  app.delete("/api/routines/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const routine = await storage.getRoutine(req.params.id);
+      if (!routine) {
+        return res.status(404).json({ error: "Routine not found" });
+      }
+      
+      // Only owner can delete
+      if (routine.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      await storage.deleteRoutine(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete routine:", error);
+      res.status(500).json({ error: "Failed to delete routine" });
+    }
+  });
+
+  // Routines API - Apply routine (create scheduled workouts)
+  app.post("/api/routines/:id/apply", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const routine = await storage.getRoutine(req.params.id);
+      if (!routine) {
+        return res.status(404).json({ error: "Routine not found" });
+      }
+      
+      // Allow access if user owns the routine or it's public
+      if (routine.userId !== userId && !routine.isPublic) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const { startDate, durationDays } = req.body;
+      
+      if (!startDate) {
+        return res.status(400).json({ error: "Start date is required" });
+      }
+      
+      const entries = await storage.getRoutineEntries(req.params.id);
+      
+      // Filter entries to only include those within the requested duration
+      const maxDays = durationDays || routine.defaultDurationDays;
+      const filteredEntries = entries.filter(entry => entry.dayIndex <= maxDays && entry.workoutName);
+      
+      if (filteredEntries.length === 0) {
+        return res.status(400).json({ error: "No workout entries found for the specified duration" });
+      }
+      
+      // Check for conflicts
+      const existingWorkouts = await storage.getScheduledWorkouts(userId);
+      const startDateObj = new Date(startDate);
+      const conflicts: string[] = [];
+      
+      for (const entry of filteredEntries) {
+        const workoutDate = new Date(startDateObj);
+        workoutDate.setDate(startDateObj.getDate() + entry.dayIndex - 1);
+        const dateStr = workoutDate.toISOString().split('T')[0];
+        
+        const hasConflict = existingWorkouts.some(w => {
+          const existingDate = new Date(w.date).toISOString().split('T')[0];
+          return existingDate === dateStr;
+        });
+        
+        if (hasConflict) {
+          conflicts.push(dateStr);
+        }
+      }
+      
+      if (conflicts.length > 0) {
+        return res.status(409).json({ 
+          error: "Scheduling conflicts found",
+          conflicts,
+          message: `Workouts already exist on: ${conflicts.join(", ")}`
+        });
+      }
+      
+      // Get user settings for calendar sync
+      const userSettings = await storage.getUserSettings(userId);
+      const calendarId = userSettings?.selectedCalendarId || 'primary';
+      
+      // Create scheduled workouts
+      const createdWorkouts = [];
+      
+      for (const entry of filteredEntries) {
+        const workoutDate = new Date(startDateObj);
+        workoutDate.setDate(startDateObj.getDate() + entry.dayIndex - 1);
+        
+        // Calculate local date string
+        const localDate = `${workoutDate.getFullYear()}-${String(workoutDate.getMonth() + 1).padStart(2, '0')}-${String(workoutDate.getDate()).padStart(2, '0')}`;
+        
+        const scheduledWorkout = await storage.createScheduledWorkout({
+          userId,
+          name: entry.workoutName || `Day ${entry.dayIndex}`,
+          date: workoutDate,
+          exercises: entry.exercises || [],
+          templateId: entry.workoutTemplateId || null,
+        });
+        
+        // Sync to Google Calendar
+        try {
+          const calendarEventId = await createCalendarEvent(
+            scheduledWorkout.name,
+            workoutDate,
+            calendarId,
+            localDate
+          );
+          if (calendarEventId) {
+            await storage.updateScheduledWorkoutCalendarEventId(scheduledWorkout.id, calendarEventId);
+          }
+        } catch (calendarError) {
+          console.error("Failed to create calendar event:", calendarError);
+        }
+        
+        createdWorkouts.push(scheduledWorkout);
+      }
+      
+      res.status(201).json({ 
+        success: true, 
+        createdCount: createdWorkouts.length,
+        workouts: createdWorkouts 
+      });
+    } catch (error) {
+      console.error("Failed to apply routine:", error);
+      res.status(500).json({ error: "Failed to apply routine" });
+    }
+  });
+
   // Register image generation routes
   registerImageRoutes(app);
 

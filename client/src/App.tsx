@@ -21,6 +21,7 @@ import ExercisesPage from "@/pages/ExercisesPage";
 import TrackPage from "@/pages/TrackPage";
 import HistoryPage from "@/pages/HistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
+import RoutinesPage from "@/pages/RoutinesPage";
 import LandingPage from "@/pages/LandingPage";
 
 function useAppDiagnostics() {
@@ -56,6 +57,7 @@ function Router() {
     <Switch>
       <Route path="/" component={WorkoutsPage} />
       <Route path="/workouts" component={WorkoutsPage} />
+      <Route path="/routines" component={RoutinesPage} />
       <Route path="/exercises" component={ExercisesPage} />
       <Route path="/track" component={TrackPage} />
       <Route path="/history" component={HistoryPage} />

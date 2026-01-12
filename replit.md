@@ -73,6 +73,8 @@ Preferred communication style: Simple, everyday language.
 4. **Workout Sessions** - Completed workout records with date and duration
 5. **Sets** - Individual set tracking with exercise reference, weight, reps, and completion status
 6. **User Settings** - Per-user preferences including selected Google Calendar for workout sync
+7. **Routines** - Multi-day workout programs (7-90+ days) with public/private visibility
+8. **Routine Entries** - Day-indexed entries linking routines to workout templates
 
 **Exercise Data Pattern**
 - All exercises (both built-in and custom) are stored in the PostgreSQL database

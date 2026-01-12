@@ -1,4 +1,4 @@
-import { Home, Database, Play, BarChart3, Settings } from "lucide-react";
+import { Home, Database, Play, BarChart3, Settings, CalendarDays } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
   Sidebar,
@@ -18,6 +18,12 @@ const menuItems = [
     url: "/",
     icon: Home,
     testId: "link-workouts",
+  },
+  {
+    title: "Routines",
+    url: "/routines",
+    icon: CalendarDays,
+    testId: "link-routines",
   },
   {
     title: "Exercises",
