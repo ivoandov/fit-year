@@ -1,5 +1,6 @@
 import { useLocation, Link } from "wouter";
-import { Home, Dumbbell, PersonStanding, ClipboardList, BarChart3 } from "lucide-react";
+import { Home, PersonStanding, ClipboardList, BarChart3 } from "lucide-react";
+import { GiMuscleUp } from "react-icons/gi";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -12,7 +13,7 @@ const navItems = [
   {
     title: "Track",
     url: "/track",
-    icon: Dumbbell,
+    icon: GiMuscleUp,
     testId: "nav-track",
   },
   {
@@ -46,18 +47,18 @@ export function BottomNav() {
             (item.url === "/" && location === "/workouts");
           
           return (
-            <Link key={item.url} href={item.url}>
-              <button
-                className={cn(
-                  "flex flex-col items-center justify-center w-14 h-14 rounded-full transition-colors",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                data-testid={item.testId}
-              >
-                <item.icon className="h-5 w-5" />
-              </button>
+            <Link 
+              key={item.url} 
+              href={item.url}
+              className={cn(
+                "flex flex-col items-center justify-center w-14 h-14 rounded-full transition-colors",
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              data-testid={item.testId}
+            >
+              <item.icon className="h-5 w-5" />
             </Link>
           );
         })}
