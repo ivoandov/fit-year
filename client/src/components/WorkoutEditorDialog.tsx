@@ -352,10 +352,8 @@ export function WorkoutEditorDialog({
                   {allMuscleGroups.map((muscle) => (
                     <Badge
                       key={muscle}
-                      variant={selectedMuscleFilters.includes(muscle) ? "default" : "secondary"}
-                      className={`cursor-pointer text-xs border-0 toggle-elevate ${
-                        !selectedMuscleFilters.includes(muscle) ? "bg-card" : ""
-                      }`}
+                      variant={selectedMuscleFilters.includes(muscle) ? "default" : "outline"}
+                      className="cursor-pointer text-xs toggle-elevate"
                       onClick={() => toggleMuscleFilter(muscle)}
                       data-testid={`filter-muscle-${muscle.toLowerCase().replace(/\s+/g, '-')}`}
                     >
