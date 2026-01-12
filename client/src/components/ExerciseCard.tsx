@@ -105,7 +105,7 @@ export function ExerciseCard({
         <CardHeader className="space-y-2 p-4 sm:p-6">
           <div className="flex gap-1.5 sm:gap-2 flex-wrap">
             {muscleGroups.map((group) => (
-              <Badge key={group} variant="secondary" className="text-xs min-w-[5.5rem] justify-center" data-testid={`badge-muscle-${id}-${group.toLowerCase()}`}>
+              <Badge key={group} variant="secondary" className="text-xs" data-testid={`badge-muscle-${id}-${group.toLowerCase()}`}>
                 {group}
               </Badge>
             ))}

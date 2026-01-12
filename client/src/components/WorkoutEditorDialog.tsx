@@ -305,7 +305,7 @@ export function WorkoutEditorDialog({
                         >
                           <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 cursor-grab active:cursor-grabbing" />
                           <span className="flex-1 text-sm truncate">{exercise.name}</span>
-                          <Badge variant="outline" className="text-xs hidden sm:flex min-w-[5.5rem] justify-center">
+                          <Badge variant="outline" className="text-xs hidden sm:flex">
                             {exercise.muscleGroups[0] || ""}
                           </Badge>
                           <div className="flex gap-1">
@@ -353,7 +353,7 @@ export function WorkoutEditorDialog({
                     <Badge
                       key={muscle}
                       variant={selectedMuscleFilters.includes(muscle) ? "default" : "outline"}
-                      className="cursor-pointer text-xs toggle-elevate min-w-[5.5rem] justify-center"
+                      className="cursor-pointer text-xs toggle-elevate"
                       onClick={() => toggleMuscleFilter(muscle)}
                       data-testid={`filter-muscle-${muscle.toLowerCase().replace(/\s+/g, '-')}`}
                     >
@@ -392,7 +392,7 @@ export function WorkoutEditorDialog({
                           data-testid={`available-exercise-${exercise.id}`}
                         >
                           <span className="flex-1 text-sm truncate">{exercise.name}</span>
-                          <Badge variant="outline" className="text-xs min-w-[5.5rem] justify-center">
+                          <Badge variant="outline" className="text-xs">
                             {exercise.muscleGroups[0] || ""}
                           </Badge>
                           {!isSelected && (
