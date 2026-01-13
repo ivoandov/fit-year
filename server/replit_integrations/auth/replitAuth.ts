@@ -51,12 +51,25 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
+  // Handle different claim name formats (OIDC standard vs custom)
+  const firstName = claims["first_name"] || claims["given_name"] || null;
+  const lastName = claims["last_name"] || claims["family_name"] || null;
+  
+  // If no first/last name but we have a display name, try to parse it
+  let parsedFirstName = firstName;
+  let parsedLastName = lastName;
+  if (!parsedFirstName && !parsedLastName && claims["name"]) {
+    const nameParts = claims["name"].split(" ");
+    parsedFirstName = nameParts[0] || null;
+    parsedLastName = nameParts.slice(1).join(" ") || null;
+  }
+  
   await authStorage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
+    firstName: parsedFirstName,
+    lastName: parsedLastName,
+    profileImageUrl: claims["profile_image_url"] || claims["picture"],
   });
 }
 
