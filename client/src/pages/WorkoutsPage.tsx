@@ -654,6 +654,7 @@ export default function WorkoutsPage() {
                       </div>
                       <Button
                         size="icon"
+                        className="shrink-0 aspect-square"
                         onClick={() => handleStartWorkout(workout.displayId)}
                         data-testid={`button-start-workout-${workout.displayId}`}
                       >
@@ -734,6 +735,7 @@ export default function WorkoutsPage() {
                       </div>
                       <Button
                         size="icon"
+                        className="shrink-0 aspect-square"
                         onClick={() => handleStartWorkout(workout.displayId)}
                         data-testid={`button-start-workout-${workout.displayId}`}
                       >
@@ -832,6 +834,7 @@ export default function WorkoutsPage() {
                     </div>
                     <Button
                       size="icon"
+                      className="shrink-0 aspect-square"
                       onClick={() => handleRestartWorkout(workout)}
                       data-testid={`button-restart-workout-${index}`}
                     >
@@ -902,6 +905,7 @@ export default function WorkoutsPage() {
                     </p>
                     <Button
                       size="icon"
+                      className="shrink-0 aspect-square"
                       onClick={() => handleStartFromTemplate(template.id)}
                       data-testid={`button-start-library-workout-${template.id}`}
                     >
