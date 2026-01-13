@@ -14,12 +14,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Calendar as CalendarIcon, Trash2, Pencil, Play, Globe, Lock, MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Plus, Calendar as CalendarIcon, Trash2, Pencil, Play, Globe, Lock, MoreVertical, ChevronLeft, ChevronRight, CheckCircle, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format, addDays } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Routine, RoutineEntry, WorkoutTemplate } from "@shared/schema";
+import type { Routine, RoutineEntry, WorkoutTemplate, RoutineInstance } from "@shared/schema";
 
 interface RoutineWithEntries extends Routine {
   entries: RoutineEntry[];
@@ -52,6 +53,10 @@ export default function RoutinesPage() {
 
   const { data: workoutTemplates = [] } = useQuery<WorkoutTemplate[]>({
     queryKey: ["/api/workout-templates"],
+  });
+
+  const { data: activeInstances = [], isLoading: loadingInstances } = useQuery<RoutineInstance[]>({
+    queryKey: ["/api/routine-instances/active"],
   });
 
   const createRoutineMutation = useMutation({
@@ -98,22 +103,36 @@ export default function RoutinesPage() {
     },
   });
 
-  const applyRoutineMutation = useMutation({
+  const startRoutineMutation = useMutation({
     mutationFn: async ({ id, startDate, durationDays }: { id: string; startDate: string; durationDays: number }) => {
-      return apiRequest("POST", `/api/routines/${id}/apply`, { startDate, durationDays });
+      return apiRequest("POST", `/api/routines/${id}/start`, { startDate, durationDays });
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/routine-instances/active"] });
       toast({ 
-        title: "Routine applied", 
-        description: `${data.createdCount} workouts have been scheduled.` 
+        title: "Routine started", 
+        description: `${data.createdCount} workouts have been scheduled. Track your progress here!` 
       });
       setIsApplyModalOpen(false);
       setApplyingRoutine(null);
     },
     onError: (error: any) => {
-      const message = error?.message || "Failed to apply routine";
-      toast({ title: "Failed to apply routine", description: message, variant: "destructive" });
+      const message = error?.message || "Failed to start routine";
+      toast({ title: "Failed to start routine", description: message, variant: "destructive" });
+    },
+  });
+
+  const cancelInstanceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("PATCH", `/api/routine-instances/${id}`, { status: 'cancelled' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/routine-instances/active"] });
+      toast({ title: "Routine cancelled" });
+    },
+    onError: () => {
+      toast({ title: "Failed to cancel routine", variant: "destructive" });
     },
   });
 
@@ -197,10 +216,10 @@ export default function RoutinesPage() {
     }
   };
 
-  const handleApplyRoutine = () => {
+  const handleStartRoutine = () => {
     if (!applyingRoutine) return;
     
-    applyRoutineMutation.mutate({
+    startRoutineMutation.mutate({
       id: applyingRoutine.id,
       startDate: applyStartDate.toISOString(),
       durationDays: applyDuration,
@@ -331,6 +350,68 @@ export default function RoutinesPage() {
             Create Routine
           </Button>
         </div>
+
+        {activeInstances.length > 0 && (
+          <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20" data-testid="card-active-routines">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Play className="h-5 w-5 text-primary" />
+                Active Routines
+              </CardTitle>
+              <CardDescription>Track your routine progress</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {activeInstances.map((instance) => {
+                const progressPercent = instance.totalWorkouts > 0 
+                  ? Math.round((instance.completedWorkouts / instance.totalWorkouts) * 100) 
+                  : 0;
+                const isComplete = instance.completedWorkouts >= instance.totalWorkouts;
+                
+                return (
+                  <div 
+                    key={instance.id} 
+                    className="p-4 bg-card rounded-lg space-y-3"
+                    data-testid={`card-active-routine-${instance.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-semibold truncate">{instance.routineName}</h4>
+                          {isComplete && (
+                            <Badge variant="secondary" className="text-primary shrink-0">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Complete
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(instance.startDate), "MMM d")} - {format(new Date(instance.endDate), "MMM d, yyyy")}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 h-8 w-8"
+                        onClick={() => cancelInstanceMutation.mutate(instance.id)}
+                        data-testid={`button-cancel-instance-${instance.id}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>{instance.completedWorkouts} of {instance.totalWorkouts} workouts</span>
+                        <span className="font-medium text-primary">{progressPercent}%</span>
+                      </div>
+                      <Progress value={progressPercent} className="h-2" />
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2 max-w-md">
@@ -545,9 +626,9 @@ export default function RoutinesPage() {
         <Dialog open={isApplyModalOpen} onOpenChange={(open) => { if (!open) { setIsApplyModalOpen(false); setApplyingRoutine(null); } }}>
           <DialogContent data-testid="dialog-apply-routine">
             <DialogHeader>
-              <DialogTitle>Apply Routine</DialogTitle>
+              <DialogTitle>Start Routine</DialogTitle>
               <DialogDescription>
-                Schedule workouts from "{applyingRoutine?.name}" to your calendar.
+                Start "{applyingRoutine?.name}" and track your progress.
               </DialogDescription>
             </DialogHeader>
             
@@ -609,11 +690,11 @@ export default function RoutinesPage() {
                 Cancel
               </Button>
               <Button 
-                onClick={handleApplyRoutine} 
-                disabled={applyRoutineMutation.isPending}
+                onClick={handleStartRoutine} 
+                disabled={startRoutineMutation.isPending}
                 data-testid="button-confirm-apply"
               >
-                {applyRoutineMutation.isPending ? "Applying..." : "Apply Routine"}
+                {startRoutineMutation.isPending ? "Starting..." : "Start Routine"}
               </Button>
             </DialogFooter>
           </DialogContent>
