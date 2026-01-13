@@ -491,11 +491,11 @@ export default function TrackPage() {
               </div>
 
               <Button
-                className="w-full text-base py-6"
+                className="w-full"
                 onClick={handlePrimaryButtonClick}
                 data-testid="button-primary-action"
               >
-                {allSetsCompleted && <Check className="h-5 w-5 mr-2" />}
+                {allSetsCompleted && <Check className="h-4 w-4 mr-2" />}
                 {getPrimaryButtonText()}
               </Button>
             </div>
