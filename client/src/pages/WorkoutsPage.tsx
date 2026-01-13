@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { WorkoutEditorDialog, type WorkoutData } from "@/components/WorkoutEditorDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, Clock } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, Clock, Dumbbell } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays, isBefore, startOfDay } from "date-fns";
@@ -639,7 +639,9 @@ export default function WorkoutsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <div className="px-4 sm:px-5 flex-1" />
+                    <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
+                      <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.4))' }} />
+                    </div>
                     <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm sm:text-base text-muted-foreground">
@@ -715,7 +717,9 @@ export default function WorkoutsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <div className="px-4 sm:px-5 flex-1" />
+                    <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
+                      <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.4))' }} />
+                    </div>
                     <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm sm:text-base text-muted-foreground">
@@ -820,7 +824,9 @@ export default function WorkoutsPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="px-4 sm:px-5 flex-1" />
+                  <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
+                      <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.4))' }} />
+                    </div>
                   <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex items-center gap-1 text-sm sm:text-base text-muted-foreground">
@@ -898,7 +904,9 @@ export default function WorkoutsPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="px-4 sm:px-5 flex-1" />
+                  <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
+                      <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.4))' }} />
+                    </div>
                   <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
                     <p className="text-sm sm:text-base text-muted-foreground">
                       {template.exercises.length} exercises
