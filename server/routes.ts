@@ -1256,7 +1256,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Routines API - Apply routine (create scheduled workouts)
+  // Routines API - Start routine (create routine instance and scheduled workouts with progress tracking)
+  app.post("/api/routines/:id/start", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const routine = await storage.getRoutine(req.params.id);
+      if (!routine) {
+        return res.status(404).json({ error: "Routine not found" });
+      }
+      
+      // Allow access if user owns the routine or it's public
+      if (routine.userId !== userId && !routine.isPublic) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const { startDate, durationDays } = req.body;
+      
+      if (!startDate) {
+        return res.status(400).json({ error: "Start date is required" });
+      }
+      
+      const entries = await storage.getRoutineEntries(req.params.id);
+      
+      // Filter entries to only include those within the requested duration
+      const maxDays = durationDays || routine.defaultDurationDays;
+      const filteredEntries = entries.filter(entry => entry.dayIndex <= maxDays && entry.workoutName);
+      
+      if (filteredEntries.length === 0) {
+        return res.status(400).json({ error: "No workout entries found for the specified duration" });
+      }
+      
+      // Check for conflicts
+      const existingWorkouts = await storage.getScheduledWorkouts(userId);
+      const startDateObj = new Date(startDate);
+      const conflicts: string[] = [];
+      
+      for (const entry of filteredEntries) {
+        const workoutDate = new Date(startDateObj);
+        workoutDate.setDate(startDateObj.getDate() + entry.dayIndex - 1);
+        const dateStr = workoutDate.toISOString().split('T')[0];
+        
+        const hasConflict = existingWorkouts.some(w => {
+          const existingDate = new Date(w.date).toISOString().split('T')[0];
+          return existingDate === dateStr;
+        });
+        
+        if (hasConflict) {
+          conflicts.push(dateStr);
+        }
+      }
+      
+      if (conflicts.length > 0) {
+        return res.status(409).json({ 
+          error: "Scheduling conflicts found",
+          conflicts,
+          message: `Workouts already exist on: ${conflicts.join(", ")}`
+        });
+      }
+      
+      // Calculate end date
+      const endDate = new Date(startDateObj);
+      endDate.setDate(startDateObj.getDate() + maxDays - 1);
+      
+      // Create routine instance to track progress
+      const routineInstance = await storage.createRoutineInstance({
+        routineId: req.params.id,
+        userId,
+        routineName: routine.name,
+        startDate: startDateObj,
+        endDate,
+        durationDays: maxDays,
+        totalWorkouts: filteredEntries.length,
+        completedWorkouts: 0,
+        status: 'active',
+      });
+      
+      // Get user settings for calendar sync
+      const userSettings = await storage.getUserSettings(userId);
+      const calendarId = userSettings?.selectedCalendarId || 'primary';
+      
+      // Create scheduled workouts linked to routine instance
+      const createdWorkouts = [];
+      
+      for (const entry of filteredEntries) {
+        const workoutDate = new Date(startDateObj);
+        workoutDate.setDate(startDateObj.getDate() + entry.dayIndex - 1);
+        
+        // Calculate local date string
+        const localDate = `${workoutDate.getFullYear()}-${String(workoutDate.getMonth() + 1).padStart(2, '0')}-${String(workoutDate.getDate()).padStart(2, '0')}`;
+        
+        const scheduledWorkout = await storage.createScheduledWorkoutWithRoutine({
+          userId,
+          name: entry.workoutName || `Day ${entry.dayIndex}`,
+          date: workoutDate,
+          exercises: entry.exercises || [],
+          templateId: entry.workoutTemplateId || null,
+          routineInstanceId: routineInstance.id,
+          routineDayIndex: entry.dayIndex,
+        });
+        
+        // Sync to Google Calendar
+        try {
+          const calendarEventId = await createCalendarEvent(
+            scheduledWorkout.name,
+            workoutDate,
+            calendarId,
+            localDate
+          );
+          if (calendarEventId) {
+            await storage.updateScheduledWorkoutCalendarEventId(scheduledWorkout.id, calendarEventId);
+          }
+        } catch (calendarError) {
+          console.error("Failed to create calendar event:", calendarError);
+        }
+        
+        createdWorkouts.push(scheduledWorkout);
+      }
+      
+      res.status(201).json({ 
+        success: true, 
+        routineInstance,
+        createdCount: createdWorkouts.length,
+        workouts: createdWorkouts 
+      });
+    } catch (error) {
+      console.error("Failed to start routine:", error);
+      res.status(500).json({ error: "Failed to start routine" });
+    }
+  });
+
+  // Routines API - Legacy apply route (for backwards compatibility)
   app.post("/api/routines/:id/apply", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
@@ -1366,6 +1499,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to apply routine:", error);
       res.status(500).json({ error: "Failed to apply routine" });
+    }
+  });
+
+  // Routine Instances API - Get all routine instances for user
+  app.get("/api/routine-instances", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const instances = await storage.getRoutineInstances(userId);
+      res.json(instances);
+    } catch (error) {
+      console.error("Failed to fetch routine instances:", error);
+      res.status(500).json({ error: "Failed to fetch routine instances" });
+    }
+  });
+
+  // Routine Instances API - Get active routine instances
+  app.get("/api/routine-instances/active", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const instances = await storage.getActiveRoutineInstances(userId);
+      res.json(instances);
+    } catch (error) {
+      console.error("Failed to fetch active routine instances:", error);
+      res.status(500).json({ error: "Failed to fetch active routine instances" });
+    }
+  });
+
+  // Routine Instances API - Get single routine instance
+  app.get("/api/routine-instances/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const instance = await storage.getRoutineInstance(req.params.id);
+      if (!instance) {
+        return res.status(404).json({ error: "Routine instance not found" });
+      }
+      
+      if (instance.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      res.json(instance);
+    } catch (error) {
+      console.error("Failed to fetch routine instance:", error);
+      res.status(500).json({ error: "Failed to fetch routine instance" });
+    }
+  });
+
+  // Routine Instances API - Update routine instance (e.g., cancel, complete manually)
+  app.patch("/api/routine-instances/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const instance = await storage.getRoutineInstance(req.params.id);
+      if (!instance) {
+        return res.status(404).json({ error: "Routine instance not found" });
+      }
+      
+      if (instance.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const { status } = req.body;
+      const updatedInstance = await storage.updateRoutineInstance(req.params.id, { status });
+      res.json(updatedInstance);
+    } catch (error) {
+      console.error("Failed to update routine instance:", error);
+      res.status(500).json({ error: "Failed to update routine instance" });
+    }
+  });
+
+  // Routine Instances API - Delete routine instance
+  app.delete("/api/routine-instances/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const instance = await storage.getRoutineInstance(req.params.id);
+      if (!instance) {
+        return res.status(404).json({ error: "Routine instance not found" });
+      }
+      
+      if (instance.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      await storage.deleteRoutineInstance(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete routine instance:", error);
+      res.status(500).json({ error: "Failed to delete routine instance" });
     }
   });
 
