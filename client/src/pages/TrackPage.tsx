@@ -536,6 +536,8 @@ export default function TrackPage() {
           isOpen={trackingState === "resting"}
           onClose={handleRestTimerClose}
           initialSeconds={restTimerDuration}
+          exerciseName={currentExercise?.name}
+          nextExerciseName={currentExerciseIndex < workoutExercises.length - 1 ? workoutExercises[currentExerciseIndex + 1]?.name : undefined}
         />
       </div>
     </div>
