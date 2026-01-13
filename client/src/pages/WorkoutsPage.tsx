@@ -602,11 +602,11 @@ export default function WorkoutsPage() {
                 return (
                   <Card 
                     key={workout.displayId}
-                    className={`hover-elevate border-0 aspect-square flex flex-col ${isCompleted ? 'bg-green-950/20' : ''}`}
+                    className="hover-elevate border-0 aspect-square flex flex-col"
                     data-testid={`card-workout-${workout.displayId}`}
                   >
                     <div className="flex items-start justify-between p-4 sm:p-5">
-                      <CardTitle className="text-base sm:text-xl font-semibold truncate flex-1">
+                      <CardTitle className="text-[1.75rem] font-semibold truncate flex-1">
                         {workout.name}
                       </CardTitle>
                       <DropdownMenu>
@@ -639,18 +639,19 @@ export default function WorkoutsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <div className="px-4 sm:px-5 flex-1">
-                      <p className="text-sm sm:text-base text-muted-foreground">
-                        {format(workout.date, "PPP")}
-                      </p>
-                      {isCompleted && (
-                        <Badge variant="outline" className="text-green-500 border-green-500 mt-2">
-                          <Check className="h-3 w-3 mr-1" />
-                          Done
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="p-4 sm:p-5 flex justify-end">
+                    <div className="px-4 sm:px-5 flex-1" />
+                    <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm sm:text-base text-muted-foreground">
+                          {format(workout.date, "PPP")}
+                        </p>
+                        {isCompleted && (
+                          <Badge variant="outline" className="text-green-500 border-green-500">
+                            <Check className="h-3 w-3 mr-1" />
+                            Done
+                          </Badge>
+                        )}
+                      </div>
                       <Button
                         size="icon"
                         onClick={() => handleStartWorkout(workout.displayId)}
@@ -676,11 +677,11 @@ export default function WorkoutsPage() {
                 return (
                   <Card 
                     key={workout.displayId}
-                    className={`hover-elevate border-0 aspect-square flex flex-col ${isCompleted ? 'bg-green-950/20' : ''}`}
+                    className="hover-elevate border-0 aspect-square flex flex-col"
                     data-testid={`card-workout-${workout.displayId}`}
                   >
                     <div className="flex items-start justify-between p-4 sm:p-5">
-                      <CardTitle className="text-base sm:text-xl font-semibold truncate flex-1">
+                      <CardTitle className="text-[1.75rem] font-semibold truncate flex-1">
                         {workout.name}
                       </CardTitle>
                       <DropdownMenu>
@@ -713,23 +714,24 @@ export default function WorkoutsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                    <div className="px-4 sm:px-5 flex-1">
-                      <p className="text-sm sm:text-base text-muted-foreground">
-                        {format(workout.date, "PPP")}
-                      </p>
-                      {isPastDue && (
-                        <Badge variant="outline" className="text-red-500 border-red-500 bg-red-950/30 mt-2">
-                          Past Due
-                        </Badge>
-                      )}
-                      {isCompleted && (
-                        <Badge variant="outline" className="text-green-500 border-green-500 mt-2">
-                          <Check className="h-3 w-3 mr-1" />
-                          Done
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="p-4 sm:p-5 flex justify-end">
+                    <div className="px-4 sm:px-5 flex-1" />
+                    <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm sm:text-base text-muted-foreground">
+                          {format(workout.date, "PPP")}
+                        </p>
+                        {isPastDue && (
+                          <Badge variant="outline" className="text-red-500 border-red-500 bg-red-950/30">
+                            Past Due
+                          </Badge>
+                        )}
+                        {isCompleted && (
+                          <Badge variant="outline" className="text-green-500 border-green-500">
+                            <Check className="h-3 w-3 mr-1" />
+                            Done
+                          </Badge>
+                        )}
+                      </div>
                       <Button
                         size="icon"
                         onClick={() => handleStartWorkout(workout.displayId)}
@@ -772,11 +774,11 @@ export default function WorkoutsPage() {
               {completedWorkouts.slice(0, 6).map((workout, index) => (
                 <Card 
                   key={`${workout.displayId}-${index}`}
-                  className="hover-elevate border-0 aspect-square flex flex-col bg-green-950/20"
+                  className="hover-elevate border-0 aspect-square flex flex-col"
                   data-testid={`card-recent-workout-${index}`}
                 >
                   <div className="flex items-start justify-between p-4 sm:p-5">
-                    <CardTitle className="text-base sm:text-xl font-semibold truncate flex-1">
+                    <CardTitle className="text-[1.75rem] font-semibold truncate flex-1">
                       {workout.name}
                     </CardTitle>
                     <DropdownMenu>
@@ -816,17 +818,18 @@ export default function WorkoutsPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="px-4 sm:px-5 flex-1">
-                    <div className="flex items-center gap-1 text-sm sm:text-base text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      <span>{format(workout.completedAt, "PP")}</span>
+                  <div className="px-4 sm:px-5 flex-1" />
+                  <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1 text-sm sm:text-base text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        <span>{format(workout.completedAt, "PP")}</span>
+                      </div>
+                      <Badge variant="outline" className="text-green-500 border-green-500">
+                        <Check className="h-3 w-3 mr-1" />
+                        Done
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className="text-green-500 border-green-500 mt-2">
-                      <Check className="h-3 w-3 mr-1" />
-                      Done
-                    </Badge>
-                  </div>
-                  <div className="p-4 sm:p-5 flex justify-end">
                     <Button
                       size="icon"
                       onClick={() => handleRestartWorkout(workout)}
@@ -859,7 +862,7 @@ export default function WorkoutsPage() {
                   data-testid={`card-library-workout-${template.id}`}
                 >
                   <div className="flex items-start justify-between p-4 sm:p-5">
-                    <CardTitle className="text-base sm:text-xl font-semibold truncate flex-1">
+                    <CardTitle className="text-[1.75rem] font-semibold truncate flex-1">
                       {template.name}
                     </CardTitle>
                     <DropdownMenu>
@@ -892,12 +895,11 @@ export default function WorkoutsPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="px-4 sm:px-5 flex-1">
+                  <div className="px-4 sm:px-5 flex-1" />
+                  <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
                     <p className="text-sm sm:text-base text-muted-foreground">
                       {template.exercises.length} exercises
                     </p>
-                  </div>
-                  <div className="p-4 sm:p-5 flex justify-end">
                     <Button
                       size="icon"
                       onClick={() => handleStartFromTemplate(template.id)}
