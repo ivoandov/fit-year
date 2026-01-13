@@ -44,6 +44,7 @@ export default function TrackPage() {
     trackingProgress,
     saveTrackingProgress,
     clearTrackingProgress,
+    flushProgress,
   } = useWorkout();
   
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
@@ -254,13 +255,50 @@ export default function TrackPage() {
   };
 
   const handleEditSave = (data: WorkoutData) => {
+    // Remap exercise sets to preserve progress when exercises are reordered/changed
+    // We match by exercise ID to maintain progress even if order changes
+    const oldExercises = activeWorkout.exercises;
+    const newExercises = data.exercises;
+    
+    // Create a map of old exercise ID -> old index
+    const oldIdToIndex = new Map<string, number>();
+    oldExercises.forEach((ex, idx) => {
+      oldIdToIndex.set(ex.id, idx);
+    });
+    
+    // Create new exercise sets map with remapped indices
+    const newExerciseSets = new Map<number, SetData[]>();
+    newExercises.forEach((newEx, newIdx) => {
+      const oldIdx = oldIdToIndex.get(newEx.id);
+      if (oldIdx !== undefined && exerciseSets.has(oldIdx)) {
+        // Preserve the set data from the old index
+        newExerciseSets.set(newIdx, exerciseSets.get(oldIdx)!);
+      }
+    });
+    
+    // Update the exercise sets with the remapped data
+    setExerciseSets(newExerciseSets);
+    
     updateActiveWorkout(data.name, data.exercises);
     setIsEditDialogOpen(false);
+    
     // Reset to first exercise if current exercise was removed
     if (currentExerciseIndex >= data.exercises.length) {
       setCurrentExerciseIndex(Math.max(0, data.exercises.length - 1));
       setCurrentSetIndex(0);
       setTrackingState("not_started");
+    } else {
+      // Check if current exercise still exists at a different index
+      const currentExId = oldExercises[currentExerciseIndex]?.id;
+      const newIndex = newExercises.findIndex(ex => ex.id === currentExId);
+      if (newIndex >= 0 && newIndex !== currentExerciseIndex) {
+        setCurrentExerciseIndex(newIndex);
+      } else if (newIndex < 0) {
+        // Current exercise was removed, go to first exercise
+        setCurrentExerciseIndex(0);
+        setCurrentSetIndex(0);
+        setTrackingState("not_started");
+      }
     }
   };
 
@@ -503,7 +541,7 @@ export default function TrackPage() {
         </Card>
 
         <div className="flex flex-col gap-2 sm:gap-3">
-          <Button variant="outline" className="w-full text-sm" onClick={() => setIsEditDialogOpen(true)} data-testid="button-edit-workout">
+          <Button variant="outline" className="w-full text-sm" onClick={() => { flushProgress(); setIsEditDialogOpen(true); }} data-testid="button-edit-workout">
             <Pencil className="h-4 w-4 mr-2" />
             Edit Workout
           </Button>

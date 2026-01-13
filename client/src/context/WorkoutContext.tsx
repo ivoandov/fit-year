@@ -58,6 +58,7 @@ interface WorkoutContextType {
   updateActiveWorkout: (name: string, exercises: Exercise[]) => void;
   saveTrackingProgress: (progress: TrackingProgress) => void;
   clearTrackingProgress: () => void;
+  flushProgress: () => void;
 }
 
 const WorkoutContext = createContext<WorkoutContextType | null>(null);
@@ -71,6 +72,24 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   const [trackingProgress, setTrackingProgress] = useState<TrackingProgress | null>(null);
   const [hasLoadedFromServer, setHasLoadedFromServer] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Refs to track current state for immediate saves (visibility change, beforeunload)
+  const activeWorkoutRef = useRef<ActiveWorkout | null>(null);
+  const trackingProgressRef = useRef<TrackingProgress | null>(null);
+  const userRef = useRef(user);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    activeWorkoutRef.current = activeWorkout;
+  }, [activeWorkout]);
+  
+  useEffect(() => {
+    trackingProgressRef.current = trackingProgress;
+  }, [trackingProgress]);
+  
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   // Load active workout from server when user is authenticated
   useEffect(() => {
@@ -126,9 +145,8 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     }
   }, [user, hasLoadedFromServer]);
 
-  // Debounced save to server whenever workout or tracking progress changes
-  const saveToServer = useCallback((workout: ActiveWorkout | null, progress: TrackingProgress | null) => {
-    // Always save to localStorage first (synchronous backup)
+  // Save to localStorage (synchronous, always works)
+  const saveToLocalStorage = useCallback((workout: ActiveWorkout | null, progress: TrackingProgress | null) => {
     if (workout) {
       localStorage.setItem(ACTIVE_WORKOUT_STORAGE_KEY, JSON.stringify(workout));
       if (progress) {
@@ -138,6 +156,42 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(ACTIVE_WORKOUT_STORAGE_KEY);
       localStorage.removeItem(TRACKING_STORAGE_KEY);
     }
+  }, []);
+
+  // Immediate save to server (no debounce) - used for critical moments
+  const saveToServerImmediate = useCallback((workout: ActiveWorkout | null, progress: TrackingProgress | null) => {
+    if (!userRef.current) return;
+    
+    // Cancel any pending debounced save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    
+    if (workout) {
+      // Use sendBeacon for reliability when page is closing
+      const data = JSON.stringify({
+        workoutData: workout,
+        trackingProgress: progress,
+      });
+      
+      // Try fetch first, with keepalive for reliability
+      fetch("/api/active-workout", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: data,
+        credentials: "include",
+        keepalive: true,
+      }).catch(err => {
+        console.error("Failed immediate save to server:", err);
+      });
+    }
+  }, []);
+
+  // Debounced save to server whenever workout or tracking progress changes
+  const saveToServer = useCallback((workout: ActiveWorkout | null, progress: TrackingProgress | null) => {
+    // Always save to localStorage first (synchronous backup)
+    saveToLocalStorage(workout, progress);
     
     // Only save to server if user is authenticated
     if (!user) return;
@@ -161,8 +215,35 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         apiRequest("DELETE", "/api/active-workout")
           .catch(err => console.error("Failed to delete from server:", err));
       }
-    }, 500);
-  }, [user]);
+    }, 300); // Reduced debounce time
+  }, [user, saveToLocalStorage]);
+
+  // Handle visibility change - save immediately when user leaves tab
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden" && activeWorkoutRef.current) {
+        console.log("[FitYear] Visibility hidden - saving progress immediately");
+        saveToLocalStorage(activeWorkoutRef.current, trackingProgressRef.current);
+        saveToServerImmediate(activeWorkoutRef.current, trackingProgressRef.current);
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (activeWorkoutRef.current) {
+        console.log("[FitYear] Before unload - saving progress");
+        saveToLocalStorage(activeWorkoutRef.current, trackingProgressRef.current);
+        saveToServerImmediate(activeWorkoutRef.current, trackingProgressRef.current);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [saveToLocalStorage, saveToServerImmediate]);
 
   // Save whenever activeWorkout changes (after initial load)
   useEffect(() => {
@@ -179,6 +260,15 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   const clearTrackingProgress = useCallback(() => {
     setTrackingProgress(null);
   }, []);
+
+  // Flush progress immediately - call this before critical operations like editing
+  const flushProgress = useCallback(() => {
+    if (activeWorkoutRef.current) {
+      console.log("[FitYear] Flushing progress immediately");
+      saveToLocalStorage(activeWorkoutRef.current, trackingProgressRef.current);
+      saveToServerImmediate(activeWorkoutRef.current, trackingProgressRef.current);
+    }
+  }, [saveToLocalStorage, saveToServerImmediate]);
 
   const { data: completedWorkoutsData = [], isLoading } = useQuery<any[]>({
     queryKey: ["/api/completed-workouts"],
@@ -379,6 +469,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       updateActiveWorkout,
       saveTrackingProgress,
       clearTrackingProgress,
+      flushProgress,
     }}>
       {children}
     </WorkoutContext.Provider>
