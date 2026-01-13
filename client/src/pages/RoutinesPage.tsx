@@ -398,7 +398,7 @@ export default function RoutinesPage() {
         </Tabs>
 
         <Dialog open={isBuilderOpen} onOpenChange={(open) => !open && closeBuilder()}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" data-testid="dialog-routine-builder">
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" data-testid="dialog-routine-builder">
             <DialogHeader>
               <DialogTitle>{editingRoutine ? "Edit Routine" : "Create Routine"}</DialogTitle>
               <DialogDescription>
@@ -406,7 +406,7 @@ export default function RoutinesPage() {
               </DialogDescription>
             </DialogHeader>
             
-            <ScrollArea className="flex-1 max-h-[60vh] pr-4">
+            <ScrollArea className="flex-1 min-h-0 overflow-auto pr-4">
               <div className="space-y-6 py-4">
                 <div className="space-y-4">
                   <div className="space-y-2">
