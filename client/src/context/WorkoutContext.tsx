@@ -37,7 +37,7 @@ interface ExerciseSetData {
 
 interface TrackingProgress {
   workoutDisplayId: string;
-  exerciseSets: [number, ExerciseSetData[]][];
+  exerciseSets: [string, ExerciseSetData[]][]; // Keyed by exercise ID for stability
   currentExerciseIndex: number;
   currentSetIndex: number;
   restTimerDuration: number;
@@ -50,7 +50,7 @@ interface WorkoutContextType {
   trackingProgress: TrackingProgress | null;
   startWorkout: (workout: { id: string; displayId: string; scheduledWorkoutId?: string; name: string; exercises: Exercise[] }) => void;
   endWorkout: () => void;
-  completeWorkout: (exerciseSets?: Map<number, ExerciseSetData[]>) => void;
+  completeWorkout: (exerciseSets?: Map<string, ExerciseSetData[]>) => void;
   isWorkoutCompleted: (displayId: string) => boolean;
   restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
   updateCompletedWorkout: (id: string, name: string, exercises?: any[]) => void;
@@ -380,11 +380,11 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     setTrackingProgress(null);
   };
 
-  const completeWorkout = (exerciseSets?: Map<number, ExerciseSetData[]>) => {
+  const completeWorkout = (exerciseSets?: Map<string, ExerciseSetData[]>) => {
     if (activeWorkout) {
-      // Merge set data into exercises if provided
-      const exercisesWithSets = activeWorkout.exercises.map((exercise, index) => {
-        const sets = exerciseSets?.get(index);
+      // Merge set data into exercises by exercise ID
+      const exercisesWithSets = activeWorkout.exercises.map((exercise) => {
+        const sets = exerciseSets?.get(exercise.id);
         if (sets) {
           const completedSets = sets.filter(s => s.completed);
           return {

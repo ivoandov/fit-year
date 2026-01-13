@@ -27,7 +27,7 @@ const TRACKING_STORAGE_KEY = "workout_tracking_progress";
 
 interface SavedTrackingProgress {
   workoutDisplayId: string;
-  exerciseSets: [number, SetData[]][];
+  exerciseSets: [string, SetData[]][]; // Keyed by exercise ID for stability
   currentExerciseIndex: number;
   currentSetIndex: number;
   restTimerDuration: number;
@@ -51,7 +51,7 @@ export default function TrackPage() {
   const [trackingState, setTrackingState] = useState<TrackingState>("not_started");
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [restTimerDuration, setRestTimerDuration] = useState(90);
-  const [exerciseSets, setExerciseSets] = useState<Map<number, SetData[]>>(new Map());
+  const [exerciseSets, setExerciseSets] = useState<Map<string, SetData[]>>(new Map()); // Keyed by exercise ID
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [hasLoadedSavedProgress, setHasLoadedSavedProgress] = useState(false);
 
@@ -64,7 +64,21 @@ export default function TrackPage() {
     if (activeWorkout && !hasLoadedSavedProgress) {
       if (trackingProgress && trackingProgress.workoutDisplayId === activeWorkout.displayId) {
         console.log("Restoring tracking progress from server");
-        setExerciseSets(new Map(trackingProgress.exerciseSets));
+        // Handle backward compatibility: old data used numeric indices, new uses exercise IDs
+        const restoredMap = new Map<string, SetData[]>();
+        for (const [key, sets] of trackingProgress.exerciseSets) {
+          if (typeof key === 'number') {
+            // Old format: numeric index - convert to exercise ID
+            const exercise = activeWorkout.exercises[key];
+            if (exercise) {
+              restoredMap.set(exercise.id, sets);
+            }
+          } else {
+            // New format: string exercise ID
+            restoredMap.set(key, sets);
+          }
+        }
+        setExerciseSets(restoredMap);
         setCurrentExerciseIndex(trackingProgress.currentExerciseIndex);
         setCurrentSetIndex(trackingProgress.currentSetIndex);
         setRestTimerDuration(trackingProgress.restTimerDuration);
@@ -139,21 +153,26 @@ export default function TrackPage() {
 
   const getCurrentSets = (): SetData[] => {
     const currentExercise = activeWorkout?.exercises[currentExerciseIndex];
-    return exerciseSets.get(currentExerciseIndex) || getDefaultSets(currentExercise?.id);
+    if (!currentExercise) return getDefaultSets();
+    return exerciseSets.get(currentExercise.id) || getDefaultSets(currentExercise.id);
   };
 
   const setCurrentSets = (sets: SetData[]) => {
+    const currentExercise = activeWorkout?.exercises[currentExerciseIndex];
+    if (!currentExercise) return;
     const newMap = new Map(exerciseSets);
-    newMap.set(currentExerciseIndex, sets);
+    newMap.set(currentExercise.id, sets);
     setExerciseSets(newMap);
   };
 
   useEffect(() => {
-    if (!exerciseSets.has(currentExerciseIndex) && activeWorkout) {
+    if (activeWorkout) {
       const currentEx = activeWorkout.exercises[currentExerciseIndex];
-      const newMap = new Map(exerciseSets);
-      newMap.set(currentExerciseIndex, getDefaultSets(currentEx?.id));
-      setExerciseSets(newMap);
+      if (currentEx && !exerciseSets.has(currentEx.id)) {
+        const newMap = new Map(exerciseSets);
+        newMap.set(currentEx.id, getDefaultSets(currentEx.id));
+        setExerciseSets(newMap);
+      }
     }
   }, [currentExerciseIndex, activeWorkout]);
 
@@ -255,43 +274,25 @@ export default function TrackPage() {
   };
 
   const handleEditSave = (data: WorkoutData) => {
-    // Remap exercise sets to preserve progress when exercises are reordered/changed
-    // We match by exercise ID to maintain progress even if order changes
+    // Since exerciseSets is now keyed by exercise ID, no remapping needed!
+    // Set data stays aligned automatically when exercises are reordered/added/removed
     const oldExercises = activeWorkout.exercises;
     const newExercises = data.exercises;
-    
-    // Create a map of old exercise ID -> old index
-    const oldIdToIndex = new Map<string, number>();
-    oldExercises.forEach((ex, idx) => {
-      oldIdToIndex.set(ex.id, idx);
-    });
-    
-    // Create new exercise sets map with remapped indices
-    const newExerciseSets = new Map<number, SetData[]>();
-    newExercises.forEach((newEx, newIdx) => {
-      const oldIdx = oldIdToIndex.get(newEx.id);
-      if (oldIdx !== undefined && exerciseSets.has(oldIdx)) {
-        // Preserve the set data from the old index
-        newExerciseSets.set(newIdx, exerciseSets.get(oldIdx)!);
-      }
-    });
-    
-    // Update the exercise sets with the remapped data
-    setExerciseSets(newExerciseSets);
     
     updateActiveWorkout(data.name, data.exercises);
     setIsEditDialogOpen(false);
     
     // Reset to first exercise if current exercise was removed
-    if (currentExerciseIndex >= data.exercises.length) {
-      setCurrentExerciseIndex(Math.max(0, data.exercises.length - 1));
+    if (currentExerciseIndex >= newExercises.length) {
+      setCurrentExerciseIndex(Math.max(0, newExercises.length - 1));
       setCurrentSetIndex(0);
       setTrackingState("not_started");
     } else {
-      // Check if current exercise still exists at a different index
+      // Check if current exercise still exists (might be at a different index now)
       const currentExId = oldExercises[currentExerciseIndex]?.id;
       const newIndex = newExercises.findIndex(ex => ex.id === currentExId);
       if (newIndex >= 0 && newIndex !== currentExerciseIndex) {
+        // Move to the new index of the same exercise
         setCurrentExerciseIndex(newIndex);
       } else if (newIndex < 0) {
         // Current exercise was removed, go to first exercise
