@@ -606,7 +606,7 @@ export default function WorkoutsPage() {
                     data-testid={`card-workout-${workout.displayId}`}
                   >
                     <div className="flex items-start justify-between p-4 sm:p-5">
-                      <CardTitle className="text-[1.75rem] font-semibold truncate flex-1">
+                      <CardTitle className="text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2">
                         {workout.name}
                       </CardTitle>
                       <DropdownMenu>
@@ -681,7 +681,7 @@ export default function WorkoutsPage() {
                     data-testid={`card-workout-${workout.displayId}`}
                   >
                     <div className="flex items-start justify-between p-4 sm:p-5">
-                      <CardTitle className="text-[1.75rem] font-semibold truncate flex-1">
+                      <CardTitle className="text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2">
                         {workout.name}
                       </CardTitle>
                       <DropdownMenu>
@@ -778,7 +778,7 @@ export default function WorkoutsPage() {
                   data-testid={`card-recent-workout-${index}`}
                 >
                   <div className="flex items-start justify-between p-4 sm:p-5">
-                    <CardTitle className="text-[1.75rem] font-semibold truncate flex-1">
+                    <CardTitle className="text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2">
                       {workout.name}
                     </CardTitle>
                     <DropdownMenu>
@@ -862,7 +862,7 @@ export default function WorkoutsPage() {
                   data-testid={`card-library-workout-${template.id}`}
                 >
                   <div className="flex items-start justify-between p-4 sm:p-5">
-                    <CardTitle className="text-[1.75rem] font-semibold truncate flex-1">
+                    <CardTitle className="text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2">
                       {template.name}
                     </CardTitle>
                     <DropdownMenu>
