@@ -11,6 +11,7 @@ import {
   activeWorkouts,
   routines,
   routineEntries,
+  routineInstances,
   type Exercise,
   type WorkoutTemplate,
   type ScheduledWorkout,
@@ -19,6 +20,7 @@ import {
   type ActiveWorkout,
   type Routine,
   type RoutineEntry,
+  type RoutineInstance,
   type InsertExercise,
   type InsertWorkoutTemplate,
   type InsertScheduledWorkout,
@@ -27,6 +29,7 @@ import {
   type InsertActiveWorkout,
   type InsertRoutine,
   type InsertRoutineEntry,
+  type InsertRoutineInstance,
 } from "@shared/schema";
 import { builtInExercises } from "./data/builtInExercises";
 
@@ -125,6 +128,16 @@ export interface IStorage {
   updateRoutineEntry(id: string, entry: Partial<InsertRoutineEntry>): Promise<RoutineEntry | undefined>;
   deleteRoutineEntry(id: string): Promise<boolean>;
   deleteRoutineEntriesByRoutineId(routineId: string): Promise<boolean>;
+  
+  getRoutineInstances(userId: string): Promise<RoutineInstance[]>;
+  getActiveRoutineInstances(userId: string): Promise<RoutineInstance[]>;
+  getRoutineInstance(id: string): Promise<RoutineInstance | undefined>;
+  createRoutineInstance(instance: InsertRoutineInstance): Promise<RoutineInstance>;
+  updateRoutineInstance(id: string, instance: Partial<InsertRoutineInstance>): Promise<RoutineInstance | undefined>;
+  incrementRoutineInstanceProgress(id: string): Promise<RoutineInstance | undefined>;
+  deleteRoutineInstance(id: string): Promise<boolean>;
+  
+  createScheduledWorkoutWithRoutine(workout: InsertScheduledWorkout & { routineInstanceId?: string | null; routineDayIndex?: number | null }): Promise<ScheduledWorkout>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -895,6 +908,203 @@ export class DatabaseStorage implements IStorage {
       console.error("Error deleting routine entries:", error);
       return false;
     }
+  }
+
+  async getRoutineInstances(userId: string): Promise<RoutineInstance[]> {
+    try {
+      const results = await neonClient`
+        SELECT 
+          id,
+          routine_id as "routineId",
+          user_id as "userId",
+          routine_name as "routineName",
+          start_date as "startDate",
+          end_date as "endDate",
+          duration_days as "durationDays",
+          total_workouts as "totalWorkouts",
+          completed_workouts as "completedWorkouts",
+          status,
+          created_at as "createdAt",
+          completed_at as "completedAt"
+        FROM routine_instances 
+        WHERE user_id = ${userId}
+        ORDER BY created_at DESC
+      `;
+      return (results || []) as RoutineInstance[];
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async getActiveRoutineInstances(userId: string): Promise<RoutineInstance[]> {
+    try {
+      const results = await neonClient`
+        SELECT 
+          id,
+          routine_id as "routineId",
+          user_id as "userId",
+          routine_name as "routineName",
+          start_date as "startDate",
+          end_date as "endDate",
+          duration_days as "durationDays",
+          total_workouts as "totalWorkouts",
+          completed_workouts as "completedWorkouts",
+          status,
+          created_at as "createdAt",
+          completed_at as "completedAt"
+        FROM routine_instances 
+        WHERE user_id = ${userId} AND status = 'active'
+        ORDER BY start_date ASC
+      `;
+      return (results || []) as RoutineInstance[];
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  async getRoutineInstance(id: string): Promise<RoutineInstance | undefined> {
+    try {
+      const results = await neonClient`
+        SELECT 
+          id,
+          routine_id as "routineId",
+          user_id as "userId",
+          routine_name as "routineName",
+          start_date as "startDate",
+          end_date as "endDate",
+          duration_days as "durationDays",
+          total_workouts as "totalWorkouts",
+          completed_workouts as "completedWorkouts",
+          status,
+          created_at as "createdAt",
+          completed_at as "completedAt"
+        FROM routine_instances 
+        WHERE id = ${id}
+      `;
+      return results?.[0] as RoutineInstance | undefined;
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null (reading 'map')")) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
+  async createRoutineInstance(instance: InsertRoutineInstance): Promise<RoutineInstance> {
+    const id = crypto.randomUUID();
+    const startDateStr = instance.startDate instanceof Date ? instance.startDate.toISOString() : instance.startDate;
+    const endDateStr = instance.endDate instanceof Date ? instance.endDate.toISOString() : instance.endDate;
+    
+    await neonClient`
+      INSERT INTO routine_instances (id, routine_id, user_id, routine_name, start_date, end_date, duration_days, total_workouts, completed_workouts, status)
+      VALUES (${id}, ${instance.routineId}, ${instance.userId}, ${instance.routineName}, ${startDateStr}::timestamp, ${endDateStr}::timestamp, ${instance.durationDays}, ${instance.totalWorkouts || 0}, ${instance.completedWorkouts || 0}, ${instance.status || 'active'})
+    `;
+    
+    return {
+      id,
+      routineId: instance.routineId,
+      userId: instance.userId,
+      routineName: instance.routineName,
+      startDate: instance.startDate instanceof Date ? instance.startDate : new Date(startDateStr),
+      endDate: instance.endDate instanceof Date ? instance.endDate : new Date(endDateStr),
+      durationDays: instance.durationDays,
+      totalWorkouts: instance.totalWorkouts || 0,
+      completedWorkouts: instance.completedWorkouts || 0,
+      status: instance.status || 'active',
+      createdAt: new Date(),
+      completedAt: null,
+    };
+  }
+
+  async updateRoutineInstance(id: string, instance: Partial<InsertRoutineInstance>): Promise<RoutineInstance | undefined> {
+    const existing = await this.getRoutineInstance(id);
+    if (!existing) return undefined;
+    
+    const status = instance.status !== undefined ? instance.status : existing.status;
+    const completedWorkouts = instance.completedWorkouts !== undefined ? instance.completedWorkouts : existing.completedWorkouts;
+    const totalWorkouts = instance.totalWorkouts !== undefined ? instance.totalWorkouts : existing.totalWorkouts;
+    
+    await neonClient`
+      UPDATE routine_instances 
+      SET 
+        status = ${status},
+        completed_workouts = ${completedWorkouts},
+        total_workouts = ${totalWorkouts},
+        completed_at = ${status === 'completed' ? new Date().toISOString() : null}::timestamp
+      WHERE id = ${id}
+    `;
+    
+    return {
+      ...existing,
+      status,
+      completedWorkouts,
+      totalWorkouts,
+      completedAt: status === 'completed' ? new Date() : null,
+    };
+  }
+
+  async incrementRoutineInstanceProgress(id: string): Promise<RoutineInstance | undefined> {
+    const existing = await this.getRoutineInstance(id);
+    if (!existing) return undefined;
+    
+    const newCompletedWorkouts = existing.completedWorkouts + 1;
+    const isComplete = newCompletedWorkouts >= existing.totalWorkouts;
+    const newStatus = isComplete ? 'completed' : 'active';
+    
+    await neonClient`
+      UPDATE routine_instances 
+      SET 
+        completed_workouts = ${newCompletedWorkouts},
+        status = ${newStatus},
+        completed_at = ${isComplete ? new Date().toISOString() : null}::timestamp
+      WHERE id = ${id}
+    `;
+    
+    return {
+      ...existing,
+      completedWorkouts: newCompletedWorkouts,
+      status: newStatus,
+      completedAt: isComplete ? new Date() : null,
+    };
+  }
+
+  async deleteRoutineInstance(id: string): Promise<boolean> {
+    try {
+      await neonClient`DELETE FROM routine_instances WHERE id = ${id}`;
+      return true;
+    } catch (error) {
+      console.error("Error deleting routine instance:", error);
+      return false;
+    }
+  }
+
+  async createScheduledWorkoutWithRoutine(workout: InsertScheduledWorkout & { routineInstanceId?: string | null; routineDayIndex?: number | null }): Promise<ScheduledWorkout> {
+    const id = crypto.randomUUID();
+    const exercisesJson = JSON.stringify(workout.exercises || []);
+    const dateStr = workout.date instanceof Date ? workout.date.toISOString() : workout.date;
+    
+    await neonClient`
+      INSERT INTO scheduled_workouts (id, user_id, name, date, exercises, template_id, routine_instance_id, routine_day_index)
+      VALUES (${id}, ${workout.userId || null}, ${workout.name}, ${dateStr}::timestamp, ${exercisesJson}::jsonb, ${workout.templateId || null}, ${workout.routineInstanceId || null}, ${workout.routineDayIndex ?? null})
+    `;
+    
+    return {
+      id,
+      userId: workout.userId || null,
+      name: workout.name,
+      date: workout.date instanceof Date ? workout.date : new Date(dateStr),
+      exercises: workout.exercises || [],
+      templateId: workout.templateId || null,
+      calendarEventId: null,
+      routineInstanceId: workout.routineInstanceId || null,
+      routineDayIndex: workout.routineDayIndex ?? null,
+    };
   }
 }
 
