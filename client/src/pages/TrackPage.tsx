@@ -537,7 +537,7 @@ export default function TrackPage() {
           onClose={handleRestTimerClose}
           initialSeconds={restTimerDuration}
           exerciseName={currentExercise?.name}
-          nextExerciseName={currentExerciseIndex < workoutExercises.length - 1 ? workoutExercises[currentExerciseIndex + 1]?.name : undefined}
+          nextExerciseName={currentExerciseIndex < activeWorkout.exercises.length - 1 ? activeWorkout.exercises[currentExerciseIndex + 1]?.name : undefined}
         />
       </div>
     </div>
