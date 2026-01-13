@@ -886,9 +886,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userSettings = await storage.getUserSettings(userId);
       const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
       
-      // If this was from a scheduled workout, delete the "(Scheduled)" calendar event
+      // If this was from a scheduled workout, handle routine progress tracking
       if (scheduledWorkoutId) {
         const scheduledWorkout = await storage.getScheduledWorkout(scheduledWorkoutId);
+        
+        // Delete the "(Scheduled)" calendar event
         if (scheduledWorkout?.calendarEventId) {
           deleteCalendarEvent(scheduledWorkout.calendarEventId, selectedCalendarId)
             .then((deleted) => {
@@ -899,6 +901,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .catch((err) => {
               console.error("Failed to delete scheduled calendar event:", err);
             });
+        }
+        
+        // If this workout was part of a routine instance, update progress
+        if (scheduledWorkout?.routineInstanceId) {
+          try {
+            const updatedInstance = await storage.incrementRoutineInstanceProgress(scheduledWorkout.routineInstanceId);
+            if (updatedInstance) {
+              console.log(`Updated routine instance progress: ${updatedInstance.completedWorkouts}/${updatedInstance.totalWorkouts} (${updatedInstance.routineName})`);
+              if (updatedInstance.status === 'completed') {
+                console.log(`Routine "${updatedInstance.routineName}" completed!`);
+              }
+            }
+          } catch (err) {
+            console.error("Failed to update routine instance progress:", err);
+          }
         }
       }
       

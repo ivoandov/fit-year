@@ -377,13 +377,13 @@ export class DatabaseStorage implements IStorage {
     try {
       const results = userId
         ? await neonClient`
-            SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises, calendar_event_id as "calendarEventId"
+            SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises, calendar_event_id as "calendarEventId", routine_instance_id as "routineInstanceId", routine_day_index as "routineDayIndex"
             FROM scheduled_workouts 
             WHERE user_id = ${userId}
             ORDER BY date
           `
         : await neonClient`
-            SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises, calendar_event_id as "calendarEventId"
+            SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises, calendar_event_id as "calendarEventId", routine_instance_id as "routineInstanceId", routine_day_index as "routineDayIndex"
             FROM scheduled_workouts 
             ORDER BY date
           `;
