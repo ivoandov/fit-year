@@ -853,6 +853,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Skip a scheduled workout (for routine workouts only)
+  app.post("/api/scheduled-workouts/:id/skip", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      
+      // Verify ownership
+      const existing = await storage.getScheduledWorkout(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Workout not found" });
+      }
+      if (existing.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      // Only routine workouts can be skipped
+      if (!existing.routineInstanceId) {
+        return res.status(400).json({ error: "Only routine workouts can be skipped" });
+      }
+      
+      // Delete the calendar event if one exists
+      if (existing.calendarEventId) {
+        const userSettings = await storage.getUserSettings(userId);
+        const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+        deleteCalendarEvent(existing.calendarEventId, selectedCalendarId)
+          .then((deleted) => {
+            if (deleted) {
+              console.log(`Deleted skipped workout calendar event: ${existing.calendarEventId}`);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to delete skipped workout calendar event:", err);
+          });
+      }
+      
+      // Increment the skipped count on the routine instance
+      await storage.incrementRoutineInstanceSkipped(existing.routineInstanceId);
+      
+      // Delete the scheduled workout
+      await storage.deleteScheduledWorkout(id);
+      
+      res.json({ success: true, message: "Workout skipped" });
+    } catch (error) {
+      console.error("Failed to skip scheduled workout:", error);
+      res.status(500).json({ error: "Failed to skip scheduled workout" });
+    }
+  });
+
   // Completed Workouts (requires authentication)
   app.get("/api/completed-workouts", isAuthenticated, async (req: any, res) => {
     try {
