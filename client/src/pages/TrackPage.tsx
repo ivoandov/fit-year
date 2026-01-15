@@ -219,7 +219,7 @@ export default function TrackPage() {
 
   const handleFinishExercise = () => {
     if (isLastExercise) {
-      clearSavedProgress();
+      // Don't clear progress before save - the save handles cleanup on success
       completeWorkout(exerciseSets);
       setLocation("/");
     } else {
@@ -269,7 +269,7 @@ export default function TrackPage() {
   };
 
   const handleEndWorkout = () => {
-    clearSavedProgress();
+    // Don't clear progress before save - the save handles cleanup on success
     endWorkout(exerciseSets);
     setLocation("/");
   };

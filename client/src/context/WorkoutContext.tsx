@@ -318,7 +318,17 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       });
     },
     onSuccess: () => {
+      // Only clear active workout and tracking progress AFTER successful save
+      setActiveWorkout(null);
+      setTrackingProgress(null);
       queryClient.invalidateQueries({ queryKey: ["/api/completed-workouts"] });
+      // Also clear from server
+      if (user) {
+        apiRequest("DELETE", "/api/active-workout").catch(() => {});
+      }
+    },
+    onError: (error) => {
+      console.error("Failed to save workout - data preserved:", error);
     },
   });
 
@@ -405,20 +415,24 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         };
       });
       
+      const scheduledWorkoutId = activeWorkout.scheduledWorkoutId;
+      
       createCompletedMutation.mutate({
         displayId: activeWorkout.displayId,
         name: activeWorkout.name,
         exercises: exercisesWithSets,
         completedAt: new Date(),
-        scheduledWorkoutId: activeWorkout.scheduledWorkoutId || undefined,
+        scheduledWorkoutId: scheduledWorkoutId || undefined,
+      }, {
+        onSuccess: () => {
+          // Delete the scheduled workout AFTER completed workout is saved
+          if (scheduledWorkoutId) {
+            deleteScheduledWorkoutMutation.mutate(scheduledWorkoutId);
+          }
+        }
       });
-      
-      // Delete the scheduled workout if this was a scheduled workout
-      if (activeWorkout.scheduledWorkoutId) {
-        deleteScheduledWorkoutMutation.mutate(activeWorkout.scheduledWorkoutId);
-      }
+      // State clearing now happens in createCompletedMutation.onSuccess - DO NOT clear here
     }
-    setActiveWorkout(null);
   };
 
   const isWorkoutCompleted = (displayId: string) => {
