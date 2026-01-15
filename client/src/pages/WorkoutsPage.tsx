@@ -121,6 +121,7 @@ export default function WorkoutsPage() {
       muscleGroups: ex.muscleGroups || [],
     })) as Exercise[],
     templateId: w.templateId,
+    routineInstanceId: w.routineInstanceId,
   }));
 
   const workoutTemplates: WorkoutTemplate[] = dbTemplates.map((t) => ({

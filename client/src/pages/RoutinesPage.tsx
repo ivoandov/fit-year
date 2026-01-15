@@ -397,10 +397,11 @@ export default function RoutinesPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {activeInstances.map((instance) => {
+                const totalDone = instance.completedWorkouts + (instance.skippedWorkouts || 0);
                 const progressPercent = instance.totalWorkouts > 0 
-                  ? Math.round((instance.completedWorkouts / instance.totalWorkouts) * 100) 
+                  ? Math.round((totalDone / instance.totalWorkouts) * 100) 
                   : 0;
-                const isComplete = instance.completedWorkouts >= instance.totalWorkouts;
+                const isComplete = totalDone >= instance.totalWorkouts;
                 
                 return (
                   <div 
@@ -436,7 +437,13 @@ export default function RoutinesPage() {
                     
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span>{instance.completedWorkouts} of {instance.totalWorkouts} workouts</span>
+                        <span>
+                          {instance.completedWorkouts} completed
+                          {(instance.skippedWorkouts || 0) > 0 && (
+                            <span className="text-muted-foreground"> + {instance.skippedWorkouts} skipped</span>
+                          )}
+                          {" "}of {instance.totalWorkouts}
+                        </span>
                         <span className="font-medium text-primary">{progressPercent}%</span>
                       </div>
                       <Progress value={progressPercent} className="h-2" />
