@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { WorkoutEditorDialog, type WorkoutData } from "@/components/WorkoutEditorDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, Clock, Dumbbell } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, Clock, Dumbbell, SkipForward } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays, isBefore, startOfDay } from "date-fns";
@@ -45,6 +45,7 @@ interface ScheduledWorkout {
   date: Date;
   exercises: Exercise[];
   templateId?: string;
+  routineInstanceId?: string | null;
 }
 
 interface WorkoutTemplate {
@@ -59,6 +60,7 @@ interface DBScheduledWorkout {
   date: string;
   exercises: any;
   templateId?: string;
+  routineInstanceId?: string | null;
 }
 
 interface DBWorkoutTemplate {
@@ -233,6 +235,30 @@ export default function WorkoutsPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
     },
   });
+
+  const skipWorkoutMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("POST", `/api/scheduled-workouts/${id}/skip`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/routine-instances/active"] });
+      toast({
+        title: "Workout Skipped",
+        description: "This workout has been marked as skipped.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to skip workout",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSkipWorkout = (workoutId: string) => {
+    skipWorkoutMutation.mutate(workoutId);
+  };
 
   const handleStartWorkout = (workoutId: string) => {
     const workout = scheduledWorkouts.find(w => w.id === workoutId);
@@ -628,6 +654,15 @@ export default function WorkoutsPage() {
                             <Pencil className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
+                          {workout.routineInstanceId && (
+                            <DropdownMenuItem
+                              onClick={() => handleSkipWorkout(workout.id)}
+                              data-testid={`button-skip-workout-${workout.displayId}`}
+                            >
+                              <SkipForward className="h-4 w-4 mr-2" />
+                              Skip
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
                             className="text-destructive"
@@ -651,6 +686,11 @@ export default function WorkoutsPage() {
                           <Badge variant="outline" className="text-green-500 border-green-500">
                             <Check className="h-3 w-3 mr-1" />
                             Done
+                          </Badge>
+                        )}
+                        {workout.routineInstanceId && (
+                          <Badge variant="outline" className="text-primary border-primary/50">
+                            Routine
                           </Badge>
                         )}
                       </div>
@@ -706,6 +746,15 @@ export default function WorkoutsPage() {
                             <Pencil className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
+                          {workout.routineInstanceId && (
+                            <DropdownMenuItem
+                              onClick={() => handleSkipWorkout(workout.id)}
+                              data-testid={`button-skip-workout-${workout.displayId}`}
+                            >
+                              <SkipForward className="h-4 w-4 mr-2" />
+                              Skip
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
                             className="text-destructive"
@@ -734,6 +783,11 @@ export default function WorkoutsPage() {
                           <Badge variant="outline" className="text-green-500 border-green-500">
                             <Check className="h-3 w-3 mr-1" />
                             Done
+                          </Badge>
+                        )}
+                        {workout.routineInstanceId && (
+                          <Badge variant="outline" className="text-primary border-primary/50">
+                            Routine
                           </Badge>
                         )}
                       </div>
