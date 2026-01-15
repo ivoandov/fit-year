@@ -270,7 +270,7 @@ export default function TrackPage() {
 
   const handleEndWorkout = () => {
     clearSavedProgress();
-    endWorkout();
+    endWorkout(exerciseSets);
     setLocation("/");
   };
 

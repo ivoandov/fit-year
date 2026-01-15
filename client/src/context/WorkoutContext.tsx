@@ -49,7 +49,7 @@ interface WorkoutContextType {
   isLoading: boolean;
   trackingProgress: TrackingProgress | null;
   startWorkout: (workout: { id: string; displayId: string; scheduledWorkoutId?: string; name: string; exercises: Exercise[] }) => void;
-  endWorkout: () => void;
+  endWorkout: (exerciseSets?: Map<string, ExerciseSetData[]>) => void;
   completeWorkout: (exerciseSets?: Map<string, ExerciseSetData[]>) => void;
   isWorkoutCompleted: (displayId: string) => boolean;
   restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
@@ -375,9 +375,14 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     setActiveWorkout(workoutWithSets);
   };
 
-  const endWorkout = () => {
-    setActiveWorkout(null);
-    setTrackingProgress(null);
+  const endWorkout = (exerciseSets?: Map<string, ExerciseSetData[]>) => {
+    // Save the workout with whatever progress exists before ending
+    if (activeWorkout) {
+      completeWorkout(exerciseSets);
+    } else {
+      setActiveWorkout(null);
+      setTrackingProgress(null);
+    }
   };
 
   const completeWorkout = (exerciseSets?: Map<string, ExerciseSetData[]>) => {
