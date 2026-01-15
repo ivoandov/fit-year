@@ -42,6 +42,7 @@ export default function HistoryPage() {
       totalVolume: workoutVolume,
       totalSets,
       exercises,
+      calendarEventId: workout.calendarEventId,
     };
   });
 

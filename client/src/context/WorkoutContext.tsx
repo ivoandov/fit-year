@@ -24,6 +24,7 @@ export interface CompletedWorkoutRecord {
   name: string;
   exercises: Exercise[];
   completedAt: Date;
+  calendarEventId?: string | null;
 }
 
 interface ExerciseSetData {
@@ -299,6 +300,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         setsData: ex.setsData || [],
       })) as Exercise[],
       completedAt,
+      calendarEventId: w.calendarEventId,
     };
   });
 

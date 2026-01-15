@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Dumbbell, TrendingUp, Pencil, Check, X, Plus, Trash2 } from "lucide-react";
+import { Calendar, Dumbbell, TrendingUp, Pencil, Check, X, Plus, Trash2, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { useWorkout } from "@/context/WorkoutContext";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface SetDetail {
   setNumber?: number;
@@ -36,6 +39,7 @@ interface WorkoutHistoryCardProps {
   totalVolume: number;
   totalSets?: number;
   exercises?: ExerciseDetail[];
+  calendarEventId?: string | null;
 }
 
 export function WorkoutHistoryCard({
@@ -47,11 +51,34 @@ export function WorkoutHistoryCard({
   totalVolume,
   totalSets = 0,
   exercises = [],
+  calendarEventId,
 }: WorkoutHistoryCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedExercises, setEditedExercises] = useState<ExerciseDetail[]>([]);
   const { updateCompletedWorkout } = useWorkout();
+  const { toast } = useToast();
+
+  const syncCalendarMutation = useMutation({
+    mutationFn: async () => {
+      const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      return apiRequest("POST", `/api/completed-workouts/${workoutId}/sync-calendar`, { localDate: localDateStr });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/completed-workouts"] });
+      toast({
+        title: "Synced to Calendar",
+        description: `"${workoutName}" has been added to your Google Calendar`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync workout to Google Calendar",
+        variant: "destructive",
+      });
+    },
+  });
 
   const completedSets = totalSets || exercises.reduce((total, ex) => 
     total + ex.sets.filter(s => s.completed).length, 0
@@ -183,10 +210,24 @@ export function WorkoutHistoryCard({
                   </Button>
                 </>
               ) : (
-                <Button variant="ghost" size="sm" onClick={startEditing} data-testid={`button-edit-${id}`}>
-                  <Pencil className="h-4 w-4 mr-1" />
-                  Edit Sets
-                </Button>
+                <>
+                  {!calendarEventId && workoutId && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => syncCalendarMutation.mutate()}
+                      disabled={syncCalendarMutation.isPending}
+                      data-testid={`button-sync-calendar-${id}`}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-1 ${syncCalendarMutation.isPending ? 'animate-spin' : ''}`} />
+                      {syncCalendarMutation.isPending ? 'Syncing...' : 'Sync to Calendar'}
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="sm" onClick={startEditing} data-testid={`button-edit-${id}`}>
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit Sets
+                  </Button>
+                </>
               )}
             </div>
             <div className="space-y-3 sm:space-y-4">
