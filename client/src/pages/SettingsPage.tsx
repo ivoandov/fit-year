@@ -138,44 +138,6 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-base sm:text-lg">Appearance</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              Choose how Fit Year looks to you
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-            <RadioGroup
-              value={theme}
-              onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}
-              className="space-y-3"
-            >
-              {themeOptions.map((option) => (
-                <div
-                  key={option.value}
-                  className={`flex items-center space-x-3 p-3 rounded-md border cursor-pointer hover-elevate ${
-                    theme === option.value ? 'border-primary bg-primary/5' : ''
-                  }`}
-                  onClick={() => setTheme(option.value as "light" | "dark" | "system")}
-                  data-testid={`option-theme-${option.value}`}
-                >
-                  <RadioGroupItem value={option.value} id={option.value} />
-                  <option.icon className="h-5 w-5 text-muted-foreground" />
-                  <div className="flex-1">
-                    <Label htmlFor={option.value} className="font-medium cursor-pointer">
-                      {option.label}
-                    </Label>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      {option.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </RadioGroup>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-base sm:text-lg">Week Start</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
               Choose when your week begins for weekly statistics
