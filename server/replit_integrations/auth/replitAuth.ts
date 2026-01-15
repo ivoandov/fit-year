@@ -64,12 +64,23 @@ async function upsertUser(claims: any) {
     parsedLastName = nameParts.slice(1).join(" ") || null;
   }
   
+  // Log claims for debugging profile image issue
+  const profileImageUrl = claims["profile_image_url"] || claims["picture"] || null;
+  console.log("[Auth] Upserting user with claims:", {
+    sub: claims["sub"],
+    email: claims["email"],
+    firstName: parsedFirstName,
+    lastName: parsedLastName,
+    profileImageUrl,
+    allClaimKeys: Object.keys(claims),
+  });
+  
   await authStorage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: parsedFirstName,
     lastName: parsedLastName,
-    profileImageUrl: claims["profile_image_url"] || claims["picture"],
+    profileImageUrl,
   });
 }
 
