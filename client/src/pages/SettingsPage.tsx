@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/ThemeProvider";
 import { useSettings, type WeekStart, DEFAULT_MUSCLE_GROUPS } from "@/components/SettingsProvider";
-import { Sun, Moon, Monitor, Calendar, Plus, X, ChevronUp, ChevronDown, RotateCcw, RefreshCw, Check, AlertCircle } from "lucide-react";
+import { Sun, Moon, Monitor, Calendar, Plus, X, ChevronUp, ChevronDown, RotateCcw, RefreshCw, Check, AlertCircle, Timer } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,7 +28,7 @@ interface UserSettings {
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const { weekStart, setWeekStart, muscleGroups, addMuscleGroup, removeMuscleGroup, reorderMuscleGroups, setMuscleGroups } = useSettings();
+  const { weekStart, setWeekStart, muscleGroups, addMuscleGroup, removeMuscleGroup, reorderMuscleGroups, setMuscleGroups, restTimerOnManualComplete, setRestTimerOnManualComplete } = useSettings();
   const [newMuscleGroup, setNewMuscleGroup] = useState("");
   const { toast } = useToast();
 
@@ -282,6 +283,39 @@ export default function SettingsPage() {
                 No calendars available. Connect Google Calendar to sync your workouts.
               </p>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Workout Tracking</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
+              Customize how workout tracking behaves
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <div
+              className={`flex items-center justify-between gap-3 p-3 rounded-md border cursor-pointer hover-elevate ${
+                restTimerOnManualComplete ? 'border-primary bg-primary/5' : ''
+              }`}
+              onClick={() => setRestTimerOnManualComplete(!restTimerOnManualComplete)}
+              data-testid="option-rest-timer-manual"
+            >
+              <div className="flex items-center gap-3 flex-1">
+                <Timer className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Rest timer on manual completion</p>
+                  <p className="text-xs text-muted-foreground">
+                    Start rest timer when manually checking off a set
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={restTimerOnManualComplete}
+                onCheckedChange={setRestTimerOnManualComplete}
+                data-testid="switch-rest-timer-manual"
+              />
+            </div>
           </CardContent>
         </Card>
 

@@ -25,6 +25,8 @@ type SettingsProviderState = {
   addMuscleGroup: (group: string) => void;
   removeMuscleGroup: (group: string) => void;
   reorderMuscleGroups: (fromIndex: number, toIndex: number) => void;
+  restTimerOnManualComplete: boolean;
+  setRestTimerOnManualComplete: (enabled: boolean) => void;
 };
 
 const SettingsProviderContext = createContext<SettingsProviderState | undefined>(undefined);
@@ -76,6 +78,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     setMuscleGroups(newGroups);
   };
 
+  const [restTimerOnManualComplete, setRestTimerOnManualCompleteState] = useState<boolean>(() => {
+    const stored = localStorage.getItem("restTimerOnManualComplete");
+    return stored === "true";
+  });
+
+  const setRestTimerOnManualComplete = (enabled: boolean) => {
+    setRestTimerOnManualCompleteState(enabled);
+    localStorage.setItem("restTimerOnManualComplete", enabled.toString());
+  };
+
   return (
     <SettingsProviderContext.Provider
       value={{
@@ -86,6 +98,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         addMuscleGroup,
         removeMuscleGroup,
         reorderMuscleGroups,
+        restTimerOnManualComplete,
+        setRestTimerOnManualComplete,
       }}
     >
       {children}

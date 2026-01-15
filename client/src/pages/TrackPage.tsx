@@ -9,6 +9,7 @@ import { WorkoutEditorDialog, WorkoutData } from "@/components/WorkoutEditorDial
 import { ChevronRight, ChevronLeft, Check, Plus, Pencil } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useWorkout } from "@/context/WorkoutContext";
+import { useSettings } from "@/components/SettingsProvider";
 import { useQuery } from "@tanstack/react-query";
 import type { Exercise } from "@shared/schema";
 
@@ -46,6 +47,7 @@ export default function TrackPage() {
     clearTrackingProgress,
     flushProgress,
   } = useWorkout();
+  const { restTimerOnManualComplete } = useSettings();
   
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [trackingState, setTrackingState] = useState<TrackingState>("not_started");
@@ -425,8 +427,14 @@ export default function TrackPage() {
                               if (checked && index === currentSetIndex) {
                                 if (currentSetIndex < sets.length - 1) {
                                   setCurrentSetIndex(currentSetIndex + 1);
+                                  if (restTimerOnManualComplete) {
+                                    setTrackingState("resting");
+                                  } else {
+                                    setTrackingState("not_started");
+                                  }
+                                } else {
+                                  setTrackingState("not_started");
                                 }
-                                setTrackingState("not_started");
                               }
                             }}
                             data-testid={`checkbox-complete-${set.setNumber}`}
@@ -490,8 +498,14 @@ export default function TrackPage() {
                               if (checked && index === currentSetIndex) {
                                 if (currentSetIndex < sets.length - 1) {
                                   setCurrentSetIndex(currentSetIndex + 1);
+                                  if (restTimerOnManualComplete) {
+                                    setTrackingState("resting");
+                                  } else {
+                                    setTrackingState("not_started");
+                                  }
+                                } else {
+                                  setTrackingState("not_started");
                                 }
-                                setTrackingState("not_started");
                               }
                             }}
                             data-testid={`checkbox-complete-${set.setNumber}`}
