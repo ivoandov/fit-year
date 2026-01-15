@@ -87,6 +87,7 @@ export const routineInstances = pgTable("routine_instances", {
   durationDays: integer("duration_days").notNull(),
   totalWorkouts: integer("total_workouts").notNull().default(0),
   completedWorkouts: integer("completed_workouts").notNull().default(0),
+  skippedWorkouts: integer("skipped_workouts").notNull().default(0),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   completedAt: timestamp("completed_at"),

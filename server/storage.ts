@@ -135,6 +135,7 @@ export interface IStorage {
   createRoutineInstance(instance: InsertRoutineInstance): Promise<RoutineInstance>;
   updateRoutineInstance(id: string, instance: Partial<InsertRoutineInstance>): Promise<RoutineInstance | undefined>;
   incrementRoutineInstanceProgress(id: string): Promise<RoutineInstance | undefined>;
+  incrementRoutineInstanceSkipped(id: string): Promise<RoutineInstance | undefined>;
   deleteRoutineInstance(id: string): Promise<boolean>;
   
   createScheduledWorkoutWithRoutine(workout: InsertScheduledWorkout & { routineInstanceId?: string | null; routineDayIndex?: number | null }): Promise<ScheduledWorkout>;
@@ -923,6 +924,7 @@ export class DatabaseStorage implements IStorage {
           duration_days as "durationDays",
           total_workouts as "totalWorkouts",
           completed_workouts as "completedWorkouts",
+          skipped_workouts as "skippedWorkouts",
           status,
           created_at as "createdAt",
           completed_at as "completedAt"
@@ -952,6 +954,7 @@ export class DatabaseStorage implements IStorage {
           duration_days as "durationDays",
           total_workouts as "totalWorkouts",
           completed_workouts as "completedWorkouts",
+          skipped_workouts as "skippedWorkouts",
           status,
           created_at as "createdAt",
           completed_at as "completedAt"
@@ -981,6 +984,7 @@ export class DatabaseStorage implements IStorage {
           duration_days as "durationDays",
           total_workouts as "totalWorkouts",
           completed_workouts as "completedWorkouts",
+          skipped_workouts as "skippedWorkouts",
           status,
           created_at as "createdAt",
           completed_at as "completedAt"
@@ -1016,6 +1020,7 @@ export class DatabaseStorage implements IStorage {
       durationDays: instance.durationDays,
       totalWorkouts: instance.totalWorkouts || 0,
       completedWorkouts: instance.completedWorkouts || 0,
+      skippedWorkouts: 0,
       status: instance.status || 'active',
       createdAt: new Date(),
       completedAt: null,
@@ -1054,7 +1059,7 @@ export class DatabaseStorage implements IStorage {
     if (!existing) return undefined;
     
     const newCompletedWorkouts = existing.completedWorkouts + 1;
-    const isComplete = newCompletedWorkouts >= existing.totalWorkouts;
+    const isComplete = newCompletedWorkouts + existing.skippedWorkouts >= existing.totalWorkouts;
     const newStatus = isComplete ? 'completed' : 'active';
     
     await neonClient`
@@ -1069,6 +1074,31 @@ export class DatabaseStorage implements IStorage {
     return {
       ...existing,
       completedWorkouts: newCompletedWorkouts,
+      status: newStatus,
+      completedAt: isComplete ? new Date() : null,
+    };
+  }
+
+  async incrementRoutineInstanceSkipped(id: string): Promise<RoutineInstance | undefined> {
+    const existing = await this.getRoutineInstance(id);
+    if (!existing) return undefined;
+    
+    const newSkippedWorkouts = existing.skippedWorkouts + 1;
+    const isComplete = existing.completedWorkouts + newSkippedWorkouts >= existing.totalWorkouts;
+    const newStatus = isComplete ? 'completed' : 'active';
+    
+    await neonClient`
+      UPDATE routine_instances 
+      SET 
+        skipped_workouts = ${newSkippedWorkouts},
+        status = ${newStatus},
+        completed_at = ${isComplete ? new Date().toISOString() : null}::timestamp
+      WHERE id = ${id}
+    `;
+    
+    return {
+      ...existing,
+      skippedWorkouts: newSkippedWorkouts,
       status: newStatus,
       completedAt: isComplete ? new Date() : null,
     };
