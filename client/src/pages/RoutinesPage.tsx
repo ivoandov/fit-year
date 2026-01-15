@@ -105,7 +105,8 @@ export default function RoutinesPage() {
 
   const startRoutineMutation = useMutation({
     mutationFn: async ({ id, startDate, durationDays }: { id: string; startDate: string; durationDays: number }) => {
-      return apiRequest("POST", `/api/routines/${id}/start`, { startDate, durationDays });
+      const response = await apiRequest("POST", `/api/routines/${id}/start`, { startDate, durationDays });
+      return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
