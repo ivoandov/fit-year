@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Calendar as CalendarIcon, Trash2, Pencil, Play, Globe, Lock, MoreVertical, ChevronLeft, ChevronRight, CheckCircle, X } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Trash2, Pencil, Play, Globe, Lock, MoreVertical, ChevronLeft, ChevronRight, CheckCircle, X, Copy } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format, addDays } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -261,6 +261,40 @@ export default function RoutinesPage() {
 
   const currentWeekDays = getWeekDays(currentWeekOffset);
   const totalWeeks = Math.ceil(routineDuration / 7);
+
+  const copyWeekToNext = () => {
+    const currentWeekStart = currentWeekOffset * 7 + 1;
+    const nextWeekStart = (currentWeekOffset + 1) * 7 + 1;
+    
+    // Get entries for the current week
+    const currentWeekEntries = routineEntries.filter(
+      e => e.dayIndex >= currentWeekStart && e.dayIndex < currentWeekStart + 7
+    );
+    
+    // Create new entries for the next week (shift day indices by 7)
+    const copiedEntries = currentWeekEntries
+      .map(entry => ({
+        ...entry,
+        dayIndex: entry.dayIndex + 7,
+      }))
+      .filter(e => e.dayIndex <= routineDuration); // Only keep entries within duration
+    
+    // Remove existing entries for the next week and add copied ones
+    setRoutineEntries(prev => {
+      const withoutNextWeek = prev.filter(
+        e => e.dayIndex < nextWeekStart || e.dayIndex >= nextWeekStart + 7
+      );
+      return [...withoutNextWeek, ...copiedEntries];
+    });
+    
+    // Navigate to the next week
+    setCurrentWeekOffset(currentWeekOffset + 1);
+    
+    toast({
+      title: "Week copied",
+      description: `Week ${currentWeekOffset + 1} copied to Week ${currentWeekOffset + 2}`,
+    });
+  };
 
   const renderRoutineCard = (routine: Routine, isOwner: boolean) => {
     const entryCount = myRoutines.find(r => r.id === routine.id) ? 
@@ -577,6 +611,19 @@ export default function RoutinesPage() {
                       </Button>
                     </div>
                   </div>
+                  
+                  {totalWeeks > 1 && currentWeekOffset < totalWeeks - 1 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={copyWeekToNext}
+                      className="w-full"
+                      data-testid="button-copy-week"
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy Week {currentWeekOffset + 1} to Week {currentWeekOffset + 2}
+                    </Button>
+                  )}
 
                   <div className="space-y-2">
                     {currentWeekDays.map(dayIndex => {
