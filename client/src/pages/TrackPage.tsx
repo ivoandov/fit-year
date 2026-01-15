@@ -136,10 +136,11 @@ export default function TrackPage() {
     const lastValues = exerciseId ? getLastRecordedValues(exerciseId) : null;
     
     if (lastValues) {
+      // Only apply previous values to the first set, remaining sets start blank
       return [
         { setNumber: 1, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
-        { setNumber: 2, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
-        { setNumber: 3, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
+        { setNumber: 2, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
+        { setNumber: 3, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
       ];
     }
     
