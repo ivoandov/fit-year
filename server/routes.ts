@@ -998,6 +998,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Retry calendar sync for a completed workout
+  app.post("/api/completed-workouts/:id/sync-calendar", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user?.claims?.sub;
+      const { localDate } = req.body;
+      
+      const workout = await storage.getCompletedWorkout(id);
+      if (!workout) {
+        return res.status(404).json({ error: "Workout not found" });
+      }
+      
+      if (workout.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      // Get user's selected calendar
+      const userSettings = await storage.getUserSettings(userId);
+      const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+      
+      // Determine localDate string - use provided or derive from completedAt
+      let localDateStr = localDate;
+      if (!localDateStr && workout.completedAt) {
+        const d = new Date(workout.completedAt);
+        localDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+      
+      console.log(`Retrying calendar sync for workout "${workout.name}" (${id}) to calendar ${selectedCalendarId || 'primary'}`);
+      
+      try {
+        const eventId = await createCalendarEvent(workout.name, workout.completedAt, selectedCalendarId, localDateStr);
+        if (eventId) {
+          await storage.updateCompletedWorkoutCalendarEventId(id, eventId);
+          console.log(`Successfully synced workout "${workout.name}" to Google Calendar: ${eventId}`);
+          res.json({ success: true, calendarEventId: eventId });
+        } else {
+          console.error(`Calendar sync returned null eventId for workout "${workout.name}"`);
+          res.status(500).json({ error: "Calendar sync failed - no event ID returned" });
+        }
+      } catch (calendarError: any) {
+        console.error(`Calendar sync error for workout "${workout.name}":`, calendarError.message);
+        res.status(500).json({ error: `Calendar sync failed: ${calendarError.message}` });
+      }
+    } catch (error: any) {
+      console.error("Failed to retry calendar sync:", error);
+      res.status(500).json({ error: "Failed to retry calendar sync" });
+    }
+  });
+
   // Google Calendar list endpoint
   app.get("/api/calendars", isAuthenticated, async (req: any, res) => {
     try {
