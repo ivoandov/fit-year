@@ -12,6 +12,15 @@ import sharp from "sharp";
 
 const objectStorageService = new ObjectStorageService();
 
+// Calendar sync is only available for the app owner since the Google Calendar
+// connector uses a single shared connection. Set CALENDAR_OWNER_EMAIL to enable
+// calendar sync for a specific user.
+function isCalendarOwner(userEmail: string | null | undefined): boolean {
+  const ownerEmail = process.env.CALENDAR_OWNER_EMAIL?.toLowerCase().trim();
+  if (!ownerEmail || !userEmail) return false;
+  return userEmail.toLowerCase().trim() === ownerEmail;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication first (before other routes)
   await setupAuth(app);
