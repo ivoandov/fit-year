@@ -78,6 +78,20 @@ interface DBExercise {
   exerciseType: string | null;
 }
 
+interface DBRoutineInstance {
+  id: string;
+  routineId: string;
+  userId: string;
+  routineName: string;
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+  totalWorkouts: number;
+  completedWorkouts: number;
+  skippedWorkouts: number;
+  status: string;
+}
+
 export default function WorkoutsPage() {
   const [, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -102,6 +116,14 @@ export default function WorkoutsPage() {
   const { data: dbExercises = [] } = useQuery<DBExercise[]>({
     queryKey: ["/api/exercises"],
   });
+
+  const { data: dbRoutineInstances = [] } = useQuery<DBRoutineInstance[]>({
+    queryKey: ["/api/routine-instances"],
+  });
+
+  const routineInstanceMap = new Map<string, string>(
+    dbRoutineInstances.map(ri => [ri.id, ri.routineName])
+  );
 
   const allAvailableExercises: Exercise[] = dbExercises.map((ex) => ({
     id: ex.id,
@@ -691,7 +713,7 @@ export default function WorkoutsPage() {
                         )}
                         {workout.routineInstanceId && (
                           <Badge variant="outline" className="text-primary border-primary/50">
-                            Routine
+                            {routineInstanceMap.get(workout.routineInstanceId) || "Routine"}
                           </Badge>
                         )}
                       </div>
@@ -788,7 +810,7 @@ export default function WorkoutsPage() {
                         )}
                         {workout.routineInstanceId && (
                           <Badge variant="outline" className="text-primary border-primary/50">
-                            Routine
+                            {routineInstanceMap.get(workout.routineInstanceId) || "Routine"}
                           </Badge>
                         )}
                       </div>
