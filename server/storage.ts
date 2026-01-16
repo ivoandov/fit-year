@@ -12,6 +12,7 @@ import {
   routines,
   routineEntries,
   routineInstances,
+  googleCalendarTokens,
   type Exercise,
   type WorkoutTemplate,
   type ScheduledWorkout,
@@ -21,6 +22,7 @@ import {
   type Routine,
   type RoutineEntry,
   type RoutineInstance,
+  type GoogleCalendarTokens,
   type InsertExercise,
   type InsertWorkoutTemplate,
   type InsertScheduledWorkout,
@@ -30,11 +32,46 @@ import {
   type InsertRoutine,
   type InsertRoutineEntry,
   type InsertRoutineInstance,
+  type InsertGoogleCalendarTokens,
 } from "@shared/schema";
+import * as crypto from "crypto";
 import { builtInExercises } from "./data/builtInExercises";
 
 const neonClient = neon(process.env.DATABASE_URL!);
 const db = drizzle({ client: neonClient, schema });
+
+// Token encryption helpers
+const ALGORITHM = 'aes-256-gcm';
+
+function getEncryptionKey(): Buffer {
+  const key = process.env.SESSION_SECRET;
+  if (!key) {
+    throw new Error('SESSION_SECRET environment variable is required for token encryption');
+  }
+  return crypto.scryptSync(key, 'salt', 32);
+}
+
+function encryptToken(token: string): string {
+  const iv = crypto.randomBytes(16);
+  const key = getEncryptionKey();
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  let encrypted = cipher.update(token, 'utf8', 'hex');
+  encrypted += cipher.final('hex');
+  const authTag = cipher.getAuthTag();
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+}
+
+function decryptToken(encryptedData: string): string {
+  const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
+  const iv = Buffer.from(ivHex, 'hex');
+  const authTag = Buffer.from(authTagHex, 'hex');
+  const key = getEncryptionKey();
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+  decrypted += decipher.final('utf8');
+  return decrypted;
+}
 
 export async function seedBuiltInExercises(): Promise<void> {
   console.log("Checking for built-in exercises to seed...");
@@ -139,6 +176,12 @@ export interface IStorage {
   deleteRoutineInstance(id: string): Promise<boolean>;
   
   createScheduledWorkoutWithRoutine(workout: InsertScheduledWorkout & { routineInstanceId?: string | null; routineDayIndex?: number | null }): Promise<ScheduledWorkout>;
+  
+  getGoogleCalendarTokens(userId: string): Promise<GoogleCalendarTokens | undefined>;
+  upsertGoogleCalendarTokens(userId: string, tokens: { refreshToken: string; accessToken?: string; expiresAt?: Date }): Promise<GoogleCalendarTokens>;
+  updateGoogleCalendarAccessToken(userId: string, accessToken: string, expiresAt: Date): Promise<void>;
+  deleteGoogleCalendarTokens(userId: string): Promise<boolean>;
+  isCalendarConnected(userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1135,6 +1178,93 @@ export class DatabaseStorage implements IStorage {
       routineInstanceId: workout.routineInstanceId || null,
       routineDayIndex: workout.routineDayIndex ?? null,
     };
+  }
+
+  async getGoogleCalendarTokens(userId: string): Promise<GoogleCalendarTokens | undefined> {
+    try {
+      const results = await neonClient`
+        SELECT id, user_id as "userId", refresh_token as "refreshToken", access_token as "accessToken", 
+               expires_at as "expiresAt", connected_at as "connectedAt"
+        FROM google_calendar_tokens 
+        WHERE user_id = ${userId}
+      `;
+      if (!results || results.length === 0) return undefined;
+      const row = results[0] as any;
+      return {
+        id: row.id,
+        userId: row.userId,
+        refreshToken: decryptToken(row.refreshToken),
+        accessToken: row.accessToken ? decryptToken(row.accessToken) : null,
+        expiresAt: row.expiresAt ? new Date(row.expiresAt) : null,
+        connectedAt: new Date(row.connectedAt),
+      };
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null")) {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
+  async upsertGoogleCalendarTokens(userId: string, tokens: { refreshToken: string; accessToken?: string; expiresAt?: Date }): Promise<GoogleCalendarTokens> {
+    const id = crypto.randomUUID();
+    const encryptedRefresh = encryptToken(tokens.refreshToken);
+    const encryptedAccess = tokens.accessToken ? encryptToken(tokens.accessToken) : null;
+    const expiresAtStr = tokens.expiresAt ? tokens.expiresAt.toISOString() : null;
+    const now = new Date();
+    
+    await neonClient`
+      INSERT INTO google_calendar_tokens (id, user_id, refresh_token, access_token, expires_at, connected_at)
+      VALUES (${id}, ${userId}, ${encryptedRefresh}, ${encryptedAccess}, ${expiresAtStr}::timestamp, ${now.toISOString()}::timestamp)
+      ON CONFLICT (user_id) 
+      DO UPDATE SET 
+        refresh_token = ${encryptedRefresh},
+        access_token = ${encryptedAccess},
+        expires_at = ${expiresAtStr}::timestamp,
+        connected_at = ${now.toISOString()}::timestamp
+    `;
+    
+    return {
+      id,
+      userId,
+      refreshToken: tokens.refreshToken,
+      accessToken: tokens.accessToken || null,
+      expiresAt: tokens.expiresAt || null,
+      connectedAt: now,
+    };
+  }
+
+  async updateGoogleCalendarAccessToken(userId: string, accessToken: string, expiresAt: Date): Promise<void> {
+    const encryptedAccess = encryptToken(accessToken);
+    await neonClient`
+      UPDATE google_calendar_tokens 
+      SET access_token = ${encryptedAccess}, expires_at = ${expiresAt.toISOString()}::timestamp
+      WHERE user_id = ${userId}
+    `;
+  }
+
+  async deleteGoogleCalendarTokens(userId: string): Promise<boolean> {
+    try {
+      await neonClient`DELETE FROM google_calendar_tokens WHERE user_id = ${userId}`;
+      return true;
+    } catch (error) {
+      console.error("Error deleting calendar tokens:", error);
+      return false;
+    }
+  }
+
+  async isCalendarConnected(userId: string): Promise<boolean> {
+    try {
+      const results = await neonClient`
+        SELECT id FROM google_calendar_tokens WHERE user_id = ${userId}
+      `;
+      return results && results.length > 0;
+    } catch (error: any) {
+      if (error?.message?.includes("Cannot read properties of null")) {
+        return false;
+      }
+      throw error;
+    }
   }
 }
 
