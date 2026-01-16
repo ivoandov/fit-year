@@ -1321,14 +1321,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Calendar not connected" });
       }
       
+      console.log("[Calendar] Fetching calendars for user:", userId);
       const calendars = await listUserCalendars(userId);
+      console.log("[Calendar] Found", calendars.length, "calendars");
       res.json(calendars);
     } catch (error: any) {
-      console.error("Failed to list user calendars:", error);
+      console.error("[Calendar] Failed to list user calendars:", error.message, error.stack);
       if (error.message?.includes('Calendar not connected')) {
         return res.status(401).json({ error: "Calendar not connected" });
       }
-      res.status(500).json({ error: "Failed to list calendars" });
+      // Return the actual error message for debugging
+      res.status(500).json({ error: "Failed to list calendars", details: error.message });
     }
   });
 
