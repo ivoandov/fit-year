@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/ThemeProvider";
 import { useSettings, type WeekStart, DEFAULT_MUSCLE_GROUPS } from "@/components/SettingsProvider";
-import { Sun, Moon, Monitor, Calendar, Plus, X, ChevronUp, ChevronDown, RotateCcw, RefreshCw, Check, AlertCircle, Timer } from "lucide-react";
+import { Sun, Moon, Monitor, Calendar, Plus, X, ChevronUp, ChevronDown, RotateCcw, RefreshCw, Check, AlertCircle, Timer, Link2, Unlink } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation, useSearch } from "wouter";
 
 interface CalendarInfo {
   id: string;
@@ -30,17 +31,100 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { weekStart, setWeekStart, muscleGroups, addMuscleGroup, removeMuscleGroup, reorderMuscleGroups, setMuscleGroups, restTimerOnManualComplete, setRestTimerOnManualComplete } = useSettings();
   const [newMuscleGroup, setNewMuscleGroup] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
+  const search = useSearch();
+  const [, setLocation] = useLocation();
 
-  // Fetch available Google Calendars
+  // Check for calendar connection callback params
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    if (params.get('calendar_connected') === 'true') {
+      toast({
+        title: "Calendar connected",
+        description: "Your Google Calendar has been connected successfully.",
+      });
+      setLocation('/settings');
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar/list'] });
+    }
+    const error = params.get('calendar_error');
+    if (error) {
+      toast({
+        title: "Calendar connection failed",
+        description: decodeURIComponent(error),
+        variant: "destructive",
+      });
+      setLocation('/settings');
+    }
+  }, [search, toast, setLocation]);
+
+  // Check if calendar is connected
+  const { data: calendarStatus, isLoading: statusLoading } = useQuery<{ connected: boolean }>({
+    queryKey: ['/api/calendar/status'],
+  });
+
+  // Fetch available Google Calendars (only if connected)
   const { data: calendars, isLoading: calendarsLoading, error: calendarsError, refetch: refetchCalendars } = useQuery<CalendarInfo[]>({
-    queryKey: ['/api/calendars'],
+    queryKey: ['/api/calendar/list'],
+    enabled: calendarStatus?.connected === true,
   });
 
   // Fetch user settings
   const { data: userSettings, isLoading: settingsLoading } = useQuery<UserSettings>({
     queryKey: ['/api/user-settings'],
   });
+
+  // Connect calendar mutation
+  const connectCalendarMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('GET', '/api/calendar/connect');
+      return response.json();
+    },
+    onSuccess: (data: { authUrl: string }) => {
+      window.location.href = data.authUrl;
+    },
+    onError: () => {
+      toast({
+        title: "Failed to connect calendar",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+      setIsConnecting(false);
+    },
+  });
+
+  // Disconnect calendar mutation
+  const disconnectCalendarMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', '/api/calendar/disconnect');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar/status'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/calendar/list'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user-settings'] });
+      toast({
+        title: "Calendar disconnected",
+        description: "Your Google Calendar has been disconnected.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to disconnect calendar",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleConnectCalendar = () => {
+    setIsConnecting(true);
+    connectCalendarMutation.mutate();
+  };
+
+  const handleDisconnectCalendar = () => {
+    disconnectCalendarMutation.mutate();
+  };
 
   // Mutation to update calendar selection
   const updateCalendarMutation = useMutation({
@@ -180,70 +264,133 @@ export default function SettingsPage() {
               <div>
                 <CardTitle className="text-base sm:text-lg">Google Calendar Sync</CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  Choose which calendar receives your completed workout events
+                  {calendarStatus?.connected 
+                    ? "Choose which calendar receives your completed workout events" 
+                    : "Connect your Google Calendar to sync workout events"}
                 </CardDescription>
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => refetchCalendars()}
-                disabled={calendarsLoading}
-                data-testid="button-refresh-calendars"
-              >
-                <RefreshCw className={`h-4 w-4 ${calendarsLoading ? 'animate-spin' : ''}`} />
-              </Button>
+              {calendarStatus?.connected && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => refetchCalendars()}
+                  disabled={calendarsLoading}
+                  data-testid="button-refresh-calendars"
+                >
+                  <RefreshCw className={`h-4 w-4 ${calendarsLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
-            {calendarsLoading || settingsLoading ? (
+            {statusLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-14 w-full" />
+              </div>
+            ) : !calendarStatus?.connected ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 p-4 rounded-md border bg-muted/50">
+                  <Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Calendar not connected</p>
+                    <p className="text-xs text-muted-foreground">Connect your Google Calendar to automatically sync your completed workouts as calendar events.</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleConnectCalendar}
+                  disabled={isConnecting || connectCalendarMutation.isPending}
+                  className="w-full"
+                  data-testid="button-connect-calendar"
+                >
+                  <Link2 className="h-4 w-4 mr-2" />
+                  {isConnecting || connectCalendarMutation.isPending ? "Connecting..." : "Connect Google Calendar"}
+                </Button>
+              </div>
+            ) : calendarsLoading || settingsLoading ? (
               <div className="space-y-3">
                 <Skeleton className="h-14 w-full" />
                 <Skeleton className="h-14 w-full" />
                 <Skeleton className="h-14 w-full" />
               </div>
             ) : calendarsError ? (
-              <div className="flex items-center gap-2 p-4 rounded-md border border-destructive/50 bg-destructive/10 text-destructive">
-                <AlertCircle className="h-5 w-5 flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-sm">Unable to load calendars</p>
-                  <p className="text-xs">Make sure Google Calendar is connected in your account settings.</p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 p-4 rounded-md border border-destructive/50 bg-destructive/10 text-destructive">
+                  <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Unable to load calendars</p>
+                    <p className="text-xs">There was an issue fetching your calendars. Try disconnecting and reconnecting.</p>
+                  </div>
                 </div>
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnectCalendar}
+                  disabled={disconnectCalendarMutation.isPending}
+                  className="w-full"
+                  data-testid="button-disconnect-calendar"
+                >
+                  <Unlink className="h-4 w-4 mr-2" />
+                  {disconnectCalendarMutation.isPending ? "Disconnecting..." : "Disconnect Calendar"}
+                </Button>
               </div>
             ) : calendars && calendars.length > 0 ? (
-              <div className="space-y-3">
-                {calendars.map((calendar) => {
-                  const isSelected = userSettings?.selectedCalendarId === calendar.id || 
-                    (!userSettings?.selectedCalendarId && calendar.primary);
-                  return (
-                    <div
-                      key={calendar.id}
-                      className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer hover-elevate ${
-                        isSelected ? 'border-primary bg-primary/5' : ''
-                      }`}
-                      onClick={() => handleSelectCalendar(calendar)}
-                      data-testid={`option-calendar-${calendar.id}`}
-                    >
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  {calendars.map((calendar) => {
+                    const isSelected = userSettings?.selectedCalendarId === calendar.id || 
+                      (!userSettings?.selectedCalendarId && calendar.primary);
+                    return (
                       <div
-                        className="w-4 h-4 rounded-sm flex-shrink-0"
-                        style={{ backgroundColor: calendar.backgroundColor || '#4285f4' }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{calendar.summary}</p>
-                        {calendar.primary && (
-                          <p className="text-xs text-muted-foreground">Primary calendar</p>
+                        key={calendar.id}
+                        className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer hover-elevate ${
+                          isSelected ? 'border-primary bg-primary/5' : ''
+                        }`}
+                        onClick={() => handleSelectCalendar(calendar)}
+                        data-testid={`option-calendar-${calendar.id}`}
+                      >
+                        <div
+                          className="w-4 h-4 rounded-sm flex-shrink-0"
+                          style={{ backgroundColor: calendar.backgroundColor || '#4285f4' }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{calendar.summary}</p>
+                          {calendar.primary && (
+                            <p className="text-xs text-muted-foreground">Primary calendar</p>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <Check className="h-5 w-5 text-primary flex-shrink-0" />
                         )}
                       </div>
-                      {isSelected && (
-                        <Check className="h-5 w-5 text-primary flex-shrink-0" />
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnectCalendar}
+                  disabled={disconnectCalendarMutation.isPending}
+                  className="w-full"
+                  data-testid="button-disconnect-calendar"
+                >
+                  <Unlink className="h-4 w-4 mr-2" />
+                  {disconnectCalendarMutation.isPending ? "Disconnecting..." : "Disconnect Calendar"}
+                </Button>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No calendars available. Connect Google Calendar to sync your workouts.
-              </p>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No calendars available.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={handleDisconnectCalendar}
+                  disabled={disconnectCalendarMutation.isPending}
+                  className="w-full"
+                  data-testid="button-disconnect-calendar"
+                >
+                  <Unlink className="h-4 w-4 mr-2" />
+                  {disconnectCalendarMutation.isPending ? "Disconnecting..." : "Disconnect Calendar"}
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
