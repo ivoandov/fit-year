@@ -6,6 +6,13 @@ import { registerImageRoutes, openai } from "./replit_integrations/image";
 import { registerObjectStorageRoutes, ObjectStorageService, objectStorageClient } from "./replit_integrations/object_storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { createCalendarEvent, deleteCalendarEvent, listCalendars } from "./replit_integrations/google-calendar";
+import { 
+  getCalendarAuthUrl, 
+  handleCalendarCallback, 
+  listUserCalendars, 
+  createUserCalendarEvent, 
+  deleteUserCalendarEvent 
+} from "./replit_integrations/google-calendar/user-calendar";
 import * as fs from "fs";
 import * as path from "path";
 import sharp from "sharp";
@@ -1152,6 +1159,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Failed to update user settings:", error);
       res.status(500).json({ error: "Failed to update user settings" });
+    }
+  });
+
+  // Per-user Google Calendar OAuth routes
+  app.get("/api/calendar/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const connected = await storage.isCalendarConnected(userId);
+      res.json({ connected });
+    } catch (error: any) {
+      console.error("Failed to check calendar status:", error);
+      res.status(500).json({ error: "Failed to check calendar status" });
+    }
+  });
+
+  app.get("/api/calendar/connect", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const authUrl = getCalendarAuthUrl(userId);
+      res.json({ authUrl });
+    } catch (error: any) {
+      console.error("Failed to get calendar auth URL:", error);
+      res.status(500).json({ error: "Failed to initiate calendar connection" });
+    }
+  });
+
+  app.get("/api/calendar/callback", async (req: any, res) => {
+    try {
+      const { code, state: userId } = req.query;
+      
+      if (!code || !userId) {
+        return res.redirect('/settings?calendar_error=missing_params');
+      }
+      
+      await handleCalendarCallback(code as string, userId as string);
+      res.redirect('/settings?calendar_connected=true');
+    } catch (error: any) {
+      console.error("Calendar OAuth callback error:", error);
+      res.redirect(`/settings?calendar_error=${encodeURIComponent(error.message)}`);
+    }
+  });
+
+  app.post("/api/calendar/disconnect", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      await storage.deleteGoogleCalendarTokens(userId);
+      
+      // Clear selected calendar preferences
+      await storage.upsertUserSettings(userId, {
+        selectedCalendarId: null,
+        selectedCalendarName: null,
+      });
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Failed to disconnect calendar:", error);
+      res.status(500).json({ error: "Failed to disconnect calendar" });
+    }
+  });
+
+  app.get("/api/calendar/list", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const connected = await storage.isCalendarConnected(userId);
+      if (!connected) {
+        return res.status(401).json({ error: "Calendar not connected" });
+      }
+      
+      const calendars = await listUserCalendars(userId);
+      res.json(calendars);
+    } catch (error: any) {
+      console.error("Failed to list user calendars:", error);
+      if (error.message?.includes('Calendar not connected')) {
+        return res.status(401).json({ error: "Calendar not connected" });
+      }
+      res.status(500).json({ error: "Failed to list calendars" });
     }
   });
 

@@ -1,0 +1,170 @@
+import { google, calendar_v3 } from 'googleapis';
+import { storage } from '../../storage';
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
+
+function getRedirectUri(): string {
+  const replitDevUrl = process.env.REPLIT_DEV_DOMAIN;
+  const replitProdUrl = process.env.REPLIT_DOMAINS?.split(',')[0];
+  const baseUrl = replitProdUrl ? `https://${replitProdUrl}` : `https://${replitDevUrl}`;
+  return `${baseUrl}/api/calendar/callback`;
+}
+
+function createOAuth2Client() {
+  return new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    getRedirectUri()
+  );
+}
+
+export function getCalendarAuthUrl(userId: string): string {
+  const oauth2Client = createOAuth2Client();
+  return oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['https://www.googleapis.com/auth/calendar'],
+    prompt: 'consent',
+    state: userId,
+  });
+}
+
+export async function handleCalendarCallback(code: string, userId: string): Promise<void> {
+  const oauth2Client = createOAuth2Client();
+  const { tokens } = await oauth2Client.getToken(code);
+  
+  if (!tokens.refresh_token) {
+    throw new Error('No refresh token received. Please try connecting again.');
+  }
+  
+  await storage.upsertGoogleCalendarTokens(userId, {
+    refreshToken: tokens.refresh_token,
+    accessToken: tokens.access_token || undefined,
+    expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
+  });
+}
+
+async function getCalendarClientForUser(userId: string): Promise<calendar_v3.Calendar> {
+  const tokens = await storage.getGoogleCalendarTokens(userId);
+  if (!tokens) {
+    throw new Error('Calendar not connected');
+  }
+  
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials({
+    refresh_token: tokens.refreshToken,
+    access_token: tokens.accessToken || undefined,
+    expiry_date: tokens.expiresAt?.getTime(),
+  });
+  
+  oauth2Client.on('tokens', async (newTokens) => {
+    if (newTokens.access_token) {
+      await storage.updateGoogleCalendarAccessToken(
+        userId,
+        newTokens.access_token,
+        newTokens.expiry_date ? new Date(newTokens.expiry_date) : new Date(Date.now() + 3600 * 1000)
+      );
+    }
+  });
+  
+  return google.calendar({ version: 'v3', auth: oauth2Client });
+}
+
+export interface CalendarInfo {
+  id: string;
+  summary: string;
+  primary?: boolean;
+  backgroundColor?: string;
+}
+
+export async function listUserCalendars(userId: string): Promise<CalendarInfo[]> {
+  try {
+    const calendar = await getCalendarClientForUser(userId);
+    const response = await calendar.calendarList.list();
+    const calendars = response.data.items || [];
+    
+    return calendars
+      .filter((cal: any) => cal.accessRole === 'owner' || cal.accessRole === 'writer')
+      .map((cal: any) => ({
+        id: cal.id,
+        summary: cal.summary || cal.id,
+        primary: cal.primary || false,
+        backgroundColor: cal.backgroundColor,
+      }));
+  } catch (error: any) {
+    console.error('Failed to list user calendars:', error.message);
+    throw error;
+  }
+}
+
+export async function createUserCalendarEvent(
+  userId: string,
+  workoutName: string,
+  completedDate: Date,
+  calendarId?: string,
+  localDateStr?: string
+): Promise<string | null> {
+  try {
+    const calendar = await getCalendarClientForUser(userId);
+    
+    let startDateStr: string;
+    let endDateStr: string;
+    
+    if (localDateStr) {
+      startDateStr = localDateStr;
+      const [year, month, day] = localDateStr.split('-').map(Number);
+      const endDate = new Date(year, month - 1, day + 1);
+      endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+    } else {
+      const year = completedDate.getFullYear();
+      const month = String(completedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(completedDate.getDate()).padStart(2, '0');
+      startDateStr = `${year}-${month}-${day}`;
+      
+      const endDate = new Date(completedDate);
+      endDate.setDate(endDate.getDate() + 1);
+      endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+    }
+    
+    const event = {
+      summary: workoutName,
+      description: `Completed workout: ${workoutName}`,
+      start: { date: startDateStr },
+      end: { date: endDateStr },
+    };
+
+    const targetCalendarId = calendarId || 'primary';
+    const response = await calendar.events.insert({
+      calendarId: targetCalendarId,
+      requestBody: event,
+    });
+
+    console.log(`Created calendar event for user ${userId} in ${targetCalendarId}: ${response.data.id}`);
+    return response.data.id || null;
+  } catch (error: any) {
+    console.error('Failed to create user calendar event:', error.message);
+    return null;
+  }
+}
+
+export async function deleteUserCalendarEvent(
+  userId: string,
+  eventId: string,
+  calendarId?: string
+): Promise<boolean> {
+  try {
+    const calendar = await getCalendarClientForUser(userId);
+    const targetCalendarId = calendarId || 'primary';
+    
+    await calendar.events.delete({
+      calendarId: targetCalendarId,
+      eventId: eventId,
+    });
+
+    console.log(`Deleted calendar event for user ${userId} from ${targetCalendarId}: ${eventId}`);
+    return true;
+  } catch (error: any) {
+    console.error('Failed to delete user calendar event:', error.message);
+    return false;
+  }
+}
