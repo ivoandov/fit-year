@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { LogOut, Loader2, Settings } from "lucide-react";
+import { LogOut, Loader2, Settings, MoreVertical } from "lucide-react";
 import { Link } from "wouter";
 import NotFound from "@/pages/not-found";
 import WorkoutsPage from "@/pages/WorkoutsPage";
@@ -70,20 +70,12 @@ function UserMenu() {
   const { user, logout, isLoggingOut } = useAuth();
   
   if (!user) return null;
-  
-  const initials = [user.firstName, user.lastName]
-    .filter(Boolean)
-    .map(n => n?.[0])
-    .join('') || user.email?.[0]?.toUpperCase() || '?';
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-user-menu">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || 'User'} />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
+        <Button variant="ghost" size="icon" data-testid="button-user-menu">
+          <MoreVertical className="h-5 w-5" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
