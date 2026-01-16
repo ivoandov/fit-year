@@ -93,6 +93,15 @@ export const routineInstances = pgTable("routine_instances", {
   completedAt: timestamp("completed_at"),
 });
 
+export const googleCalendarTokens = pgTable("google_calendar_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  refreshToken: text("refresh_token").notNull(),
+  accessToken: text("access_token"),
+  expiresAt: timestamp("expires_at"),
+  connectedAt: timestamp("connected_at").notNull().default(sql`now()`),
+});
+
 export const insertExerciseSchema = createInsertSchema(exercises).omit({ id: true });
 export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({ id: true });
 export const insertWorkoutTemplateSchema = createInsertSchema(workoutTemplates).omit({ id: true });
@@ -102,6 +111,7 @@ export const insertActiveWorkoutSchema = createInsertSchema(activeWorkouts).omit
 export const insertRoutineSchema = createInsertSchema(routines).omit({ id: true, createdAt: true });
 export const insertRoutineEntrySchema = createInsertSchema(routineEntries).omit({ id: true });
 export const insertRoutineInstanceSchema = createInsertSchema(routineInstances).omit({ id: true, createdAt: true, completedAt: true });
+export const insertGoogleCalendarTokensSchema = createInsertSchema(googleCalendarTokens).omit({ id: true, connectedAt: true });
 
 export type Exercise = typeof exercises.$inferSelect;
 export type WorkoutTemplate = typeof workoutTemplates.$inferSelect;
@@ -112,6 +122,7 @@ export type ActiveWorkout = typeof activeWorkouts.$inferSelect;
 export type Routine = typeof routines.$inferSelect;
 export type RoutineEntry = typeof routineEntries.$inferSelect;
 export type RoutineInstance = typeof routineInstances.$inferSelect;
+export type GoogleCalendarTokens = typeof googleCalendarTokens.$inferSelect;
 export type InsertExercise = z.infer<typeof insertExerciseSchema>;
 export type InsertWorkoutTemplate = z.infer<typeof insertWorkoutTemplateSchema>;
 export type InsertScheduledWorkout = z.infer<typeof insertScheduledWorkoutSchema>;
@@ -121,6 +132,7 @@ export type InsertActiveWorkout = z.infer<typeof insertActiveWorkoutSchema>;
 export type InsertRoutine = z.infer<typeof insertRoutineSchema>;
 export type InsertRoutineEntry = z.infer<typeof insertRoutineEntrySchema>;
 export type InsertRoutineInstance = z.infer<typeof insertRoutineInstanceSchema>;
+export type InsertGoogleCalendarTokens = z.infer<typeof insertGoogleCalendarTokensSchema>;
 
 export * from "./models/chat";
 export * from "./models/auth";
