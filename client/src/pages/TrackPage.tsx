@@ -236,10 +236,10 @@ export default function TrackPage() {
     const lastSet = sets[sets.length - 1];
     const newSet: SetData = {
       setNumber: newSetNumber,
-      weight: lastSet?.weight || 135,
-      reps: lastSet?.reps || 10,
-      distance: lastSet?.distance || 1,
-      time: lastSet?.time || 30,
+      weight: lastSet?.weight ?? 0,
+      reps: lastSet?.reps ?? 0,
+      distance: lastSet?.distance ?? 0,
+      time: lastSet?.time ?? 0,
       completed: false,
     };
     setCurrentSets([...sets, newSet]);
