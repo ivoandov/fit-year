@@ -661,7 +661,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Workout Templates (requires authentication)
   app.get("/api/workout-templates", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       const templates = await storage.getWorkoutTemplates(userId);
       res.json(templates);
     } catch (error) {
@@ -671,7 +671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/workout-templates", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       const parsed = insertWorkoutTemplateSchema.safeParse({ ...req.body, userId });
       if (!parsed.success) {
         console.error("Workout template validation error:", parsed.error.message);
@@ -688,7 +688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/workout-templates/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       
       // Verify ownership before updating
       const existing = await storage.getWorkoutTemplate(id);
@@ -713,7 +713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/workout-templates/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       
       // Verify ownership before deleting
       const existing = await storage.getWorkoutTemplate(id);
@@ -737,7 +737,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Scheduled Workouts (requires authentication)
   app.get("/api/scheduled-workouts", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       const workouts = await storage.getScheduledWorkouts(userId);
       res.json(workouts);
     } catch (error) {
@@ -747,7 +747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/scheduled-workouts", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       const { localDate, ...restBody } = req.body;
       const body = {
         ...restBody,
@@ -788,7 +788,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/scheduled-workouts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       
       // Verify ownership before updating
       const existing = await storage.getScheduledWorkout(id);
@@ -817,7 +817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/scheduled-workouts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       
       // Verify ownership before deleting
       const existing = await storage.getScheduledWorkout(id);
@@ -857,7 +857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/scheduled-workouts/:id/skip", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       
       // Verify ownership
       const existing = await storage.getScheduledWorkout(id);
@@ -904,7 +904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Completed Workouts (requires authentication)
   app.get("/api/completed-workouts", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       const workouts = await storage.getCompletedWorkouts(userId);
       res.json(workouts);
     } catch (error) {
@@ -914,7 +914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/completed-workouts", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       const { displayId, name, exercises, completedAt, localDate, scheduledWorkoutId } = req.body;
       
       if (!displayId || !name || !exercises) {
@@ -989,7 +989,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/completed-workouts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       const { name, exercises } = req.body;
       
       const existing = await storage.getCompletedWorkout(id);
@@ -1012,7 +1012,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/completed-workouts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       
       // Get the workout to check for ownership and calendar event
       const workout = await storage.getCompletedWorkout(id);
@@ -1050,7 +1050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/completed-workouts/:id/sync-calendar", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       const { localDate } = req.body;
       
       const workout = await storage.getCompletedWorkout(id);
@@ -1112,7 +1112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // User settings endpoints
   app.get("/api/user-settings", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1127,7 +1127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/user-settings", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1149,7 +1149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Active workout persistence endpoints (survives page refresh)
   app.get("/api/active-workout", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1164,7 +1164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/active-workout", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1185,7 +1185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete("/api/active-workout", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1201,7 +1201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routines API - My Routines
   app.get("/api/routines", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1227,7 +1227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routines API - Get single routine with entries
   app.get("/api/routines/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1253,7 +1253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routines API - Create routine
   app.post("/api/routines", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1297,7 +1297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routines API - Update routine
   app.put("/api/routines/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1347,7 +1347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routines API - Delete routine
   app.delete("/api/routines/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1373,7 +1373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routines API - Start routine (create routine instance and scheduled workouts with progress tracking)
   app.post("/api/routines/:id/start", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1506,7 +1506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routines API - Legacy apply route (for backwards compatibility)
   app.post("/api/routines/:id/apply", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1619,7 +1619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routine Instances API - Get all routine instances for user
   app.get("/api/routine-instances", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1635,7 +1635,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routine Instances API - Get active routine instances
   app.get("/api/routine-instances/active", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1651,7 +1651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routine Instances API - Get single routine instance
   app.get("/api/routine-instances/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1675,7 +1675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routine Instances API - Update routine instance (e.g., cancel, complete manually)
   app.patch("/api/routine-instances/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
@@ -1701,7 +1701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Routine Instances API - Delete routine instance
   app.delete("/api/routine-instances/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = (req.user as any)?.id;
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }

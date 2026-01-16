@@ -1,22 +1,9 @@
-import * as client from "openid-client";
-import { Strategy, type VerifyFunction } from "openid-client/passport";
-
 import passport from "passport";
+import { Strategy as GoogleStrategy, Profile } from "passport-google-oauth20";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
-import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
-
-const getOidcConfig = memoize(
-  async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
-  },
-  { maxAge: 3600 * 1000 }
-);
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -40,48 +27,67 @@ export function getSession() {
   });
 }
 
-function updateUserSession(
-  user: any,
-  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
-) {
-  user.claims = tokens.claims();
-  user.access_token = tokens.access_token;
-  user.refresh_token = tokens.refresh_token;
-  user.expires_at = user.claims?.exp;
+interface SessionUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  profileImageUrl: string | null;
 }
 
-async function upsertUser(claims: any) {
-  // Handle different claim name formats (OIDC standard vs custom)
-  const firstName = claims["first_name"] || claims["given_name"] || null;
-  const lastName = claims["last_name"] || claims["family_name"] || null;
-  
-  // If no first/last name but we have a display name, try to parse it
-  let parsedFirstName = firstName;
-  let parsedLastName = lastName;
-  if (!parsedFirstName && !parsedLastName && claims["name"]) {
-    const nameParts = claims["name"].split(" ");
-    parsedFirstName = nameParts[0] || null;
-    parsedLastName = nameParts.slice(1).join(" ") || null;
+async function findOrCreateUser(profile: Profile): Promise<SessionUser> {
+  const email = profile.emails?.[0]?.value;
+  const googleId = profile.id;
+  const firstName = profile.name?.givenName || null;
+  const lastName = profile.name?.familyName || null;
+  const profileImageUrl = profile.photos?.[0]?.value || null;
+
+  if (!email) {
+    throw new Error("No email found in Google profile");
   }
-  
-  // Log claims for debugging profile image issue
-  const profileImageUrl = claims["profile_image_url"] || claims["picture"] || null;
-  console.log("[Auth] Upserting user with claims:", {
-    sub: claims["sub"],
-    email: claims["email"],
-    firstName: parsedFirstName,
-    lastName: parsedLastName,
-    profileImageUrl,
-    allClaimKeys: Object.keys(claims),
-  });
-  
-  await authStorage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: parsedFirstName,
-    lastName: parsedLastName,
+
+  console.log("[Auth] Google OAuth profile:", {
+    googleId,
+    email,
+    firstName,
+    lastName,
     profileImageUrl,
   });
+
+  const existingUser = await authStorage.getUserByEmail(email);
+  
+  if (existingUser) {
+    console.log("[Auth] Found existing user by email, updating profile picture");
+    const updatedUser = await authStorage.updateUserById(existingUser.id, {
+      firstName: firstName || existingUser.firstName,
+      lastName: lastName || existingUser.lastName,
+      profileImageUrl: profileImageUrl || existingUser.profileImageUrl,
+    });
+    return {
+      id: existingUser.id,
+      email: existingUser.email!,
+      firstName: updatedUser?.firstName || existingUser.firstName,
+      lastName: updatedUser?.lastName || existingUser.lastName,
+      profileImageUrl: updatedUser?.profileImageUrl || profileImageUrl,
+    };
+  }
+
+  console.log("[Auth] Creating new user with Google ID");
+  const newUser = await authStorage.upsertUser({
+    id: googleId,
+    email,
+    firstName,
+    lastName,
+    profileImageUrl,
+  });
+
+  return {
+    id: newUser.id,
+    email: newUser.email!,
+    firstName: newUser.firstName,
+    lastName: newUser.lastName,
+    profileImageUrl: newUser.profileImageUrl,
+  };
 }
 
 export async function setupAuth(app: Express) {
@@ -90,95 +96,62 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const config = await getOidcConfig();
+  const clientID = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
-  const verify: VerifyFunction = async (
-    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
-    verified: passport.AuthenticateCallback
-  ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
-  };
+  if (!clientID || !clientSecret) {
+    console.error("[Auth] GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required for authentication");
+    return;
+  }
 
-  // Keep track of registered strategies
-  const registeredStrategies = new Set<string>();
-
-  // Helper function to ensure strategy exists for a domain
-  const ensureStrategy = (domain: string) => {
-    const strategyName = `replitauth:${domain}`;
-    if (!registeredStrategies.has(strategyName)) {
-      const strategy = new Strategy(
-        {
-          name: strategyName,
-          config,
-          scope: "openid email profile offline_access",
-          callbackURL: `https://${domain}/api/callback`,
-        },
-        verify
-      );
-      passport.use(strategy);
-      registeredStrategies.add(strategyName);
-    }
-  };
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID,
+        clientSecret,
+        callbackURL: "/api/callback",
+        scope: ["profile", "email"],
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const user = await findOrCreateUser(profile);
+          done(null, user);
+        } catch (error) {
+          console.error("[Auth] Error in Google OAuth callback:", error);
+          done(error as Error);
+        }
+      }
+    )
+  );
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  app.get("/api/login", (req, res, next) => {
-    ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access"],
-    })(req, res, next);
-  });
+  app.get("/api/login", passport.authenticate("google", {
+    scope: ["profile", "email"],
+    prompt: "select_account",
+  }));
 
-  app.get("/api/callback", (req, res, next) => {
-    ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
+  app.get(
+    "/api/callback",
+    passport.authenticate("google", {
       failureRedirect: "/api/login",
-    })(req, res, next);
-  });
+    }),
+    (req, res) => {
+      res.redirect("/");
+    }
+  );
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
-      res.redirect(
-        client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
-      );
+      res.redirect("/");
     });
   });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = req.user as any;
-
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
-    return next();
-  }
-
-  const refreshToken = user.refresh_token;
-  if (!refreshToken) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-
-  try {
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
-    return next();
-  } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
+  return next();
 };
