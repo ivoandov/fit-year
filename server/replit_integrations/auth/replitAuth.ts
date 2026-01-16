@@ -140,10 +140,32 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
+  function getCallbackURL(req: any): string {
+    // Use explicit env var if set
+    if (process.env.AUTH_CALLBACK_URL) {
+      return process.env.AUTH_CALLBACK_URL;
+    }
+    
+    // Get host from request headers
+    const host = req.headers['x-forwarded-host'] || req.get('host') || '';
+    
+    // If accessing via published .replit.app domain, use that
+    if (host.includes('.replit.app')) {
+      return `https://${host}/api/callback`;
+    }
+    
+    // For dev preview, use REPLIT_DEV_DOMAIN for consistency
+    if (process.env.REPLIT_DEV_DOMAIN) {
+      return `https://${process.env.REPLIT_DEV_DOMAIN}/api/callback`;
+    }
+    
+    // Fallback to request headers
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    return `${protocol}://${host}/api/callback`;
+  }
+
   app.get("/api/login", (req, res, next) => {
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    const callbackURL = `${protocol}://${host}/api/callback`;
+    const callbackURL = getCallbackURL(req);
     
     console.log("[Auth] Login initiated with callback URL:", callbackURL);
     
@@ -155,9 +177,7 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    const callbackURL = `${protocol}://${host}/api/callback`;
+    const callbackURL = getCallbackURL(req);
     
     console.log("[Auth] Callback received with URL:", callbackURL);
     console.log("[Auth] Callback query params:", req.query);
