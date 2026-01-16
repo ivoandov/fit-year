@@ -123,7 +123,7 @@ export async function setupAuth(app: Express) {
         clientID,
         clientSecret,
         callbackURL: "/api/callback",
-        scope: ["profile", "email"],
+        passReqToCallback: false,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -140,20 +140,34 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  app.get("/api/login", passport.authenticate("google", {
-    scope: ["profile", "email"],
-    prompt: "select_account",
-  }));
-
-  app.get(
-    "/api/callback",
+  app.get("/api/login", (req, res, next) => {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const callbackURL = `${protocol}://${host}/api/callback`;
+    
+    console.log("[Auth] Login initiated with callback URL:", callbackURL);
+    
     passport.authenticate("google", {
-      failureRedirect: "/api/login",
-    }),
-    (req, res) => {
+      scope: ["profile", "email"],
+      prompt: "select_account",
+      callbackURL,
+    } as any)(req, res, next);
+  });
+
+  app.get("/api/callback", (req, res, next) => {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    const callbackURL = `${protocol}://${host}/api/callback`;
+    
+    console.log("[Auth] Callback received with URL:", callbackURL);
+    
+    passport.authenticate("google", {
+      failureRedirect: "/",
+      callbackURL,
+    } as any)(req, res, () => {
       res.redirect("/");
-    }
-  );
+    });
+  });
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
