@@ -1217,20 +1217,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { code, state: stateUserId } = req.query;
       const sessionUserId = (req.user as any)?.id;
       
+      console.log("[Calendar] Callback received:", { code: code ? "present" : "missing", stateUserId, sessionUserId });
+      
       if (!code || !stateUserId) {
+        console.error("[Calendar] Missing code or state in callback");
         return res.redirect('/settings?calendar_error=missing_params');
       }
       
       // Security: Validate that state (userId) matches the authenticated session user
       if (stateUserId !== sessionUserId) {
-        console.error(`Calendar callback state mismatch: state=${stateUserId}, session=${sessionUserId}`);
+        console.error(`[Calendar] State mismatch: state=${stateUserId}, session=${sessionUserId}`);
         return res.redirect('/settings?calendar_error=invalid_state');
       }
       
+      console.log("[Calendar] Exchanging code for tokens...");
       await handleCalendarCallback(code as string, sessionUserId);
+      console.log("[Calendar] Tokens saved successfully for user:", sessionUserId);
       res.redirect('/settings?calendar_connected=true');
     } catch (error: any) {
-      console.error("Calendar OAuth callback error:", error);
+      console.error("[Calendar] OAuth callback error:", error.message, error.stack);
       res.redirect(`/settings?calendar_error=${encodeURIComponent(error.message)}`);
     }
   });

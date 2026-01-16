@@ -30,18 +30,27 @@ export function getCalendarAuthUrl(userId: string): string {
 }
 
 export async function handleCalendarCallback(code: string, userId: string): Promise<void> {
+  console.log("[UserCalendar] Exchanging code for tokens, userId:", userId);
   const oauth2Client = createOAuth2Client();
   const { tokens } = await oauth2Client.getToken(code);
+  
+  console.log("[UserCalendar] Tokens received:", { 
+    hasRefreshToken: !!tokens.refresh_token, 
+    hasAccessToken: !!tokens.access_token,
+    expiryDate: tokens.expiry_date 
+  });
   
   if (!tokens.refresh_token) {
     throw new Error('No refresh token received. Please try connecting again.');
   }
   
+  console.log("[UserCalendar] Saving tokens for user:", userId);
   await storage.upsertGoogleCalendarTokens(userId, {
     refreshToken: tokens.refresh_token,
     accessToken: tokens.access_token || undefined,
     expiresAt: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
   });
+  console.log("[UserCalendar] Tokens saved successfully");
 }
 
 async function getCalendarClientForUser(userId: string): Promise<calendar_v3.Calendar> {
