@@ -36,15 +36,17 @@ interface SessionUser {
 }
 
 async function findOrCreateUser(profile: Profile): Promise<SessionUser> {
-  const email = profile.emails?.[0]?.value;
+  const rawEmail = profile.emails?.[0]?.value;
   const googleId = profile.id;
   const firstName = profile.name?.givenName || null;
   const lastName = profile.name?.familyName || null;
   const profileImageUrl = profile.photos?.[0]?.value || null;
 
-  if (!email) {
+  if (!rawEmail) {
     throw new Error("No email found in Google profile");
   }
+
+  const email = rawEmail.toLowerCase().trim();
 
   console.log("[Auth] Google OAuth profile:", {
     googleId,
@@ -57,22 +59,33 @@ async function findOrCreateUser(profile: Profile): Promise<SessionUser> {
   const existingUser = await authStorage.getUserByEmail(email);
   
   if (existingUser) {
-    console.log("[Auth] Found existing user by email, updating profile picture");
-    const updatedUser = await authStorage.updateUserById(existingUser.id, {
-      firstName: firstName || existingUser.firstName,
-      lastName: lastName || existingUser.lastName,
-      profileImageUrl: profileImageUrl || existingUser.profileImageUrl,
-    });
-    return {
-      id: existingUser.id,
-      email: existingUser.email!,
-      firstName: updatedUser?.firstName || existingUser.firstName,
-      lastName: updatedUser?.lastName || existingUser.lastName,
-      profileImageUrl: updatedUser?.profileImageUrl || profileImageUrl,
-    };
+    console.log("[Auth] Found existing user by email:", existingUser.id);
+    try {
+      const updatedUser = await authStorage.updateUserById(existingUser.id, {
+        firstName: firstName || existingUser.firstName,
+        lastName: lastName || existingUser.lastName,
+        profileImageUrl: profileImageUrl || existingUser.profileImageUrl,
+      });
+      return {
+        id: existingUser.id,
+        email: existingUser.email!,
+        firstName: updatedUser?.firstName || existingUser.firstName,
+        lastName: updatedUser?.lastName || existingUser.lastName,
+        profileImageUrl: updatedUser?.profileImageUrl || profileImageUrl,
+      };
+    } catch (updateError) {
+      console.error("[Auth] Error updating existing user, returning as-is:", updateError);
+      return {
+        id: existingUser.id,
+        email: existingUser.email!,
+        firstName: existingUser.firstName,
+        lastName: existingUser.lastName,
+        profileImageUrl: existingUser.profileImageUrl || profileImageUrl,
+      };
+    }
   }
 
-  console.log("[Auth] Creating new user with Google ID");
+  console.log("[Auth] Creating new user with Google ID:", googleId);
   const newUser = await authStorage.upsertUser({
     id: googleId,
     email,

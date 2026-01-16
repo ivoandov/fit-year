@@ -16,10 +16,25 @@ export function registerAuthRoutes(app: Express): void {
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
       const sessionUser = req.user as SessionUser;
-      const user = await authStorage.getUser(sessionUser.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
+      
+      let user = await authStorage.getUser(sessionUser.id);
+      
+      if (!user && sessionUser.email) {
+        console.log("[Auth] User not found by ID, trying email fallback:", sessionUser.email);
+        user = await authStorage.getUserByEmail(sessionUser.email.toLowerCase());
       }
+      
+      if (!user) {
+        console.log("[Auth] User not found, returning session data as fallback");
+        return res.json({
+          id: sessionUser.id,
+          email: sessionUser.email,
+          firstName: sessionUser.firstName,
+          lastName: sessionUser.lastName,
+          profileImageUrl: sessionUser.profileImageUrl,
+        });
+      }
+      
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
