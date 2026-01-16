@@ -1181,16 +1181,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Debug endpoint to check OAuth configuration
+  // Debug endpoint to check OAuth configuration and test DB
   app.get("/api/calendar/debug", isAuthenticated, async (req: any, res) => {
     const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI || 'NOT SET';
     const replitDomains = process.env.REPLIT_DOMAINS || 'NOT SET';
     const userId = String((req.user as any)?.id);
     
+    // Test if we can read from the tokens table
+    let dbTest = "not tested";
+    let tokenExists = false;
+    try {
+      tokenExists = await storage.isCalendarConnected(userId);
+      dbTest = "db read success";
+    } catch (e: any) {
+      dbTest = `db read error: ${e.message}`;
+    }
+    
     res.json({
       redirectUri,
       replitDomains,
       userId,
+      dbTest,
+      tokenExists,
       message: "Check that redirectUri matches what's in Google Cloud Console"
     });
   });
