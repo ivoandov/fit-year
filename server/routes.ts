@@ -1185,14 +1185,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/calendar/status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any)?.id;
-      console.log("[Calendar] Status check for userId:", userId);
+      console.log("[Calendar] Status check for userId:", userId, "type:", typeof userId);
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       
-      const connected = await storage.isCalendarConnected(userId);
-      console.log("[Calendar] Status result for user", userId, ":", connected);
-      res.json({ connected });
+      // Convert userId to string to ensure consistent comparison
+      const userIdStr = String(userId);
+      const connected = await storage.isCalendarConnected(userIdStr);
+      console.log("[Calendar] Status result for user", userIdStr, ":", connected);
+      res.json({ connected, userId: userIdStr });
     } catch (error: any) {
       console.error("Failed to check calendar status:", error);
       res.status(500).json({ error: "Failed to check calendar status" });
@@ -1222,7 +1224,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("[Calendar] Callback received:", { 
         code: code ? "present" : "missing", 
         stateUserId, 
+        stateUserIdType: typeof stateUserId,
         sessionUserId: sessionUserId || "no session",
+        sessionUserIdType: typeof sessionUserId,
         hasSession: !!req.session,
         sessionId: req.sessionID
       });
@@ -1232,18 +1236,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.redirect('/settings?calendar_error=missing_params');
       }
       
+      // Convert both to strings for consistent comparison
+      const stateUserIdStr = String(stateUserId);
+      const sessionUserIdStr = sessionUserId ? String(sessionUserId) : null;
+      
       // Use state userId if session is lost during redirect
       // The state contains the userId that initiated the OAuth flow
-      const userId = sessionUserId || stateUserId;
+      const userId = sessionUserIdStr || stateUserIdStr;
       
       // If we have a session, validate state matches for security
-      if (sessionUserId && stateUserId !== sessionUserId) {
-        console.error(`[Calendar] State mismatch: state=${stateUserId}, session=${sessionUserId}`);
+      if (sessionUserIdStr && stateUserIdStr !== sessionUserIdStr) {
+        console.error(`[Calendar] State mismatch: state=${stateUserIdStr}, session=${sessionUserIdStr}`);
         return res.redirect('/settings?calendar_error=invalid_state');
       }
       
       console.log("[Calendar] Exchanging code for tokens for user:", userId);
-      await handleCalendarCallback(code as string, userId as string);
+      await handleCalendarCallback(code as string, userId);
       console.log("[Calendar] Tokens saved successfully for user:", userId);
       res.redirect('/settings?calendar_connected=true');
     } catch (error: any) {
@@ -1254,8 +1262,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/calendar/disconnect", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = (req.user as any)?.id;
-      if (!userId) {
+      const userId = String((req.user as any)?.id);
+      if (!userId || userId === 'undefined') {
         return res.status(401).json({ error: "Unauthorized" });
       }
       
@@ -1276,12 +1284,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/calendar/list", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = (req.user as any)?.id;
-      if (!userId) {
+      const userId = String((req.user as any)?.id);
+      if (!userId || userId === 'undefined') {
         return res.status(401).json({ error: "Unauthorized" });
       }
       
       const connected = await storage.isCalendarConnected(userId);
+      console.log("[Calendar] List check for user", userId, "connected:", connected);
       if (!connected) {
         return res.status(401).json({ error: "Calendar not connected" });
       }
