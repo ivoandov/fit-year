@@ -1181,6 +1181,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug endpoint to check OAuth configuration
+  app.get("/api/calendar/debug", isAuthenticated, async (req: any, res) => {
+    const redirectUri = process.env.GOOGLE_OAUTH_REDIRECT_URI || 'NOT SET';
+    const replitDomains = process.env.REPLIT_DOMAINS || 'NOT SET';
+    const userId = String((req.user as any)?.id);
+    
+    res.json({
+      redirectUri,
+      replitDomains,
+      userId,
+      message: "Check that redirectUri matches what's in Google Cloud Console"
+    });
+  });
+
   // Per-user Google Calendar OAuth routes
   app.get("/api/calendar/status", isAuthenticated, async (req: any, res) => {
     try {
