@@ -120,10 +120,14 @@ Preferred communication style: Simple, everyday language.
 - clsx and tailwind-merge utilities for conditional class names
 
 **Authentication & Authorization**
-- Replit Auth integration for user login (supports Google, GitHub, Apple, email)
-- Session-based authentication with PostgreSQL-backed session storage
+- Direct Google OAuth 2.0 using passport-google-oauth20 (migrated from Replit Auth)
+- Session-based authentication with PostgreSQL-backed session storage (connect-pg-simple)
 - User data isolation: workout templates, scheduled workouts, and completed workouts are scoped by userId
 - All CRUD operations verify ownership before allowing modifications (403 if unauthorized)
+- Existing users are matched by email address during OAuth login to preserve workout data
+- Google profile pictures stored and displayed in the app header
+- Required environment variables: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SESSION_SECRET
+- OAuth redirect URI must be configured in Google Cloud Console for the published app URL
 
 **Google Calendar Integration**
 - Completed workouts automatically create all-day events in user's Google Calendar
