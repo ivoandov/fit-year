@@ -1207,31 +1207,43 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertGoogleCalendarTokens(userId: string, tokens: { refreshToken: string; accessToken?: string; expiresAt?: Date }): Promise<GoogleCalendarTokens> {
-    const id = crypto.randomUUID();
-    const encryptedRefresh = encryptToken(tokens.refreshToken);
-    const encryptedAccess = tokens.accessToken ? encryptToken(tokens.accessToken) : null;
-    const expiresAtStr = tokens.expiresAt ? tokens.expiresAt.toISOString() : null;
-    const now = new Date();
+    console.log("[Storage] upsertGoogleCalendarTokens called with userId:", userId);
     
-    await neonClient`
-      INSERT INTO google_calendar_tokens (id, user_id, refresh_token, access_token, expires_at, connected_at)
-      VALUES (${id}, ${userId}, ${encryptedRefresh}, ${encryptedAccess}, ${expiresAtStr}::timestamp, ${now.toISOString()}::timestamp)
-      ON CONFLICT (user_id) 
-      DO UPDATE SET 
-        refresh_token = ${encryptedRefresh},
-        access_token = ${encryptedAccess},
-        expires_at = ${expiresAtStr}::timestamp,
-        connected_at = ${now.toISOString()}::timestamp
-    `;
-    
-    return {
-      id,
-      userId,
-      refreshToken: tokens.refreshToken,
-      accessToken: tokens.accessToken || null,
-      expiresAt: tokens.expiresAt || null,
-      connectedAt: now,
-    };
+    try {
+      const id = crypto.randomUUID();
+      const encryptedRefresh = encryptToken(tokens.refreshToken);
+      const encryptedAccess = tokens.accessToken ? encryptToken(tokens.accessToken) : null;
+      const expiresAtStr = tokens.expiresAt ? tokens.expiresAt.toISOString() : null;
+      const now = new Date();
+      
+      console.log("[Storage] Inserting token with id:", id, "encryptedRefresh length:", encryptedRefresh?.length);
+      
+      const result = await neonClient`
+        INSERT INTO google_calendar_tokens (id, user_id, refresh_token, access_token, expires_at, connected_at)
+        VALUES (${id}, ${userId}, ${encryptedRefresh}, ${encryptedAccess}, ${expiresAtStr}::timestamp, ${now.toISOString()}::timestamp)
+        ON CONFLICT (user_id) 
+        DO UPDATE SET 
+          refresh_token = ${encryptedRefresh},
+          access_token = ${encryptedAccess},
+          expires_at = ${expiresAtStr}::timestamp,
+          connected_at = ${now.toISOString()}::timestamp
+        RETURNING id
+      `;
+      
+      console.log("[Storage] Token insert result:", result);
+      
+      return {
+        id,
+        userId,
+        refreshToken: tokens.refreshToken,
+        accessToken: tokens.accessToken || null,
+        expiresAt: tokens.expiresAt || null,
+        connectedAt: now,
+      };
+    } catch (error: any) {
+      console.error("[Storage] CRITICAL: Failed to save calendar tokens:", error.message, error.stack);
+      throw error;
+    }
   }
 
   async updateGoogleCalendarAccessToken(userId: string, accessToken: string, expiresAt: Date): Promise<void> {
