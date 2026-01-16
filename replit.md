@@ -130,13 +130,16 @@ Preferred communication style: Simple, everyday language.
 - OAuth redirect URI must be configured in Google Cloud Console for the published app URL
 
 **Google Calendar Integration**
-- Completed workouts automatically create all-day events in user's Google Calendar
-- Users can select which Google Calendar receives workout sync events via Settings page
-- User calendar preferences stored in `user_settings` table (selectedCalendarId, selectedCalendarName)
-- Defaults to primary calendar if no selection is made
-- Uses OAuth2 with Google Calendar API via Replit's connector integration
+- Per-user OAuth connection - each user connects their own Google Calendar independently
+- Users connect/disconnect calendar via Settings page with "Connect Google Calendar" button
+- OAuth tokens stored encrypted (AES-256-GCM) in `google_calendar_tokens` table
+- Completed workouts automatically create all-day events in connected user's calendar
+- Users can select which of their Google Calendars receives workout sync events
+- Calendar sync only occurs for users who have connected their calendar
 - Events include workout name and completion date
 - Calendar events are deleted when workouts are removed
+- OAuth redirect URI: `/api/calendar/callback` (must be configured in Google Cloud Console)
+- Automatic token refresh handled by googleapis client with event listener updating stored tokens
 
 **Font Loading**
 - Google Fonts CDN for DM Sans (primary), JetBrains Mono (monospace), and other font families

@@ -5,7 +5,6 @@ import { insertExerciseSchema, insertWorkoutTemplateSchema, insertScheduledWorko
 import { registerImageRoutes, openai } from "./replit_integrations/image";
 import { registerObjectStorageRoutes, ObjectStorageService, objectStorageClient } from "./replit_integrations/object_storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
-import { createCalendarEvent, deleteCalendarEvent, listCalendars } from "./replit_integrations/google-calendar";
 import { 
   getCalendarAuthUrl, 
   handleCalendarCallback, 
@@ -18,15 +17,6 @@ import * as path from "path";
 import sharp from "sharp";
 
 const objectStorageService = new ObjectStorageService();
-
-// Calendar sync is only available for the app owner since the Google Calendar
-// connector uses a single shared connection. Set CALENDAR_OWNER_EMAIL to enable
-// calendar sync for a specific user.
-function isCalendarOwner(userEmail: string | null | undefined): boolean {
-  const ownerEmail = process.env.CALENDAR_OWNER_EMAIL?.toLowerCase().trim();
-  if (!ownerEmail || !userEmail) return false;
-  return userEmail.toLowerCase().trim() === ownerEmail;
-}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication first (before other routes)
@@ -1129,14 +1119,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Google Calendar list endpoint
+  // Legacy Google Calendar list endpoint - redirect to per-user endpoint
+  // This is kept for backwards compatibility but now uses per-user tokens
   app.get("/api/calendars", isAuthenticated, async (req: any, res) => {
     try {
-      const calendars = await listCalendars();
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const isConnected = await storage.isCalendarConnected(userId);
+      if (!isConnected) {
+        return res.status(401).json({ error: "Google Calendar not connected" });
+      }
+      
+      const calendars = await listUserCalendars(userId);
       res.json(calendars);
     } catch (error: any) {
       console.error("Failed to list calendars:", error);
-      if (error.message?.includes('Google Calendar not connected')) {
+      if (error.message?.includes('not connected')) {
         return res.status(401).json({ error: "Google Calendar not connected" });
       }
       res.status(500).json({ error: "Failed to list calendars" });
@@ -1211,15 +1212,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/calendar/callback", async (req: any, res) => {
+  app.get("/api/calendar/callback", isAuthenticated, async (req: any, res) => {
     try {
-      const { code, state: userId } = req.query;
+      const { code, state: stateUserId } = req.query;
+      const sessionUserId = (req.user as any)?.id;
       
-      if (!code || !userId) {
+      if (!code || !stateUserId) {
         return res.redirect('/settings?calendar_error=missing_params');
       }
       
-      await handleCalendarCallback(code as string, userId as string);
+      // Security: Validate that state (userId) matches the authenticated session user
+      if (stateUserId !== sessionUserId) {
+        console.error(`Calendar callback state mismatch: state=${stateUserId}, session=${sessionUserId}`);
+        return res.redirect('/settings?calendar_error=invalid_state');
+      }
+      
+      await handleCalendarCallback(code as string, sessionUserId);
       res.redirect('/settings?calendar_connected=true');
     } catch (error: any) {
       console.error("Calendar OAuth callback error:", error);
