@@ -1212,27 +1212,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/calendar/callback", isAuthenticated, async (req: any, res) => {
+  app.get("/api/calendar/callback", async (req: any, res) => {
     try {
       const { code, state: stateUserId } = req.query;
       const sessionUserId = (req.user as any)?.id;
       
-      console.log("[Calendar] Callback received:", { code: code ? "present" : "missing", stateUserId, sessionUserId });
+      console.log("[Calendar] Callback received:", { 
+        code: code ? "present" : "missing", 
+        stateUserId, 
+        sessionUserId: sessionUserId || "no session",
+        hasSession: !!req.session,
+        sessionId: req.sessionID
+      });
       
       if (!code || !stateUserId) {
         console.error("[Calendar] Missing code or state in callback");
         return res.redirect('/settings?calendar_error=missing_params');
       }
       
-      // Security: Validate that state (userId) matches the authenticated session user
-      if (stateUserId !== sessionUserId) {
+      // Use state userId if session is lost during redirect
+      // The state contains the userId that initiated the OAuth flow
+      const userId = sessionUserId || stateUserId;
+      
+      // If we have a session, validate state matches for security
+      if (sessionUserId && stateUserId !== sessionUserId) {
         console.error(`[Calendar] State mismatch: state=${stateUserId}, session=${sessionUserId}`);
         return res.redirect('/settings?calendar_error=invalid_state');
       }
       
-      console.log("[Calendar] Exchanging code for tokens...");
-      await handleCalendarCallback(code as string, sessionUserId);
-      console.log("[Calendar] Tokens saved successfully for user:", sessionUserId);
+      console.log("[Calendar] Exchanging code for tokens for user:", userId);
+      await handleCalendarCallback(code as string, userId as string);
+      console.log("[Calendar] Tokens saved successfully for user:", userId);
       res.redirect('/settings?calendar_connected=true');
     } catch (error: any) {
       console.error("[Calendar] OAuth callback error:", error.message, error.stack);
