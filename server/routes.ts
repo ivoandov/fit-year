@@ -777,22 +777,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const workout = await storage.createScheduledWorkout(parsed.data);
       
-      // Get user's selected calendar and create "(Scheduled)" event
-      const userSettings = await storage.getUserSettings(userId);
-      const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
-      const scheduledEventName = `${workout.name} (Scheduled)`;
-      
-      // Pass the localDate from client to ensure correct calendar date
-      createCalendarEvent(scheduledEventName, workout.date, selectedCalendarId, localDate)
-        .then(async (eventId) => {
-          if (eventId) {
-            await storage.updateScheduledWorkoutCalendarEventId(workout.id, eventId);
-            console.log(`Created scheduled workout calendar event "${scheduledEventName}": ${eventId}`);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to create scheduled workout calendar event:", err);
-        });
+      // Create calendar event if user has connected their calendar
+      const isConnected = await storage.isCalendarConnected(userId);
+      if (isConnected) {
+        const userSettings = await storage.getUserSettings(userId);
+        const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+        const scheduledEventName = `${workout.name} (Scheduled)`;
+        
+        createUserCalendarEvent(userId, scheduledEventName, workout.date, selectedCalendarId, localDate)
+          .then(async (eventId) => {
+            if (eventId) {
+              await storage.updateScheduledWorkoutCalendarEventId(workout.id, eventId);
+              console.log(`Created scheduled workout calendar event "${scheduledEventName}": ${eventId}`);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to create scheduled workout calendar event:", err);
+          });
+      }
       
       res.status(201).json(workout);
     } catch (error) {
@@ -844,19 +846,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      // Delete the calendar event if one exists
+      // Delete the calendar event if one exists and user has calendar connected
       if (existing.calendarEventId) {
-        const userSettings = await storage.getUserSettings(userId);
-        const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
-        deleteCalendarEvent(existing.calendarEventId, selectedCalendarId)
-          .then((deleted) => {
-            if (deleted) {
-              console.log(`Deleted scheduled calendar event: ${existing.calendarEventId}`);
-            }
-          })
-          .catch((err) => {
-            console.error("Failed to delete scheduled calendar event:", err);
-          });
+        const isConnected = await storage.isCalendarConnected(userId);
+        if (isConnected) {
+          const userSettings = await storage.getUserSettings(userId);
+          const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+          deleteUserCalendarEvent(userId, existing.calendarEventId, selectedCalendarId)
+            .then((deleted) => {
+              if (deleted) {
+                console.log(`Deleted scheduled calendar event: ${existing.calendarEventId}`);
+              }
+            })
+            .catch((err) => {
+              console.error("Failed to delete scheduled calendar event:", err);
+            });
+        }
       }
       
       const deleted = await storage.deleteScheduledWorkout(id);
@@ -889,19 +894,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Only routine workouts can be skipped" });
       }
       
-      // Delete the calendar event if one exists
+      // Delete the calendar event if one exists and user has calendar connected
       if (existing.calendarEventId) {
-        const userSettings = await storage.getUserSettings(userId);
-        const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
-        deleteCalendarEvent(existing.calendarEventId, selectedCalendarId)
-          .then((deleted) => {
-            if (deleted) {
-              console.log(`Deleted skipped workout calendar event: ${existing.calendarEventId}`);
-            }
-          })
-          .catch((err) => {
-            console.error("Failed to delete skipped workout calendar event:", err);
-          });
+        const isConnected = await storage.isCalendarConnected(userId);
+        if (isConnected) {
+          const userSettings = await storage.getUserSettings(userId);
+          const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+          deleteUserCalendarEvent(userId, existing.calendarEventId, selectedCalendarId)
+            .then((deleted) => {
+              if (deleted) {
+                console.log(`Deleted skipped workout calendar event: ${existing.calendarEventId}`);
+              }
+            })
+            .catch((err) => {
+              console.error("Failed to delete skipped workout calendar event:", err);
+            });
+        }
       }
       
       // Increment the skipped count on the routine instance
@@ -946,7 +954,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         completedAt: completedDate,
       });
       
-      // Get user's selected calendar for syncing
+      // Check if user has calendar connected and get settings
+      const isConnected = await storage.isCalendarConnected(userId);
       const userSettings = await storage.getUserSettings(userId);
       const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
       
@@ -954,9 +963,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (scheduledWorkoutId) {
         const scheduledWorkout = await storage.getScheduledWorkout(scheduledWorkoutId);
         
-        // Delete the "(Scheduled)" calendar event
-        if (scheduledWorkout?.calendarEventId) {
-          deleteCalendarEvent(scheduledWorkout.calendarEventId, selectedCalendarId)
+        // Delete the "(Scheduled)" calendar event if connected
+        if (scheduledWorkout?.calendarEventId && isConnected) {
+          deleteUserCalendarEvent(userId, scheduledWorkout.calendarEventId, selectedCalendarId)
             .then((deleted) => {
               if (deleted) {
                 console.log(`Deleted scheduled calendar event: ${scheduledWorkout.calendarEventId}`);
@@ -983,17 +992,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Sync completed workout to Google Calendar using the user's local date
-      createCalendarEvent(name, completedDate, selectedCalendarId, localDate)
-        .then(async (eventId) => {
-          if (eventId) {
-            await storage.updateCompletedWorkoutCalendarEventId(workout.id, eventId);
-            console.log(`Synced completed workout "${name}" to Google Calendar (${selectedCalendarId || 'primary'}): ${eventId}`);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to sync to Google Calendar:", err);
-        });
+      // Sync completed workout to Google Calendar if connected
+      if (isConnected) {
+        createUserCalendarEvent(userId, name, completedDate, selectedCalendarId, localDate)
+          .then(async (eventId) => {
+            if (eventId) {
+              await storage.updateCompletedWorkoutCalendarEventId(workout.id, eventId);
+              console.log(`Synced completed workout "${name}" to Google Calendar (${selectedCalendarId || 'primary'}): ${eventId}`);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to sync to Google Calendar:", err);
+          });
+      }
       
       res.status(201).json(workout);
     } catch (error) {
@@ -1041,15 +1052,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      // Get user's selected calendar for deleting events
-      const userSettings = await storage.getUserSettings(userId);
-      const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
-      
-      // Delete from Google Calendar if linked
+      // Delete from Google Calendar if linked and user has calendar connected
       if (workout.calendarEventId) {
-        deleteCalendarEvent(workout.calendarEventId, selectedCalendarId).catch((err) => {
-          console.error("Failed to delete calendar event:", err);
-        });
+        const isConnected = await storage.isCalendarConnected(userId);
+        if (isConnected) {
+          const userSettings = await storage.getUserSettings(userId);
+          const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+          deleteUserCalendarEvent(userId, workout.calendarEventId, selectedCalendarId).catch((err) => {
+            console.error("Failed to delete calendar event:", err);
+          });
+        }
       }
       
       const deleted = await storage.deleteCompletedWorkout(id);
@@ -1078,6 +1090,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       
+      // Check if user has calendar connected
+      const isConnected = await storage.isCalendarConnected(userId);
+      if (!isConnected) {
+        return res.status(400).json({ error: "Calendar not connected. Please connect your Google Calendar in Settings." });
+      }
+      
       // Get user's selected calendar
       const userSettings = await storage.getUserSettings(userId);
       const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
@@ -1092,7 +1110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Retrying calendar sync for workout "${workout.name}" (${id}) to calendar ${selectedCalendarId || 'primary'}`);
       
       try {
-        const eventId = await createCalendarEvent(workout.name, workout.completedAt, selectedCalendarId, localDateStr);
+        const eventId = await createUserCalendarEvent(userId, workout.name, workout.completedAt, selectedCalendarId, localDateStr);
         if (eventId) {
           await storage.updateCompletedWorkoutCalendarEventId(id, eventId);
           console.log(`Successfully synced workout "${workout.name}" to Google Calendar: ${eventId}`);
@@ -1557,7 +1575,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'active',
       });
       
-      // Get user settings for calendar sync
+      // Get user settings and check calendar connection
+      const isCalendarConnected = await storage.isCalendarConnected(userId);
       const userSettings = await storage.getUserSettings(userId);
       const calendarId = userSettings?.selectedCalendarId || 'primary';
       
@@ -1581,19 +1600,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           routineDayIndex: entry.dayIndex,
         });
         
-        // Sync to Google Calendar
-        try {
-          const calendarEventId = await createCalendarEvent(
-            scheduledWorkout.name,
-            workoutDate,
-            calendarId,
-            localDate
-          );
-          if (calendarEventId) {
-            await storage.updateScheduledWorkoutCalendarEventId(scheduledWorkout.id, calendarEventId);
+        // Sync to Google Calendar if user has connected their calendar
+        if (isCalendarConnected) {
+          try {
+            const calendarEventId = await createUserCalendarEvent(
+              userId,
+              scheduledWorkout.name,
+              workoutDate,
+              calendarId,
+              localDate
+            );
+            if (calendarEventId) {
+              await storage.updateScheduledWorkoutCalendarEventId(scheduledWorkout.id, calendarEventId);
+            }
+          } catch (calendarError) {
+            console.error("Failed to create calendar event:", calendarError);
           }
-        } catch (calendarError) {
-          console.error("Failed to create calendar event:", calendarError);
         }
         
         createdWorkouts.push(scheduledWorkout);
@@ -1673,7 +1695,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Get user settings for calendar sync
+      // Get user settings and check calendar connection
+      const isCalendarConnected = await storage.isCalendarConnected(userId);
       const userSettings = await storage.getUserSettings(userId);
       const calendarId = userSettings?.selectedCalendarId || 'primary';
       
@@ -1695,19 +1718,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           templateId: entry.workoutTemplateId || null,
         });
         
-        // Sync to Google Calendar
-        try {
-          const calendarEventId = await createCalendarEvent(
-            scheduledWorkout.name,
-            workoutDate,
-            calendarId,
-            localDate
-          );
-          if (calendarEventId) {
-            await storage.updateScheduledWorkoutCalendarEventId(scheduledWorkout.id, calendarEventId);
+        // Sync to Google Calendar if user has connected their calendar
+        if (isCalendarConnected) {
+          try {
+            const calendarEventId = await createUserCalendarEvent(
+              userId,
+              scheduledWorkout.name,
+              workoutDate,
+              calendarId,
+              localDate
+            );
+            if (calendarEventId) {
+              await storage.updateScheduledWorkoutCalendarEventId(scheduledWorkout.id, calendarEventId);
+            }
+          } catch (calendarError) {
+            console.error("Failed to create calendar event:", calendarError);
           }
-        } catch (calendarError) {
-          console.error("Failed to create calendar event:", calendarError);
         }
         
         createdWorkouts.push(scheduledWorkout);
