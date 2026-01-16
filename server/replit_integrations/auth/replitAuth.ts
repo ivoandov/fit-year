@@ -160,13 +160,30 @@ export async function setupAuth(app: Express) {
     const callbackURL = `${protocol}://${host}/api/callback`;
     
     console.log("[Auth] Callback received with URL:", callbackURL);
+    console.log("[Auth] Callback query params:", req.query);
     
     passport.authenticate("google", {
       failureRedirect: "/",
       callbackURL,
-    } as any)(req, res, () => {
-      res.redirect("/");
-    });
+      failureMessage: true,
+    } as any, (err: any, user: any, info: any) => {
+      if (err) {
+        console.error("[Auth] Callback error:", err);
+        return res.redirect("/");
+      }
+      if (!user) {
+        console.error("[Auth] Callback no user - info:", info);
+        return res.redirect("/");
+      }
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          console.error("[Auth] Login error:", loginErr);
+          return res.redirect("/");
+        }
+        console.log("[Auth] Login successful for user:", user.email);
+        res.redirect("/");
+      });
+    })(req, res, next);
   });
 
   app.get("/api/logout", (req, res) => {
