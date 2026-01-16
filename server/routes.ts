@@ -1185,11 +1185,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/calendar/status", isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any)?.id;
+      console.log("[Calendar] Status check for userId:", userId);
       if (!userId) {
         return res.status(401).json({ error: "Unauthorized" });
       }
       
       const connected = await storage.isCalendarConnected(userId);
+      console.log("[Calendar] Status result for user", userId, ":", connected);
       res.json({ connected });
     } catch (error: any) {
       console.error("Failed to check calendar status:", error);
