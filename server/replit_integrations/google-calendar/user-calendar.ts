@@ -5,10 +5,21 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
 
 function getRedirectUri(): string {
-  const replitDevUrl = process.env.REPLIT_DEV_DOMAIN;
-  const replitProdUrl = process.env.REPLIT_DOMAINS?.split(',')[0];
-  const baseUrl = replitProdUrl ? `https://${replitProdUrl}` : `https://${replitDevUrl}`;
-  return `${baseUrl}/api/calendar/callback`;
+  // Find the production domain (ending with .replit.app) from REPLIT_DOMAINS
+  // This must match the redirect URI configured in Google Cloud Console
+  const domains = process.env.REPLIT_DOMAINS?.split(',') || [];
+  const prodDomain = domains.find(d => d.endsWith('.replit.app'));
+  
+  // Fallback to first domain or dev domain
+  const baseUrl = prodDomain 
+    ? `https://${prodDomain}`
+    : domains[0] 
+      ? `https://${domains[0]}`
+      : `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  
+  const redirectUri = `${baseUrl}/api/calendar/callback`;
+  console.log("[UserCalendar] Using redirect URI:", redirectUri);
+  return redirectUri;
 }
 
 function createOAuth2Client() {
