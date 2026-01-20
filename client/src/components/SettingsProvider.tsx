@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 export type WeekStart = "sunday" | "monday";
 
@@ -9,7 +9,7 @@ export const DEFAULT_MUSCLE_GROUPS = [
   "Biceps",
   "Shoulders",
   "Legs",
-  "Core",
+  "Abs/Core",
   "Cardio",
 ];
 
@@ -21,15 +21,54 @@ type SettingsProviderState = {
   weekStart: WeekStart;
   setWeekStart: (weekStart: WeekStart) => void;
   muscleGroups: string[];
+  customMuscleGroups: string[];
   setMuscleGroups: (groups: string[]) => void;
   addMuscleGroup: (group: string) => void;
   removeMuscleGroup: (group: string) => void;
   reorderMuscleGroups: (fromIndex: number, toIndex: number) => void;
   restTimerOnManualComplete: boolean;
   setRestTimerOnManualComplete: (enabled: boolean) => void;
+  isCustomMuscleGroup: (group: string) => boolean;
 };
 
 const SettingsProviderContext = createContext<SettingsProviderState | undefined>(undefined);
+
+function migrateToCustomGroups(): string[] {
+  const stored = localStorage.getItem("muscleGroups");
+  const migrated = localStorage.getItem("muscleGroupsMigrated");
+  
+  if (migrated === "v2") {
+    const customStored = localStorage.getItem("customMuscleGroups");
+    if (customStored) {
+      try {
+        return JSON.parse(customStored);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+  
+  if (stored) {
+    try {
+      const allGroups: string[] = JSON.parse(stored);
+      const defaultLower = DEFAULT_MUSCLE_GROUPS.map(g => g.toLowerCase());
+      const customGroups = allGroups.filter(g => 
+        !defaultLower.includes(g.toLowerCase()) && 
+        g.toLowerCase() !== "core"
+      );
+      localStorage.setItem("customMuscleGroups", JSON.stringify(customGroups));
+      localStorage.setItem("muscleGroupsMigrated", "v2");
+      return customGroups;
+    } catch {
+      localStorage.setItem("muscleGroupsMigrated", "v2");
+      return [];
+    }
+  }
+  
+  localStorage.setItem("muscleGroupsMigrated", "v2");
+  return [];
+}
 
 export function SettingsProvider({ children }: SettingsProviderProps) {
   const [weekStart, setWeekStartState] = useState<WeekStart>(() => {
@@ -37,45 +76,60 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     return (stored as WeekStart) || "sunday";
   });
 
-  const [muscleGroups, setMuscleGroupsState] = useState<string[]>(() => {
-    const stored = localStorage.getItem("muscleGroups");
-    if (stored) {
-      try {
-        return JSON.parse(stored);
-      } catch {
-        return DEFAULT_MUSCLE_GROUPS;
-      }
-    }
-    return DEFAULT_MUSCLE_GROUPS;
+  const [customMuscleGroups, setCustomMuscleGroupsState] = useState<string[]>(() => {
+    return migrateToCustomGroups();
   });
+
+  const muscleGroups = [...DEFAULT_MUSCLE_GROUPS, ...customMuscleGroups];
 
   const setWeekStart = (newWeekStart: WeekStart) => {
     setWeekStartState(newWeekStart);
     localStorage.setItem("weekStart", newWeekStart);
   };
 
+  const setCustomMuscleGroups = (groups: string[]) => {
+    setCustomMuscleGroupsState(groups);
+    localStorage.setItem("customMuscleGroups", JSON.stringify(groups));
+  };
+
   const setMuscleGroups = (groups: string[]) => {
-    setMuscleGroupsState(groups);
-    localStorage.setItem("muscleGroups", JSON.stringify(groups));
+    const customOnly = groups.filter(g => 
+      !DEFAULT_MUSCLE_GROUPS.map(d => d.toLowerCase()).includes(g.toLowerCase())
+    );
+    setCustomMuscleGroups(customOnly);
   };
 
   const addMuscleGroup = (group: string) => {
-    if (!muscleGroups.includes(group) && group.trim()) {
-      const newGroups = [...muscleGroups, group.trim()];
-      setMuscleGroups(newGroups);
-    }
+    const trimmed = group.trim();
+    if (!trimmed) return;
+    
+    const allLower = muscleGroups.map(g => g.toLowerCase());
+    if (allLower.includes(trimmed.toLowerCase())) return;
+    
+    const newCustomGroups = [...customMuscleGroups, trimmed];
+    setCustomMuscleGroups(newCustomGroups);
   };
 
   const removeMuscleGroup = (group: string) => {
-    const newGroups = muscleGroups.filter((g) => g !== group);
-    setMuscleGroups(newGroups);
+    if (DEFAULT_MUSCLE_GROUPS.map(g => g.toLowerCase()).includes(group.toLowerCase())) {
+      return;
+    }
+    const newCustomGroups = customMuscleGroups.filter((g) => g !== group);
+    setCustomMuscleGroups(newCustomGroups);
   };
 
   const reorderMuscleGroups = (fromIndex: number, toIndex: number) => {
     const newGroups = [...muscleGroups];
     const [removed] = newGroups.splice(fromIndex, 1);
     newGroups.splice(toIndex, 0, removed);
-    setMuscleGroups(newGroups);
+    const customOnly = newGroups.filter(g => 
+      !DEFAULT_MUSCLE_GROUPS.map(d => d.toLowerCase()).includes(g.toLowerCase())
+    );
+    setCustomMuscleGroups(customOnly);
+  };
+  
+  const isCustomMuscleGroup = (group: string) => {
+    return !DEFAULT_MUSCLE_GROUPS.map(g => g.toLowerCase()).includes(group.toLowerCase());
   };
 
   const [restTimerOnManualComplete, setRestTimerOnManualCompleteState] = useState<boolean>(() => {
@@ -94,12 +148,14 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         weekStart,
         setWeekStart,
         muscleGroups,
+        customMuscleGroups,
         setMuscleGroups,
         addMuscleGroup,
         removeMuscleGroup,
         reorderMuscleGroups,
         restTimerOnManualComplete,
         setRestTimerOnManualComplete,
+        isCustomMuscleGroup,
       }}
     >
       {children}
