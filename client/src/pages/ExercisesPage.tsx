@@ -20,6 +20,7 @@ interface DBExercise {
   description: string;
   imageUrl: string | null;
   exerciseType: string | null;
+  isAssisted: boolean | null;
 }
 
 export default function ExercisesPage() {
@@ -47,10 +48,11 @@ export default function ExercisesPage() {
     description: ex.description,
     imageUrl: ex.imageUrl || undefined,
     exerciseType: (ex.exerciseType as "weight_reps" | "distance_time") || "weight_reps",
+    isAssisted: ex.isAssisted || false,
   }));
 
   const createMutation = useMutation({
-    mutationFn: async (exercise: { name: string; muscleGroups: string[]; description: string; exerciseType: string }) => {
+    mutationFn: async (exercise: { name: string; muscleGroups: string[]; description: string; exerciseType: string; isAssisted: boolean }) => {
       return apiRequest("POST", "/api/exercises", exercise);
     },
     onSuccess: () => {
@@ -81,6 +83,7 @@ export default function ExercisesPage() {
         muscleGroups: exercise.muscleGroups,
         description: exercise.description,
         exerciseType: exercise.exerciseType,
+        isAssisted: exercise.isAssisted,
       });
     },
     onSuccess: () => {
@@ -186,6 +189,7 @@ export default function ExercisesPage() {
         muscleGroups: exercise.muscleGroups,
         description: exercise.description,
         exerciseType: exercise.exerciseType || "weight_reps",
+        isAssisted: exercise.isAssisted || false,
       });
     }
   };

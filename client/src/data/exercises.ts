@@ -20,6 +20,7 @@ export interface Exercise {
   description: string;
   imageUrl?: string;
   exerciseType?: ExerciseType;
+  isAssisted?: boolean;
 }
 
 export const exerciseLibrary: Exercise[] = [

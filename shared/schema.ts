@@ -10,6 +10,7 @@ export const exercises = pgTable("exercises", {
   description: text("description").notNull(),
   imageUrl: text("image_url"),
   exerciseType: text("exercise_type").notNull().default("weight_reps"),
+  isAssisted: boolean("is_assisted").notNull().default(false),
 });
 
 export const workoutTemplates = pgTable("workout_templates", {

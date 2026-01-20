@@ -29,6 +29,7 @@ export interface ExerciseFormData {
   muscleGroups: string[];
   description: string;
   exerciseType: ExerciseType;
+  isAssisted: boolean;
 }
 
 interface AddExerciseDialogProps {
@@ -53,6 +54,7 @@ export function AddExerciseDialog({
   const [selectedMuscleGroups, setSelectedMuscleGroups] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [exerciseType, setExerciseType] = useState<ExerciseType>("weight_reps");
+  const [isAssisted, setIsAssisted] = useState(false);
 
   useEffect(() => {
     if (initialData && isOpen) {
@@ -60,11 +62,13 @@ export function AddExerciseDialog({
       setSelectedMuscleGroups(initialData.muscleGroups);
       setDescription(initialData.description);
       setExerciseType(initialData.exerciseType || "weight_reps");
+      setIsAssisted(initialData.isAssisted || false);
     } else if (!isOpen) {
       setName("");
       setSelectedMuscleGroups([]);
       setDescription("");
       setExerciseType("weight_reps");
+      setIsAssisted(false);
     }
   }, [initialData, isOpen]);
 
@@ -83,7 +87,8 @@ export function AddExerciseDialog({
       name, 
       muscleGroups: selectedMuscleGroups, 
       description, 
-      exerciseType 
+      exerciseType,
+      isAssisted
     });
   };
 
@@ -92,6 +97,7 @@ export function AddExerciseDialog({
     setSelectedMuscleGroups([]);
     setDescription("");
     setExerciseType("weight_reps");
+    setIsAssisted(false);
     onClose();
   };
 
@@ -134,6 +140,26 @@ export function AddExerciseDialog({
               </SelectContent>
             </Select>
           </div>
+
+          {exerciseType === "weight_reps" && (
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox
+                id="is-assisted"
+                checked={isAssisted}
+                onCheckedChange={(checked) => setIsAssisted(checked === true)}
+                data-testid="checkbox-is-assisted"
+              />
+              <label
+                htmlFor="is-assisted"
+                className="text-sm font-medium leading-none cursor-pointer"
+              >
+                Assisted exercise
+              </label>
+              <span className="text-xs text-muted-foreground">
+                (less weight = more progress)
+              </span>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Muscle Groups</Label>

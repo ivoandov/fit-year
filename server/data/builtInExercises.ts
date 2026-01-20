@@ -5,6 +5,7 @@ export interface BuiltInExercise {
   description: string;
   imageUrl: string;
   exerciseType: "weight_reps" | "distance_time";
+  isAssisted?: boolean;
 }
 
 export const builtInExercises: BuiltInExercise[] = [

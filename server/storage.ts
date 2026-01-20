@@ -86,8 +86,8 @@ export async function seedBuiltInExercises(): Promise<void> {
         if (!existing || existing.length === 0) {
           const muscleGroupsJson = JSON.stringify(exercise.muscleGroups);
           await neonClient`
-            INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type)
-            VALUES (${exercise.id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl}, ${exercise.exerciseType})
+            INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type, is_assisted)
+            VALUES (${exercise.id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl}, ${exercise.exerciseType}, ${exercise.isAssisted || false})
           `;
           console.log(`Seeded exercise: ${exercise.name}`);
         }
@@ -95,8 +95,8 @@ export async function seedBuiltInExercises(): Promise<void> {
         if (innerError?.message?.includes("Cannot read properties of null (reading 'map')")) {
           const muscleGroupsJson = JSON.stringify(exercise.muscleGroups);
           await neonClient`
-            INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type)
-            VALUES (${exercise.id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl}, ${exercise.exerciseType})
+            INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type, is_assisted)
+            VALUES (${exercise.id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl}, ${exercise.exerciseType}, ${exercise.isAssisted || false})
           `;
           console.log(`Seeded exercise: ${exercise.name}`);
         } else if (innerError?.code === '23505') {
@@ -198,7 +198,8 @@ export class DatabaseStorage implements IStorage {
             WHEN image_url LIKE 'data:image%' THEN NULL 
             ELSE image_url 
           END as "imageUrl", 
-          exercise_type as "exerciseType"
+          exercise_type as "exerciseType",
+          is_assisted as "isAssisted"
         FROM exercises 
         ORDER BY name
       `;
@@ -216,7 +217,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Query exercises one at a time that have base64 images
       const results = await neonClient`
-        SELECT id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType"
+        SELECT id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType", is_assisted as "isAssisted"
         FROM exercises 
         WHERE image_url LIKE 'data:image%'
         ORDER BY name
@@ -233,7 +234,7 @@ export class DatabaseStorage implements IStorage {
   async getExerciseWithImage(id: string): Promise<Exercise | undefined> {
     try {
       const results = await neonClient`
-        SELECT id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType"
+        SELECT id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType", is_assisted as "isAssisted"
         FROM exercises 
         WHERE id = ${id}
       `;
@@ -255,8 +256,8 @@ export class DatabaseStorage implements IStorage {
       const muscleGroupsJson = JSON.stringify(exercise.muscleGroups || []);
       
       await neonClient`
-        INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type)
-        VALUES (${id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"})
+        INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type, is_assisted)
+        VALUES (${id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"}, ${exercise.isAssisted || false})
       `;
       
       const newExercise: Exercise = {
@@ -266,6 +267,7 @@ export class DatabaseStorage implements IStorage {
         description: exercise.description,
         imageUrl: exercise.imageUrl || null,
         exerciseType: exercise.exerciseType || "weight_reps",
+        isAssisted: exercise.isAssisted || false,
       };
       
       console.log("Created exercise:", newExercise);
@@ -281,8 +283,8 @@ export class DatabaseStorage implements IStorage {
       const muscleGroupsJson = JSON.stringify(exercise.muscleGroups || []);
       
       await neonClient`
-        INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type)
-        VALUES (${id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"})
+        INSERT INTO exercises (id, name, muscle_groups, description, image_url, exercise_type, is_assisted)
+        VALUES (${id}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"}, ${exercise.isAssisted || false})
       `;
       
       const newExercise: Exercise = {
@@ -292,6 +294,7 @@ export class DatabaseStorage implements IStorage {
         description: exercise.description,
         imageUrl: exercise.imageUrl || null,
         exerciseType: exercise.exerciseType || "weight_reps",
+        isAssisted: exercise.isAssisted || false,
       };
       
       console.log("Created exercise with ID:", newExercise);
@@ -327,11 +330,15 @@ export class DatabaseStorage implements IStorage {
       setClauses.push(`exercise_type = $${paramIndex++}`);
       params.push(exercise.exerciseType);
     }
+    if (exercise.isAssisted !== undefined) {
+      setClauses.push(`is_assisted = $${paramIndex++}`);
+      params.push(exercise.isAssisted);
+    }
     
     if (setClauses.length === 0) return undefined;
     
     params.push(id);
-    const query = `UPDATE exercises SET ${setClauses.join(", ")} WHERE id = $${paramIndex} RETURNING id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType"`;
+    const query = `UPDATE exercises SET ${setClauses.join(", ")} WHERE id = $${paramIndex} RETURNING id, name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType", is_assisted as "isAssisted"`;
     
     const results = await neonClient(query, params);
     return results[0] as Exercise;
