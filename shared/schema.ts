@@ -3,8 +3,28 @@ import { pgTable, text, varchar, integer, timestamp, jsonb, boolean } from "driz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const DEFAULT_MUSCLE_GROUPS = [
+  "Chest",
+  "Triceps",
+  "Back",
+  "Biceps",
+  "Shoulders",
+  "Legs",
+  "Abs/Core",
+  "Cardio",
+] as const;
+
+export function isCustomMuscleGroup(group: string): boolean {
+  return !DEFAULT_MUSCLE_GROUPS.map(g => g.toLowerCase()).includes(group.toLowerCase());
+}
+
+export function hasCustomMuscleGroup(groups: string[]): boolean {
+  return groups.some(g => isCustomMuscleGroup(g));
+}
+
 export const exercises = pgTable("exercises", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   name: text("name").notNull(),
   muscleGroups: jsonb("muscle_groups").notNull().default([]),
   description: text("description").notNull(),

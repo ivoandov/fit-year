@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, seedBuiltInExercises } from "./storage";
-import { insertExerciseSchema, insertWorkoutTemplateSchema, insertScheduledWorkoutSchema, insertCompletedWorkoutSchema } from "@shared/schema";
+import { insertExerciseSchema, insertWorkoutTemplateSchema, insertScheduledWorkoutSchema, insertCompletedWorkoutSchema, hasCustomMuscleGroup } from "@shared/schema";
 import { registerImageRoutes, openai } from "./replit_integrations/image";
 import { registerObjectStorageRoutes, ObjectStorageService, objectStorageClient } from "./replit_integrations/object_storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
@@ -343,7 +343,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Exercises
   app.get("/api/exercises", async (req, res) => {
     try {
-      const exerciseList = await storage.getExercises();
+      const userId = (req.user as any)?.id;
+      const exerciseList = await storage.getExercises(userId);
       
       // Convert object storage paths to signed URLs for direct browser access
       // Also verify files exist before returning signed URLs
@@ -386,7 +387,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Validation error:", parsed.error.message);
         return res.status(400).json({ error: parsed.error.message });
       }
-      const exercise = await storage.createExercise(parsed.data);
+      
+      const userId = (req.user as any)?.id;
+      const muscleGroups = parsed.data.muscleGroups as string[] || [];
+      
+      // If exercise uses any custom muscle group, make it user-specific
+      const exerciseUserId = hasCustomMuscleGroup(muscleGroups) ? userId : null;
+      
+      const exercise = await storage.createExercise({
+        ...parsed.data,
+        userId: exerciseUserId,
+      });
       
       if (!exercise) {
         console.error("Error creating exercise: no exercise returned from storage");

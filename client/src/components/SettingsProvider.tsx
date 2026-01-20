@@ -1,17 +1,9 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState } from "react";
+import { DEFAULT_MUSCLE_GROUPS as SHARED_DEFAULT_MUSCLE_GROUPS } from "@shared/schema";
 
 export type WeekStart = "sunday" | "monday";
 
-export const DEFAULT_MUSCLE_GROUPS = [
-  "Chest",
-  "Triceps",
-  "Back",
-  "Biceps",
-  "Shoulders",
-  "Legs",
-  "Abs/Core",
-  "Cardio",
-];
+export const DEFAULT_MUSCLE_GROUPS = [...SHARED_DEFAULT_MUSCLE_GROUPS];
 
 type SettingsProviderProps = {
   children: React.ReactNode;
