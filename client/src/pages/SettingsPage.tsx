@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/ThemeProvider";
 import { useSettings, type WeekStart, DEFAULT_MUSCLE_GROUPS } from "@/components/SettingsProvider";
+import { isCustomMuscleGroup } from "@shared/schema";
 import { Sun, Moon, Monitor, Calendar, Plus, X, ChevronUp, ChevronDown, RotateCcw, RefreshCw, Check, AlertCircle, Timer, Link2, Unlink } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -467,43 +468,51 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              {muscleGroups.map((group, index) => (
-                <div
-                  key={group}
-                  className="flex items-center gap-2 p-3 rounded-md border bg-background"
-                  data-testid={`muscle-group-item-${group.toLowerCase()}`}
-                >
-                  <span className="flex-1 font-medium text-sm">{group}</span>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => reorderMuscleGroups(index, Math.max(0, index - 1))}
-                      disabled={index === 0}
-                      data-testid={`button-move-up-${group.toLowerCase()}`}
-                    >
-                      <ChevronUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => reorderMuscleGroups(index, Math.min(muscleGroups.length - 1, index + 1))}
-                      disabled={index === muscleGroups.length - 1}
-                      data-testid={`button-move-down-${group.toLowerCase()}`}
-                    >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeMuscleGroup(group)}
-                      data-testid={`button-remove-${group.toLowerCase()}`}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+              {muscleGroups.map((group, index) => {
+                const isCustom = isCustomMuscleGroup(group);
+                return (
+                  <div
+                    key={group}
+                    className="flex items-center gap-2 p-3 rounded-md border bg-background"
+                    data-testid={`muscle-group-item-${group.toLowerCase()}`}
+                  >
+                    <span className="flex-1 font-medium text-sm">
+                      {group}
+                      {!isCustom && <span className="text-xs text-muted-foreground ml-2">(default)</span>}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => reorderMuscleGroups(index, Math.max(0, index - 1))}
+                        disabled={index === 0}
+                        data-testid={`button-move-up-${group.toLowerCase()}`}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => reorderMuscleGroups(index, Math.min(muscleGroups.length - 1, index + 1))}
+                        disabled={index === muscleGroups.length - 1}
+                        data-testid={`button-move-down-${group.toLowerCase()}`}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeMuscleGroup(group)}
+                        disabled={!isCustom}
+                        className={!isCustom ? "opacity-30 cursor-not-allowed" : ""}
+                        data-testid={`button-remove-${group.toLowerCase()}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {muscleGroups.length === 0 && (

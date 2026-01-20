@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 interface DBExercise {
   id: string;
+  userId: string | null;
   name: string;
   muscleGroups: string[];
   description: string;
