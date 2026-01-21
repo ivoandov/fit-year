@@ -45,9 +45,10 @@ function migrateToCustomGroups(): string[] {
     try {
       const allGroups: string[] = JSON.parse(stored);
       const defaultLower = DEFAULT_MUSCLE_GROUPS.map(g => g.toLowerCase());
+      // Keep any group that's not in the new defaults
+      // "Core" is kept as custom since default is now "Abs/Core"
       const customGroups = allGroups.filter(g => 
-        !defaultLower.includes(g.toLowerCase()) && 
-        g.toLowerCase() !== "core"
+        !defaultLower.includes(g.toLowerCase())
       );
       localStorage.setItem("customMuscleGroups", JSON.stringify(customGroups));
       localStorage.setItem("muscleGroupsMigrated", "v2");

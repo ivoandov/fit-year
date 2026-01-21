@@ -187,12 +187,16 @@ export interface IStorage {
 export class DatabaseStorage implements IStorage {
   async getExercises(userId?: string): Promise<Exercise[]> {
     try {
-      // Select global exercises (userId = null) plus user's own exercises
+      // Show:
+      // 1. Built-in exercises (userId = null) - always visible
+      // 2. User's own exercises (userId = currentUser)
+      // 3. Public exercises from other users (isPublic = true)
       const results = userId 
         ? await neonClient`
             SELECT 
               id, 
               user_id as "userId",
+              is_public as "isPublic",
               name, 
               muscle_groups as "muscleGroups", 
               description, 
@@ -203,13 +207,16 @@ export class DatabaseStorage implements IStorage {
               exercise_type as "exerciseType",
               is_assisted as "isAssisted"
             FROM exercises 
-            WHERE user_id IS NULL OR user_id = ${userId}
+            WHERE user_id IS NULL 
+               OR user_id = ${userId}
+               OR is_public = true
             ORDER BY name
           `
         : await neonClient`
             SELECT 
               id, 
               user_id as "userId",
+              is_public as "isPublic",
               name, 
               muscle_groups as "muscleGroups", 
               description, 
@@ -236,7 +243,7 @@ export class DatabaseStorage implements IStorage {
     try {
       // Query exercises one at a time that have base64 images
       const results = await neonClient`
-        SELECT id, user_id as "userId", name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType", is_assisted as "isAssisted"
+        SELECT id, user_id as "userId", is_public as "isPublic", name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType", is_assisted as "isAssisted"
         FROM exercises 
         WHERE image_url LIKE 'data:image%'
         ORDER BY name
@@ -253,7 +260,7 @@ export class DatabaseStorage implements IStorage {
   async getExerciseWithImage(id: string): Promise<Exercise | undefined> {
     try {
       const results = await neonClient`
-        SELECT id, user_id as "userId", name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType", is_assisted as "isAssisted"
+        SELECT id, user_id as "userId", is_public as "isPublic", name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType", is_assisted as "isAssisted"
         FROM exercises 
         WHERE id = ${id}
       `;
@@ -273,15 +280,17 @@ export class DatabaseStorage implements IStorage {
     try {
       const id = crypto.randomUUID();
       const muscleGroupsJson = JSON.stringify(exercise.muscleGroups || []);
+      const isPublic = exercise.isPublic ?? true;
       
       await neonClient`
-        INSERT INTO exercises (id, user_id, name, muscle_groups, description, image_url, exercise_type, is_assisted)
-        VALUES (${id}, ${exercise.userId || null}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"}, ${exercise.isAssisted || false})
+        INSERT INTO exercises (id, user_id, is_public, name, muscle_groups, description, image_url, exercise_type, is_assisted)
+        VALUES (${id}, ${exercise.userId || null}, ${isPublic}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"}, ${exercise.isAssisted || false})
       `;
       
       const newExercise: Exercise = {
         id,
         userId: exercise.userId || null,
+        isPublic,
         name: exercise.name,
         muscleGroups: exercise.muscleGroups || [],
         description: exercise.description,
@@ -301,15 +310,17 @@ export class DatabaseStorage implements IStorage {
   async createExerciseWithId(id: string, exercise: InsertExercise): Promise<Exercise> {
     try {
       const muscleGroupsJson = JSON.stringify(exercise.muscleGroups || []);
+      const isPublic = exercise.isPublic ?? true;
       
       await neonClient`
-        INSERT INTO exercises (id, user_id, name, muscle_groups, description, image_url, exercise_type, is_assisted)
-        VALUES (${id}, ${exercise.userId || null}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"}, ${exercise.isAssisted || false})
+        INSERT INTO exercises (id, user_id, is_public, name, muscle_groups, description, image_url, exercise_type, is_assisted)
+        VALUES (${id}, ${exercise.userId || null}, ${isPublic}, ${exercise.name}, ${muscleGroupsJson}::jsonb, ${exercise.description}, ${exercise.imageUrl || null}, ${exercise.exerciseType || "weight_reps"}, ${exercise.isAssisted || false})
       `;
       
       const newExercise: Exercise = {
         id,
         userId: exercise.userId || null,
+        isPublic,
         name: exercise.name,
         muscleGroups: exercise.muscleGroups || [],
         description: exercise.description,
@@ -355,11 +366,15 @@ export class DatabaseStorage implements IStorage {
       setClauses.push(`is_assisted = $${paramIndex++}`);
       params.push(exercise.isAssisted);
     }
+    if (exercise.isPublic !== undefined) {
+      setClauses.push(`is_public = $${paramIndex++}`);
+      params.push(exercise.isPublic);
+    }
     
     if (setClauses.length === 0) return undefined;
     
     params.push(id);
-    const query = `UPDATE exercises SET ${setClauses.join(", ")} WHERE id = $${paramIndex} RETURNING id, user_id as "userId", name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType", is_assisted as "isAssisted"`;
+    const query = `UPDATE exercises SET ${setClauses.join(", ")} WHERE id = $${paramIndex} RETURNING id, user_id as "userId", is_public as "isPublic", name, muscle_groups as "muscleGroups", description, image_url as "imageUrl", exercise_type as "exerciseType", is_assisted as "isAssisted"`;
     
     const results = await neonClient(query, params);
     return results[0] as Exercise;

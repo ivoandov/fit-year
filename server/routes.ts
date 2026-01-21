@@ -380,7 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/exercises", async (req, res) => {
+  app.post("/api/exercises", isAuthenticated, async (req: any, res) => {
     try {
       const parsed = insertExerciseSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -388,15 +388,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: parsed.error.message });
       }
       
-      const userId = (req.user as any)?.id;
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
       const muscleGroups = parsed.data.muscleGroups as string[] || [];
       
-      // If exercise uses any custom muscle group, make it user-specific
-      const exerciseUserId = hasCustomMuscleGroup(muscleGroups) ? userId : null;
+      // All user-created exercises get userId set for ownership
+      // isPublic = false if using custom muscle groups (private to user)
+      // isPublic = true if using only default muscle groups (visible to all)
+      const isPublic = !hasCustomMuscleGroup(muscleGroups);
       
       const exercise = await storage.createExercise({
         ...parsed.data,
-        userId: exerciseUserId,
+        userId: userId,
+        isPublic: isPublic,
       });
       
       if (!exercise) {
@@ -605,21 +612,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Run initial check after 5 seconds
   setTimeout(checkAndGenerateMissingContent, 5000);
 
-  app.put("/api/exercises/:id", async (req, res) => {
+  app.put("/api/exercises/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      // Check if exercise exists and user has permission to edit
+      const existingExercise = await storage.getExerciseWithImage(id);
+      if (existingExercise) {
+        // Can only edit user's own exercises, not global ones
+        if (existingExercise.userId !== null && existingExercise.userId !== userId) {
+          return res.status(403).json({ error: "Not authorized to edit this exercise" });
+        }
+        if (existingExercise.userId === null) {
+          return res.status(403).json({ error: "Cannot edit global exercises" });
+        }
+      }
+      
       const parsed = insertExerciseSchema.partial().safeParse(req.body);
       if (!parsed.success) {
         console.error("Validation error:", parsed.error.message);
         return res.status(400).json({ error: parsed.error.message });
       }
-      let exercise = await storage.updateExercise(id, parsed.data);
+      
+      // If muscleGroups are being updated, recalculate isPublic
+      let updateData = { ...parsed.data };
+      if (parsed.data.muscleGroups !== undefined) {
+        const muscleGroups = parsed.data.muscleGroups as string[] || [];
+        updateData.isPublic = !hasCustomMuscleGroup(muscleGroups);
+      }
+      
+      let exercise = await storage.updateExercise(id, updateData);
       if (!exercise) {
         const fullParsed = insertExerciseSchema.safeParse(req.body);
         if (!fullParsed.success) {
           return res.status(400).json({ error: "Full exercise data required for new exercise" });
         }
-        exercise = await storage.createExercise(fullParsed.data);
+        
+        // All user-created exercises get userId set for ownership
+        const muscleGroups = fullParsed.data.muscleGroups as string[] || [];
+        const isPublic = !hasCustomMuscleGroup(muscleGroups);
+        
+        exercise = await storage.createExercise({
+          ...fullParsed.data,
+          userId: userId,
+          isPublic: isPublic,
+        });
       }
       res.json(exercise);
     } catch (error) {
@@ -628,9 +670,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/exercises/:id", async (req, res) => {
+  app.delete("/api/exercises/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
+      const userId = req.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      // Check if exercise exists and user has permission to delete
+      const existingExercise = await storage.getExerciseWithImage(id);
+      if (!existingExercise) {
+        return res.status(404).json({ error: "Exercise not found" });
+      }
+      
+      // Can only delete user's own exercises, not global ones
+      if (existingExercise.userId !== null && existingExercise.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized to delete this exercise" });
+      }
+      if (existingExercise.userId === null) {
+        return res.status(403).json({ error: "Cannot delete global exercises" });
+      }
+      
       const deleted = await storage.deleteExercise(id);
       if (!deleted) {
         return res.status(404).json({ error: "Exercise not found" });
@@ -641,27 +703,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/exercises/:id/regenerate-image", async (req, res) => {
+  app.post("/api/exercises/:id/regenerate-image", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
-      const { name, muscleGroups } = req.body;
+      const userId = req.user?.id;
       
-      // First check if it exists in database
-      const exercises = await storage.getExercises();
-      let exercise = exercises.find(ex => ex.id === id);
-      
-      // If not in database but we have the data from request, create it with the specified ID
-      if (!exercise && name && muscleGroups) {
-        exercise = await storage.createExerciseWithId(id, {
-          name,
-          muscleGroups,
-          description: req.body.description || "",
-          exerciseType: req.body.exerciseType || "weight_reps",
-        });
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
       }
+      
+      // Check if exercise exists
+      const exercise = await storage.getExerciseWithImage(id);
       
       if (!exercise) {
         return res.status(404).json({ error: "Exercise not found" });
+      }
+      
+      // Can only regenerate image for user's own exercises or global built-in exercises
+      if (exercise.userId !== null && exercise.userId !== userId) {
+        return res.status(403).json({ error: "Not authorized to regenerate image for this exercise" });
       }
       
       res.json({ message: "Image regeneration started" });

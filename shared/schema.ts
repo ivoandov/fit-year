@@ -25,6 +25,7 @@ export function hasCustomMuscleGroup(groups: string[]): boolean {
 export const exercises = pgTable("exercises", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id"),
+  isPublic: boolean("is_public").notNull().default(true),
   name: text("name").notNull(),
   muscleGroups: jsonb("muscle_groups").notNull().default([]),
   description: text("description").notNull(),
