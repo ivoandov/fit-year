@@ -1795,9 +1795,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Sync to Google Calendar if user has connected their calendar
         if (isCalendarConnected) {
           try {
+            const scheduledEventName = `${scheduledWorkout.name} (Scheduled)`;
             const calendarEventId = await createUserCalendarEvent(
               userId,
-              scheduledWorkout.name,
+              scheduledEventName,
               workoutDate,
               calendarId,
               localDate
@@ -1913,9 +1914,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Sync to Google Calendar if user has connected their calendar
         if (isCalendarConnected) {
           try {
+            const scheduledEventName = `${scheduledWorkout.name} (Scheduled)`;
             const calendarEventId = await createUserCalendarEvent(
               userId,
-              scheduledWorkout.name,
+              scheduledEventName,
               workoutDate,
               calendarId,
               localDate
