@@ -930,6 +930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         ...workout,
         _debug: {
+          version: 2,
           hadTemplateId: !!existing.templateId,
           hadRoutineInstanceId: !!existing.routineInstanceId,
           templateId: existing.templateId,
