@@ -134,11 +134,19 @@ export default function TrackPage() {
     return null;
   };
 
-  const getDefaultSets = (exerciseId?: string): SetData[] => {
+  const getDefaultSets = (exerciseId?: string, exerciseType?: string): SetData[] => {
     const lastValues = exerciseId ? getLastRecordedValues(exerciseId) : null;
+    
+    // Distance/time exercises default to 1 set, weight/reps default to 3 sets
+    const isDistanceTime = exerciseType === "distance_time";
     
     if (lastValues) {
       // Only apply previous values to the first set, remaining sets start blank
+      if (isDistanceTime) {
+        return [
+          { setNumber: 1, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
+        ];
+      }
       return [
         { setNumber: 1, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
         { setNumber: 2, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
@@ -147,6 +155,11 @@ export default function TrackPage() {
     }
     
     // Default to blank values (0) if no history
+    if (isDistanceTime) {
+      return [
+        { setNumber: 1, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
+      ];
+    }
     return [
       { setNumber: 1, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
       { setNumber: 2, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
@@ -157,7 +170,7 @@ export default function TrackPage() {
   const getCurrentSets = (): SetData[] => {
     const currentExercise = activeWorkout?.exercises[currentExerciseIndex];
     if (!currentExercise) return getDefaultSets();
-    return exerciseSets.get(currentExercise.id) || getDefaultSets(currentExercise.id);
+    return exerciseSets.get(currentExercise.id) || getDefaultSets(currentExercise.id, currentExercise.exerciseType);
   };
 
   const setCurrentSets = (sets: SetData[]) => {
@@ -173,7 +186,7 @@ export default function TrackPage() {
       const currentEx = activeWorkout.exercises[currentExerciseIndex];
       if (currentEx && !exerciseSets.has(currentEx.id)) {
         const newMap = new Map(exerciseSets);
-        newMap.set(currentEx.id, getDefaultSets(currentEx.id));
+        newMap.set(currentEx.id, getDefaultSets(currentEx.id, currentEx.exerciseType));
         setExerciseSets(newMap);
       }
     }
