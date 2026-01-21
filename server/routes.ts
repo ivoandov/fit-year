@@ -904,21 +904,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // If name is being changed, update all related workouts (by routine or template)
+      console.log("[RENAME DEBUG] existing workout:", JSON.stringify({
+        id: existing.id,
+        name: existing.name,
+        templateId: existing.templateId,
+        routineInstanceId: existing.routineInstanceId
+      }));
+      console.log("[RENAME DEBUG] new name:", parsed.data.name);
+      
       if (parsed.data.name && parsed.data.name !== existing.name) {
         if (existing.routineInstanceId) {
-          // Update all workouts in this routine instance with the same name
-          await storage.updateScheduledWorkoutsByRoutineInstanceAndName(
+          console.log("[RENAME DEBUG] Updating by routineInstanceId:", existing.routineInstanceId);
+          const count = await storage.updateScheduledWorkoutsByRoutineInstanceAndName(
             existing.routineInstanceId,
             existing.name,
             parsed.data.name
           );
+          console.log("[RENAME DEBUG] Updated", count, "workouts by routineInstanceId");
         } else if (existing.templateId) {
-          // Update all workouts with the same template and name (regular repeating workouts)
-          await storage.updateScheduledWorkoutsByTemplateAndName(
+          console.log("[RENAME DEBUG] Updating by templateId:", existing.templateId);
+          const count = await storage.updateScheduledWorkoutsByTemplateAndName(
             existing.templateId,
             existing.name,
             parsed.data.name
           );
+          console.log("[RENAME DEBUG] Updated", count, "workouts by templateId");
+        } else {
+          console.log("[RENAME DEBUG] No templateId or routineInstanceId found");
         }
       }
       
