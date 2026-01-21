@@ -137,6 +137,7 @@ export interface IStorage {
   createScheduledWorkout(workout: InsertScheduledWorkout): Promise<ScheduledWorkout>;
   updateScheduledWorkout(id: string, workout: Partial<InsertScheduledWorkout>): Promise<ScheduledWorkout | undefined>;
   updateScheduledWorkoutsByRoutineInstanceAndName(routineInstanceId: string, originalName: string, newName: string): Promise<number>;
+  updateScheduledWorkoutsByTemplateAndName(templateId: string, originalName: string, newName: string): Promise<number>;
   updateScheduledWorkoutCalendarEventId(id: string, calendarEventId: string | null): Promise<void>;
   deleteScheduledWorkout(id: string): Promise<boolean>;
   
@@ -519,6 +520,16 @@ export class DatabaseStorage implements IStorage {
       UPDATE scheduled_workouts 
       SET name = ${newName} 
       WHERE routine_instance_id = ${routineInstanceId} AND name = ${originalName}
+      RETURNING id
+    `;
+    return results.length;
+  }
+
+  async updateScheduledWorkoutsByTemplateAndName(templateId: string, originalName: string, newName: string): Promise<number> {
+    const results = await neonClient`
+      UPDATE scheduled_workouts 
+      SET name = ${newName} 
+      WHERE template_id = ${templateId} AND name = ${originalName}
       RETURNING id
     `;
     return results.length;
