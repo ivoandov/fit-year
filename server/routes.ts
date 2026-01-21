@@ -904,12 +904,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // If this is a routine workout and the name is being changed, update all instances with the same name
+      console.log("[ROUTINE UPDATE] existing workout:", JSON.stringify({
+        id: existing.id,
+        name: existing.name,
+        routineInstanceId: existing.routineInstanceId
+      }));
+      console.log("[ROUTINE UPDATE] new name:", parsed.data.name);
+      
       if (existing.routineInstanceId && parsed.data.name && parsed.data.name !== existing.name) {
-        await storage.updateScheduledWorkoutsByRoutineInstanceAndName(
+        console.log("[ROUTINE UPDATE] Updating all instances...");
+        const count = await storage.updateScheduledWorkoutsByRoutineInstanceAndName(
           existing.routineInstanceId,
           existing.name,
           parsed.data.name
         );
+        console.log("[ROUTINE UPDATE] Updated", count, "workouts");
+      } else {
+        console.log("[ROUTINE UPDATE] Not a routine workout or name unchanged");
       }
       
       const workout = await storage.updateScheduledWorkout(id, parsed.data);
