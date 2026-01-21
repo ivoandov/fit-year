@@ -169,6 +169,53 @@ export async function createUserCalendarEvent(
   }
 }
 
+export async function updateUserCalendarEvent(
+  userId: string,
+  eventId: string,
+  newDate: Date,
+  calendarId?: string,
+  localDateStr?: string
+): Promise<boolean> {
+  try {
+    const calendar = await getCalendarClientForUser(userId);
+    const targetCalendarId = calendarId || 'primary';
+    
+    let startDateStr: string;
+    let endDateStr: string;
+    
+    if (localDateStr) {
+      startDateStr = localDateStr;
+      const [year, month, day] = localDateStr.split('-').map(Number);
+      const endDate = new Date(year, month - 1, day + 1);
+      endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+    } else {
+      const year = newDate.getFullYear();
+      const month = String(newDate.getMonth() + 1).padStart(2, '0');
+      const day = String(newDate.getDate()).padStart(2, '0');
+      startDateStr = `${year}-${month}-${day}`;
+      
+      const endDate = new Date(newDate);
+      endDate.setDate(endDate.getDate() + 1);
+      endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+    }
+    
+    await calendar.events.patch({
+      calendarId: targetCalendarId,
+      eventId: eventId,
+      requestBody: {
+        start: { date: startDateStr },
+        end: { date: endDateStr },
+      },
+    });
+
+    console.log(`Updated calendar event date for user ${userId} in ${targetCalendarId}: ${eventId} to ${startDateStr}`);
+    return true;
+  } catch (error: any) {
+    console.error('Failed to update user calendar event:', error.message);
+    return false;
+  }
+}
+
 export async function deleteUserCalendarEvent(
   userId: string,
   eventId: string,

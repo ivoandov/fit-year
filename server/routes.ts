@@ -10,7 +10,8 @@ import {
   handleCalendarCallback, 
   listUserCalendars, 
   createUserCalendarEvent, 
-  deleteUserCalendarEvent 
+  deleteUserCalendarEvent,
+  updateUserCalendarEvent 
 } from "./replit_integrations/google-calendar/user-calendar";
 import * as fs from "fs";
 import * as path from "path";
@@ -921,6 +922,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const workout = await storage.updateScheduledWorkout(id, parsed.data);
+      
+      // Update calendar event if date actually changed and event exists
+      const existingDateStr = existing.date.toISOString().split('T')[0];
+      const newDateStr = dateValue ? dateValue.toISOString().split('T')[0] : null;
+      const dateChanged = newDateStr && newDateStr !== existingDateStr;
+      
+      if (dateChanged && existing.calendarEventId) {
+        const isConnected = await storage.isCalendarConnected(userId);
+        if (isConnected) {
+          const userSettings = await storage.getUserSettings(userId);
+          const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+          updateUserCalendarEvent(userId, existing.calendarEventId, dateValue!, selectedCalendarId, localDate)
+            .then((updated) => {
+              if (updated) {
+                console.log(`Updated scheduled workout calendar event date: ${existing.calendarEventId}`);
+              }
+            })
+            .catch((err) => {
+              console.error("Failed to update calendar event date:", err);
+            });
+        }
+      }
+      
       res.json(workout);
     } catch (error) {
       res.status(500).json({ error: "Failed to update scheduled workout" });
