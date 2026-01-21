@@ -196,7 +196,7 @@ export function AddExerciseDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           <Button variant="outline" onClick={handleClose} data-testid="button-cancel">
             Cancel
           </Button>
