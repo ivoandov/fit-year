@@ -134,17 +134,24 @@ export default function WorkoutsPage() {
     exerciseType: (ex.exerciseType as "weight_reps" | "distance_time") || "weight_reps",
   }));
 
-  const scheduledWorkouts: ScheduledWorkout[] = dbWorkouts.map((w) => ({
-    id: w.id,
-    name: w.name,
-    date: new Date(w.date),
-    exercises: (w.exercises as any[]).map((ex: any) => ({
-      ...ex,
-      muscleGroups: ex.muscleGroups || [],
-    })) as Exercise[],
-    templateId: w.templateId,
-    routineInstanceId: w.routineInstanceId,
-  }));
+  const scheduledWorkouts: ScheduledWorkout[] = dbWorkouts.map((w) => {
+    // Parse date as UTC and create a local date with the same calendar date
+    // This prevents timezone shift (e.g., UTC midnight becoming previous day in local time)
+    const utcDate = new Date(w.date);
+    const localDate = new Date(utcDate.getUTCFullYear(), utcDate.getUTCMonth(), utcDate.getUTCDate());
+    
+    return {
+      id: w.id,
+      name: w.name,
+      date: localDate,
+      exercises: (w.exercises as any[]).map((ex: any) => ({
+        ...ex,
+        muscleGroups: ex.muscleGroups || [],
+      })) as Exercise[],
+      templateId: w.templateId,
+      routineInstanceId: w.routineInstanceId,
+    };
+  });
 
   const workoutTemplates: WorkoutTemplate[] = dbTemplates.map((t) => ({
     id: t.id,
@@ -231,9 +238,12 @@ export default function WorkoutsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...workout }: { id: string; name: string; date: Date; exercises: Exercise[] }) => {
+      // Send both UTC timestamp and local date string for correct handling
+      const localDate = `${workout.date.getFullYear()}-${String(workout.date.getMonth() + 1).padStart(2, '0')}-${String(workout.date.getDate()).padStart(2, '0')}`;
       return apiRequest("PUT", `/api/scheduled-workouts/${id}`, {
         name: workout.name,
         date: workout.date.toISOString(),
+        localDate,
         exercises: workout.exercises,
       });
     },

@@ -826,10 +826,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = (req.user as any)?.id;
       const { localDate, ...restBody } = req.body;
+      
+      // Use localDate if provided for timezone-safe date storage (noon UTC)
+      let dateValue = new Date(req.body.date);
+      if (localDate && typeof localDate === 'string') {
+        dateValue = new Date(localDate + 'T12:00:00Z');
+      }
+      
       const body = {
         ...restBody,
         userId,
-        date: new Date(req.body.date),
+        date: dateValue,
       };
       const parsed = insertScheduledWorkoutSchema.safeParse(body);
       if (!parsed.success) {
@@ -878,9 +885,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       
+      // Use localDate if provided for timezone-safe date storage
+      const { localDate, ...restBody } = req.body;
+      let dateValue = req.body.date ? new Date(req.body.date) : undefined;
+      
+      // If localDate is provided, use it to create a date at noon UTC to avoid timezone issues
+      if (localDate && typeof localDate === 'string') {
+        dateValue = new Date(localDate + 'T12:00:00Z');
+      }
+      
       const body = {
-        ...req.body,
-        date: req.body.date ? new Date(req.body.date) : undefined,
+        ...restBody,
+        date: dateValue,
       };
       const parsed = insertScheduledWorkoutSchema.partial().safeParse(body);
       if (!parsed.success) {
