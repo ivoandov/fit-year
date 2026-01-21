@@ -240,12 +240,15 @@ export default function WorkoutsPage() {
     mutationFn: async ({ id, ...workout }: { id: string; name: string; date: Date; exercises: Exercise[] }) => {
       // Send both UTC timestamp and local date string for correct handling
       const localDate = `${workout.date.getFullYear()}-${String(workout.date.getMonth() + 1).padStart(2, '0')}-${String(workout.date.getDate()).padStart(2, '0')}`;
-      return apiRequest("PUT", `/api/scheduled-workouts/${id}`, {
+      const res = await apiRequest("PUT", `/api/scheduled-workouts/${id}`, {
         name: workout.name,
         date: workout.date.toISOString(),
         localDate,
         exercises: workout.exercises,
       });
+      const data = await res.json();
+      console.log("[WORKOUT UPDATE DEBUG]", data._debug);
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });

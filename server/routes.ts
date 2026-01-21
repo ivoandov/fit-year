@@ -931,7 +931,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const workout = await storage.updateScheduledWorkout(id, parsed.data);
-      res.json(workout);
+      // Include debug info in response
+      res.json({
+        ...workout,
+        _debug: {
+          hadTemplateId: !!existing.templateId,
+          hadRoutineInstanceId: !!existing.routineInstanceId,
+          templateId: existing.templateId,
+          nameChanged: parsed.data.name !== existing.name,
+        }
+      });
     } catch (error) {
       res.status(500).json({ error: "Failed to update scheduled workout" });
     }
