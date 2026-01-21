@@ -487,8 +487,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getScheduledWorkout(id: string): Promise<ScheduledWorkout | undefined> {
-    const results = await db.select().from(scheduledWorkouts).where(eq(scheduledWorkouts.id, id));
-    return results[0];
+    const results = await neonClient`
+      SELECT id, user_id as "userId", template_id as "templateId", name, date, exercises, calendar_event_id as "calendarEventId", routine_instance_id as "routineInstanceId", routine_day_index as "routineDayIndex"
+      FROM scheduled_workouts 
+      WHERE id = ${id}
+    `;
+    if (results.length === 0) return undefined;
+    const row = results[0];
+    return {
+      id: row.id,
+      userId: row.userId,
+      templateId: row.templateId,
+      name: row.name,
+      date: new Date(row.date),
+      exercises: typeof row.exercises === 'string' ? JSON.parse(row.exercises) : row.exercises,
+      calendarEventId: row.calendarEventId,
+      routineInstanceId: row.routineInstanceId,
+      routineDayIndex: row.routineDayIndex,
+    };
   }
 
   async createScheduledWorkout(workout: InsertScheduledWorkout): Promise<ScheduledWorkout> {

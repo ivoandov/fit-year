@@ -904,12 +904,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // If name is being changed, update all related workouts (by routine or template)
-      console.log("[RENAME DEBUG] existing workout:", JSON.stringify({
-        id: existing.id,
-        name: existing.name,
-        templateId: existing.templateId,
-        routineInstanceId: existing.routineInstanceId
-      }));
+      console.log("[RENAME DEBUG] existing workout (full):", JSON.stringify(existing));
+      console.log("[RENAME DEBUG] templateId value:", existing.templateId, "type:", typeof existing.templateId);
       console.log("[RENAME DEBUG] new name:", parsed.data.name);
       
       if (parsed.data.name && parsed.data.name !== existing.name) {
