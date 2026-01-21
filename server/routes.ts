@@ -902,6 +902,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.message });
       }
+      
+      // If this is a routine workout and the name is being changed, update all instances with the same name
+      if (existing.routineInstanceId && parsed.data.name && parsed.data.name !== existing.name) {
+        await storage.updateScheduledWorkoutsByRoutineInstanceAndName(
+          existing.routineInstanceId,
+          existing.name,
+          parsed.data.name
+        );
+      }
+      
       const workout = await storage.updateScheduledWorkout(id, parsed.data);
       res.json(workout);
     } catch (error) {
