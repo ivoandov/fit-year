@@ -713,7 +713,7 @@ export default function WorkoutsPage() {
                     <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm sm:text-base text-muted-foreground">
-                          {format(workout.date, "PPP")}
+                          {format(workout.date, "MMM d, yyyy")}
                         </p>
                         {isCompleted && (
                           <Badge variant="outline" className="text-green-500 border-green-500">
@@ -805,7 +805,7 @@ export default function WorkoutsPage() {
                     <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm sm:text-base text-muted-foreground">
-                          {format(workout.date, "PPP")}
+                          {format(workout.date, "MMM d, yyyy")}
                         </p>
                         {isPastDue && (
                           <Badge variant="outline" className="text-red-500 border-red-500 bg-red-950/30">
