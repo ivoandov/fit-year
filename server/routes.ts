@@ -904,20 +904,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // If name is being changed, update all related workouts (by routine or template)
-      console.log("[RENAME DEBUG] existing workout (full):", JSON.stringify(existing));
-      console.log("[RENAME DEBUG] templateId value:", existing.templateId, "type:", typeof existing.templateId);
-      console.log("[RENAME DEBUG] new name:", parsed.data.name);
-      
-      let updatedCount = 0;
       if (parsed.data.name && parsed.data.name !== existing.name) {
         if (existing.routineInstanceId) {
-          updatedCount = await storage.updateScheduledWorkoutsByRoutineInstanceAndName(
+          await storage.updateScheduledWorkoutsByRoutineInstanceAndName(
             existing.routineInstanceId,
             existing.name,
             parsed.data.name
           );
         } else if (existing.templateId) {
-          updatedCount = await storage.updateScheduledWorkoutsByTemplateAndName(
+          await storage.updateScheduledWorkoutsByTemplateAndName(
             existing.templateId,
             existing.name,
             parsed.data.name
@@ -926,20 +921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const workout = await storage.updateScheduledWorkout(id, parsed.data);
-      // Include debug info in response
-      res.json({
-        ...workout,
-        _debug: {
-          version: 2,
-          hadTemplateId: !!existing.templateId,
-          hadRoutineInstanceId: !!existing.routineInstanceId,
-          templateId: existing.templateId,
-          originalName: existing.name,
-          newName: parsed.data.name,
-          nameChanged: parsed.data.name !== existing.name,
-          workoutsUpdated: updatedCount,
-        }
-      });
+      res.json(workout);
     } catch (error) {
       res.status(500).json({ error: "Failed to update scheduled workout" });
     }
