@@ -908,25 +908,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("[RENAME DEBUG] templateId value:", existing.templateId, "type:", typeof existing.templateId);
       console.log("[RENAME DEBUG] new name:", parsed.data.name);
       
+      let updatedCount = 0;
       if (parsed.data.name && parsed.data.name !== existing.name) {
         if (existing.routineInstanceId) {
-          console.log("[RENAME DEBUG] Updating by routineInstanceId:", existing.routineInstanceId);
-          const count = await storage.updateScheduledWorkoutsByRoutineInstanceAndName(
+          updatedCount = await storage.updateScheduledWorkoutsByRoutineInstanceAndName(
             existing.routineInstanceId,
             existing.name,
             parsed.data.name
           );
-          console.log("[RENAME DEBUG] Updated", count, "workouts by routineInstanceId");
         } else if (existing.templateId) {
-          console.log("[RENAME DEBUG] Updating by templateId:", existing.templateId);
-          const count = await storage.updateScheduledWorkoutsByTemplateAndName(
+          updatedCount = await storage.updateScheduledWorkoutsByTemplateAndName(
             existing.templateId,
             existing.name,
             parsed.data.name
           );
-          console.log("[RENAME DEBUG] Updated", count, "workouts by templateId");
-        } else {
-          console.log("[RENAME DEBUG] No templateId or routineInstanceId found");
         }
       }
       
@@ -938,7 +933,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hadTemplateId: !!existing.templateId,
           hadRoutineInstanceId: !!existing.routineInstanceId,
           templateId: existing.templateId,
+          originalName: existing.name,
+          newName: parsed.data.name,
           nameChanged: parsed.data.name !== existing.name,
+          workoutsUpdated: updatedCount,
         }
       });
     } catch (error) {
