@@ -1045,7 +1045,7 @@ export default function WorkoutsPage() {
               <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmDeleteWorkout}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive border-destructive"
                 data-testid="button-confirm-delete"
               >
                 Delete
