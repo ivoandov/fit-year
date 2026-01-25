@@ -928,25 +928,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newDateStr = dateValue ? dateValue.toISOString().split('T')[0] : null;
       const dateChanged = newDateStr && newDateStr !== existingDateStr;
       
-      console.log(`[Calendar Update Check] workoutId=${id}, existingDate=${existingDateStr}, newDate=${newDateStr}, dateChanged=${dateChanged}, calendarEventId=${existing.calendarEventId}`);
-      
-      if (dateChanged && existing.calendarEventId) {
+      // Handle calendar sync when date changes
+      if (dateValue) {
         const isConnected = await storage.isCalendarConnected(userId);
-        console.log(`[Calendar Update] isConnected=${isConnected}`);
         if (isConnected) {
           const userSettings = await storage.getUserSettings(userId);
           const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
-          console.log(`[Calendar Update] Calling updateUserCalendarEvent for eventId=${existing.calendarEventId}, localDate=${localDate}`);
-          updateUserCalendarEvent(userId, existing.calendarEventId, dateValue!, selectedCalendarId, localDate)
-            .then((updated) => {
-              console.log(`[Calendar Update] Result: updated=${updated}`);
-            })
-            .catch((err) => {
-              console.error("[Calendar Update] Failed:", err);
-            });
+          
+          if (existing.calendarEventId) {
+            // Update existing calendar event if date changed
+            if (dateChanged) {
+              updateUserCalendarEvent(userId, existing.calendarEventId, dateValue, selectedCalendarId, localDate)
+                .then((updated) => {
+                  if (updated) {
+                    console.log(`Updated calendar event date: ${existing.calendarEventId}`);
+                  }
+                })
+                .catch((err) => {
+                  console.error("Failed to update calendar event date:", err);
+                });
+            }
+          } else {
+            // Create new calendar event if none exists
+            const workoutName = workout?.name || existing.name;
+            const scheduledEventName = `${workoutName} (Scheduled)`;
+            createUserCalendarEvent(userId, scheduledEventName, dateValue, selectedCalendarId, localDate)
+              .then(async (eventId) => {
+                if (eventId) {
+                  await storage.updateScheduledWorkoutCalendarEventId(id, eventId);
+                  console.log(`Created calendar event for rescheduled workout: ${eventId}`);
+                }
+              })
+              .catch((err) => {
+                console.error("Failed to create calendar event:", err);
+              });
+          }
         }
-      } else if (dateChanged && !existing.calendarEventId) {
-        console.log(`[Calendar Update] Date changed but no calendarEventId stored for workout ${id}`);
       }
       
       res.json(workout);
