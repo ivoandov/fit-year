@@ -972,6 +972,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // One-time sync to ensure all scheduled workouts have calendar events
+  app.post("/api/calendar/sync-scheduled-workouts", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const isConnected = await storage.isCalendarConnected(userId);
+      if (!isConnected) {
+        return res.status(400).json({ error: "Google Calendar not connected" });
+      }
+      
+      const userSettings = await storage.getUserSettings(userId);
+      const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+      
+      const scheduledWorkouts = await storage.getScheduledWorkouts(userId);
+      let created = 0;
+      let alreadySynced = 0;
+      let failed = 0;
+      
+      for (const workout of scheduledWorkouts) {
+        if (workout.calendarEventId) {
+          alreadySynced++;
+          continue;
+        }
+        
+        try {
+          const scheduledEventName = `${workout.name} (Scheduled)`;
+          const localDateStr = workout.date.toISOString().split('T')[0];
+          const eventId = await createUserCalendarEvent(
+            userId,
+            scheduledEventName,
+            workout.date,
+            selectedCalendarId,
+            localDateStr
+          );
+          
+          if (eventId) {
+            await storage.updateScheduledWorkoutCalendarEventId(workout.id, eventId);
+            created++;
+            console.log(`Synced workout "${workout.name}" to calendar: ${eventId}`);
+          } else {
+            failed++;
+          }
+        } catch (err) {
+          console.error(`Failed to sync workout ${workout.id}:`, err);
+          failed++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Calendar sync complete`,
+        created,
+        alreadySynced,
+        failed,
+        total: scheduledWorkouts.length
+      });
+    } catch (error) {
+      console.error("Failed to sync scheduled workouts:", error);
+      res.status(500).json({ error: "Failed to sync workouts to calendar" });
+    }
+  });
+
   app.delete("/api/scheduled-workouts/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;

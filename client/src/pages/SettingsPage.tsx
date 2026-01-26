@@ -118,6 +118,26 @@ export default function SettingsPage() {
     },
   });
 
+  // Sync scheduled workouts to calendar mutation
+  const syncCalendarMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', '/api/calendar/sync-scheduled-workouts');
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Calendar sync complete",
+        description: `Created ${data.created} new events. ${data.alreadySynced} were already synced.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Failed to sync calendar",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleConnectCalendar = () => {
     setIsConnecting(true);
     connectCalendarMutation.mutate();
@@ -125,6 +145,10 @@ export default function SettingsPage() {
 
   const handleDisconnectCalendar = () => {
     disconnectCalendarMutation.mutate();
+  };
+
+  const handleSyncCalendar = () => {
+    syncCalendarMutation.mutate();
   };
 
   // Mutation to update calendar selection
@@ -365,16 +389,28 @@ export default function SettingsPage() {
                     );
                   })}
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={handleDisconnectCalendar}
-                  disabled={disconnectCalendarMutation.isPending}
-                  className="w-full"
-                  data-testid="button-disconnect-calendar"
-                >
-                  <Unlink className="h-4 w-4 mr-2" />
-                  {disconnectCalendarMutation.isPending ? "Disconnecting..." : "Disconnect Calendar"}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={handleSyncCalendar}
+                    disabled={syncCalendarMutation.isPending}
+                    className="flex-1"
+                    data-testid="button-sync-calendar"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${syncCalendarMutation.isPending ? 'animate-spin' : ''}`} />
+                    {syncCalendarMutation.isPending ? "Syncing..." : "Sync All Workouts"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDisconnectCalendar}
+                    disabled={disconnectCalendarMutation.isPending}
+                    className="flex-1"
+                    data-testid="button-disconnect-calendar"
+                  >
+                    <Unlink className="h-4 w-4 mr-2" />
+                    {disconnectCalendarMutation.isPending ? "Disconnecting..." : "Disconnect"}
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
