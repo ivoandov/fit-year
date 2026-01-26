@@ -118,13 +118,22 @@ export default function SettingsPage() {
     },
   });
 
+  // State for sync results
+  const [syncResults, setSyncResults] = useState<{
+    workouts: { name: string; date: string; status: string; eventId?: string }[];
+    created: number;
+    alreadySynced: number;
+    failed: number;
+  } | null>(null);
+
   // Sync scheduled workouts to calendar mutation
   const syncCalendarMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/calendar/sync-scheduled-workouts');
       return response.json();
     },
-    onSuccess: (data: { created: number; alreadySynced: number; failed: number }) => {
+    onSuccess: (data: { created: number; alreadySynced: number; failed: number; workouts: { name: string; date: string; status: string; eventId?: string }[] }) => {
+      setSyncResults(data);
       const parts: string[] = [];
       if (data.created > 0) parts.push(`${data.created} created`);
       if (data.alreadySynced > 0) parts.push(`${data.alreadySynced} already synced`);
@@ -136,6 +145,7 @@ export default function SettingsPage() {
       });
     },
     onError: (error: any) => {
+      setSyncResults(null);
       toast({
         title: "Failed to sync calendar",
         description: error?.message || "Please try again.",
@@ -417,6 +427,44 @@ export default function SettingsPage() {
                     {disconnectCalendarMutation.isPending ? "Disconnecting..." : "Disconnect"}
                   </Button>
                 </div>
+                {syncResults && syncResults.workouts.length > 0 && (
+                  <div className="mt-4 border rounded-lg p-3 bg-muted/30">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium">Sync Results ({syncResults.workouts.length} workouts)</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSyncResults(null)}
+                        className="h-6 px-2"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto space-y-1">
+                      {syncResults.workouts.map((w, i) => (
+                        <div
+                          key={i}
+                          className={`text-xs p-2 rounded flex items-center justify-between ${
+                            w.status === 'created' ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
+                            w.status === 'already_synced' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
+                            'bg-red-500/10 text-red-600 dark:text-red-400'
+                          }`}
+                        >
+                          <span className="font-medium truncate flex-1 mr-2">{w.name}</span>
+                          <span className="text-muted-foreground mr-2">{w.date}</span>
+                          <span className={`text-xs ${
+                            w.status === 'created' ? 'text-green-600 dark:text-green-400' :
+                            w.status === 'already_synced' ? 'text-blue-600 dark:text-blue-400' :
+                            'text-red-600 dark:text-red-400'
+                          }`}>
+                            {w.status === 'created' ? 'Created' :
+                             w.status === 'already_synced' ? 'Already synced' : 'Failed'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-4">

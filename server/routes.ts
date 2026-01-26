@@ -1001,16 +1001,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let alreadySynced = 0;
       let failed = 0;
       
+      // Track workout details for response
+      const syncedWorkouts: { name: string; date: string; status: string; eventId?: string }[] = [];
+      
       // Process each workout
       for (const workout of scheduledWorkouts) {
+        const workoutDate = workout.date instanceof Date ? workout.date : new Date(workout.date);
+        const localDateStr = workoutDate.toISOString().split('T')[0];
+        
         if (workout.calendarEventId) {
           alreadySynced++;
+          syncedWorkouts.push({
+            name: workout.name,
+            date: localDateStr,
+            status: 'already_synced',
+            eventId: workout.calendarEventId
+          });
           continue;
         }
         
         const scheduledEventName = `${workout.name} (Scheduled)`;
-        const workoutDate = workout.date instanceof Date ? workout.date : new Date(workout.date);
-        const localDateStr = workoutDate.toISOString().split('T')[0];
         
         try {
           const eventId = await createUserCalendarEvent(
@@ -1024,13 +1034,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (eventId) {
             await storage.updateScheduledWorkoutCalendarEventId(workout.id, eventId);
             created++;
+            syncedWorkouts.push({
+              name: workout.name,
+              date: localDateStr,
+              status: 'created',
+              eventId
+            });
             console.log(`Created calendar event for "${workout.name}": ${eventId}`);
           } else {
             failed++;
+            syncedWorkouts.push({
+              name: workout.name,
+              date: localDateStr,
+              status: 'failed'
+            });
           }
         } catch (err) {
           console.error(`Failed to sync workout ${workout.id}:`, err);
           failed++;
+          syncedWorkouts.push({
+            name: workout.name,
+            date: localDateStr,
+            status: 'failed'
+          });
         }
       }
       
@@ -1040,7 +1066,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         created,
         alreadySynced,
         failed,
-        total: scheduledWorkouts.length
+        total: scheduledWorkouts.length,
+        workouts: syncedWorkouts
       });
     } catch (error: any) {
       console.error("Failed to sync scheduled workouts:", error);
