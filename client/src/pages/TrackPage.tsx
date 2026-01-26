@@ -103,6 +103,17 @@ export default function TrackPage() {
     }
   }, [activeWorkout, exerciseSets, currentExerciseIndex, currentSetIndex, restTimerDuration, hasLoadedSavedProgress, saveTrackingProgress]);
 
+  // Flush progress when navigating away from the page
+  useEffect(() => {
+    return () => {
+      // On unmount, flush progress immediately to ensure it's saved
+      if (activeWorkout) {
+        console.log("[TrackPage] Unmounting - flushing progress");
+        flushProgress();
+      }
+    };
+  }, [activeWorkout, flushProgress]);
+
   // Clear saved progress when workout ends
   const clearSavedProgress = () => {
     clearTrackingProgress();

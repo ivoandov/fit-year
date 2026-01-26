@@ -254,6 +254,8 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   }, [activeWorkout, hasLoadedFromServer, saveToServer, trackingProgress]);
 
   const saveTrackingProgress = useCallback((progress: TrackingProgress) => {
+    // Update ref immediately so flushProgress has access to latest data
+    trackingProgressRef.current = progress;
     setTrackingProgress(progress);
     // Don't call saveToServer here - the useEffect above will handle it
   }, []);
