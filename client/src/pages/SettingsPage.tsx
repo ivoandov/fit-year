@@ -121,9 +121,10 @@ export default function SettingsPage() {
   // Sync scheduled workouts to calendar mutation
   const syncCalendarMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/calendar/sync-scheduled-workouts');
+      const response = await apiRequest('POST', '/api/calendar/sync-scheduled-workouts');
+      return response.json();
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data: { created: number; alreadySynced: number; failed: number }) => {
       toast({
         title: "Calendar sync complete",
         description: `Created ${data.created} new events. ${data.alreadySynced} were already synced.`,
