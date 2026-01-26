@@ -124,11 +124,11 @@ export default function SettingsPage() {
       const response = await apiRequest('POST', '/api/calendar/sync-scheduled-workouts');
       return response.json();
     },
-    onSuccess: (data: { created: number; recreated: number; alreadySynced: number; failed: number }) => {
+    onSuccess: (data: { created: number; alreadySynced: number; failed: number }) => {
       const parts: string[] = [];
       if (data.created > 0) parts.push(`${data.created} created`);
-      if (data.recreated > 0) parts.push(`${data.recreated} restored`);
       if (data.alreadySynced > 0) parts.push(`${data.alreadySynced} already synced`);
+      if (data.failed > 0) parts.push(`${data.failed} failed`);
       const description = parts.length > 0 ? parts.join(', ') : 'No workouts to sync';
       toast({
         title: "Calendar sync complete",

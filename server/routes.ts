@@ -999,44 +999,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       let created = 0;
       let alreadySynced = 0;
-      let recreated = 0;
       let failed = 0;
       
-      // Process workouts that need syncing (no calendarEventId)
-      const workoutsToSync = scheduledWorkouts.filter(w => !w.calendarEventId);
-      const workoutsWithEventIds = scheduledWorkouts.filter(w => w.calendarEventId);
-      
-      // For workouts with event IDs, verify they exist (check in parallel batches of 5)
-      const workoutsToVerify = [...workoutsWithEventIds];
-      const verifiedMissing: typeof workoutsWithEventIds = [];
-      
-      while (workoutsToVerify.length > 0) {
-        const batch = workoutsToVerify.splice(0, 5);
-        const results = await Promise.all(
-          batch.map(async (workout) => {
-            try {
-              const exists = await checkCalendarEventExists(userId, workout.calendarEventId!, selectedCalendarId);
-              return { workout, exists };
-            } catch {
-              return { workout, exists: false };
-            }
-          })
-        );
-        
-        for (const { workout, exists } of results) {
-          if (exists) {
-            alreadySynced++;
-          } else {
-            verifiedMissing.push(workout);
-            console.log(`Event ${workout.calendarEventId} for "${workout.name}" not found in calendar`);
-          }
+      // Process each workout
+      for (const workout of scheduledWorkouts) {
+        if (workout.calendarEventId) {
+          alreadySynced++;
+          continue;
         }
-      }
-      
-      // Combine workouts that need creation
-      const allWorkoutsToCreate = [...workoutsToSync, ...verifiedMissing];
-      
-      for (const workout of allWorkoutsToCreate) {
+        
         const scheduledEventName = `${workout.name} (Scheduled)`;
         const localDateStr = workout.date.toISOString().split('T')[0];
         
@@ -1051,13 +1022,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (eventId) {
             await storage.updateScheduledWorkoutCalendarEventId(workout.id, eventId);
-            if (workout.calendarEventId) {
-              recreated++;
-              console.log(`Recreated calendar event for "${workout.name}": ${eventId}`);
-            } else {
-              created++;
-              console.log(`Created calendar event for "${workout.name}": ${eventId}`);
-            }
+            created++;
+            console.log(`Created calendar event for "${workout.name}": ${eventId}`);
           } else {
             failed++;
           }
@@ -1071,7 +1037,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: `Calendar sync complete`,
         created,
-        recreated,
         alreadySynced,
         failed,
         total: scheduledWorkouts.length
