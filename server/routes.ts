@@ -11,7 +11,8 @@ import {
   listUserCalendars, 
   createUserCalendarEvent, 
   deleteUserCalendarEvent,
-  updateUserCalendarEvent 
+  updateUserCalendarEvent,
+  checkCalendarEventExists 
 } from "./replit_integrations/google-calendar/user-calendar";
 import * as fs from "fs";
 import * as path from "path";
@@ -991,17 +992,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const scheduledWorkouts = await storage.getScheduledWorkouts(userId);
       let created = 0;
       let alreadySynced = 0;
+      let recreated = 0;
       let failed = 0;
       
       for (const workout of scheduledWorkouts) {
+        const scheduledEventName = `${workout.name} (Scheduled)`;
+        const localDateStr = workout.date.toISOString().split('T')[0];
+        
         if (workout.calendarEventId) {
-          alreadySynced++;
-          continue;
+          // Verify the event still exists in Google Calendar
+          const eventExists = await checkCalendarEventExists(userId, workout.calendarEventId, selectedCalendarId);
+          if (eventExists) {
+            alreadySynced++;
+            continue;
+          }
+          // Event ID exists in DB but not in calendar - recreate it
+          console.log(`Event ${workout.calendarEventId} for "${workout.name}" not found in calendar, recreating...`);
         }
         
         try {
-          const scheduledEventName = `${workout.name} (Scheduled)`;
-          const localDateStr = workout.date.toISOString().split('T')[0];
           const eventId = await createUserCalendarEvent(
             userId,
             scheduledEventName,
@@ -1012,8 +1021,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (eventId) {
             await storage.updateScheduledWorkoutCalendarEventId(workout.id, eventId);
-            created++;
-            console.log(`Synced workout "${workout.name}" to calendar: ${eventId}`);
+            if (workout.calendarEventId) {
+              recreated++;
+              console.log(`Recreated calendar event for "${workout.name}": ${eventId}`);
+            } else {
+              created++;
+              console.log(`Created calendar event for "${workout.name}": ${eventId}`);
+            }
           } else {
             failed++;
           }
@@ -1027,6 +1041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         message: `Calendar sync complete`,
         created,
+        recreated,
         alreadySynced,
         failed,
         total: scheduledWorkouts.length

@@ -237,3 +237,27 @@ export async function deleteUserCalendarEvent(
     return false;
   }
 }
+
+export async function checkCalendarEventExists(
+  userId: string,
+  eventId: string,
+  calendarId?: string
+): Promise<boolean> {
+  try {
+    const calendar = await getCalendarClientForUser(userId);
+    const targetCalendarId = calendarId || 'primary';
+    
+    await calendar.events.get({
+      calendarId: targetCalendarId,
+      eventId: eventId,
+    });
+    
+    return true;
+  } catch (error: any) {
+    if (error.code === 404 || error.message?.includes('Not Found')) {
+      return false;
+    }
+    console.error('Failed to check calendar event:', error.message);
+    return false;
+  }
+}
