@@ -995,20 +995,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let recreated = 0;
       let failed = 0;
       
-      for (const workout of scheduledWorkouts) {
+      // Process workouts that need syncing (no calendarEventId)
+      const workoutsToSync = scheduledWorkouts.filter(w => !w.calendarEventId);
+      const workoutsWithEventIds = scheduledWorkouts.filter(w => w.calendarEventId);
+      
+      // For workouts with event IDs, verify they exist (check in parallel batches of 5)
+      const workoutsToVerify = [...workoutsWithEventIds];
+      const verifiedMissing: typeof workoutsWithEventIds = [];
+      
+      while (workoutsToVerify.length > 0) {
+        const batch = workoutsToVerify.splice(0, 5);
+        const results = await Promise.all(
+          batch.map(async (workout) => {
+            try {
+              const exists = await checkCalendarEventExists(userId, workout.calendarEventId!, selectedCalendarId);
+              return { workout, exists };
+            } catch {
+              return { workout, exists: false };
+            }
+          })
+        );
+        
+        for (const { workout, exists } of results) {
+          if (exists) {
+            alreadySynced++;
+          } else {
+            verifiedMissing.push(workout);
+            console.log(`Event ${workout.calendarEventId} for "${workout.name}" not found in calendar`);
+          }
+        }
+      }
+      
+      // Combine workouts that need creation
+      const allWorkoutsToCreate = [...workoutsToSync, ...verifiedMissing];
+      
+      for (const workout of allWorkoutsToCreate) {
         const scheduledEventName = `${workout.name} (Scheduled)`;
         const localDateStr = workout.date.toISOString().split('T')[0];
-        
-        if (workout.calendarEventId) {
-          // Verify the event still exists in Google Calendar
-          const eventExists = await checkCalendarEventExists(userId, workout.calendarEventId, selectedCalendarId);
-          if (eventExists) {
-            alreadySynced++;
-            continue;
-          }
-          // Event ID exists in DB but not in calendar - recreate it
-          console.log(`Event ${workout.calendarEventId} for "${workout.name}" not found in calendar, recreating...`);
-        }
         
         try {
           const eventId = await createUserCalendarEvent(
