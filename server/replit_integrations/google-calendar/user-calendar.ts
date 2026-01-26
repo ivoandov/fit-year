@@ -247,32 +247,18 @@ export async function checkCalendarEventExists(
     const calendar = await getCalendarClientForUser(userId);
     const targetCalendarId = calendarId || 'primary';
     
-    try {
-      await calendar.events.get({
-        calendarId: targetCalendarId,
-        eventId: eventId,
-      });
-      return true;
-    } catch (error: any) {
-      // If not found in selected calendar and it's not primary, try primary
-      if ((error.code === 404 || error.message?.includes('Not Found')) && targetCalendarId !== 'primary') {
-        try {
-          await calendar.events.get({
-            calendarId: 'primary',
-            eventId: eventId,
-          });
-          return true;
-        } catch {
-          return false;
-        }
-      }
-      if (error.code === 404 || error.message?.includes('Not Found')) {
-        return false;
-      }
-      throw error;
-    }
+    const response = await calendar.events.get({
+      calendarId: targetCalendarId,
+      eventId: eventId,
+    });
+    return !!response.data.id;
   } catch (error: any) {
-    console.error('Failed to check calendar event:', error.message);
+    // 404 means event doesn't exist - this is expected
+    if (error.code === 404 || error.status === 404) {
+      return false;
+    }
+    // For any other error, log and assume it doesn't exist
+    console.error('Failed to check calendar event:', error.message || error);
     return false;
   }
 }
