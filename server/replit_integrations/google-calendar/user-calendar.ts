@@ -251,7 +251,13 @@ export async function checkCalendarEventExists(
       calendarId: targetCalendarId,
       eventId: eventId,
     });
-    return !!response.data.id;
+    
+    // Check if event exists and is not cancelled
+    // When events are deleted in Google Calendar, they may still exist with status "cancelled"
+    if (response.data.id && response.data.status !== 'cancelled') {
+      return true;
+    }
+    return false;
   } catch (error: any) {
     // 404 means event doesn't exist - this is expected
     if (error.code === 404 || error.status === 404) {
