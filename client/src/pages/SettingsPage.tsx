@@ -444,22 +444,29 @@ export default function SettingsPage() {
                       {syncResults.workouts.map((w, i) => (
                         <div
                           key={i}
-                          className={`text-xs p-2 rounded flex items-center justify-between ${
+                          className={`text-xs p-2 rounded ${
                             w.status === 'created' ? 'bg-green-500/10 text-green-600 dark:text-green-400' :
                             w.status === 'already_synced' ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400' :
                             'bg-red-500/10 text-red-600 dark:text-red-400'
                           }`}
                         >
-                          <span className="font-medium truncate flex-1 mr-2">{w.name}</span>
-                          <span className="text-muted-foreground mr-2">{w.date}</span>
-                          <span className={`text-xs ${
-                            w.status === 'created' ? 'text-green-600 dark:text-green-400' :
-                            w.status === 'already_synced' ? 'text-blue-600 dark:text-blue-400' :
-                            'text-red-600 dark:text-red-400'
-                          }`}>
-                            {w.status === 'created' ? 'Created' :
-                             w.status === 'already_synced' ? 'Already synced' : 'Failed'}
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium truncate flex-1 mr-2">{w.name}</span>
+                            <span className="text-muted-foreground mr-2">{w.date}</span>
+                            <span className={`text-xs ${
+                              w.status === 'created' ? 'text-green-600 dark:text-green-400' :
+                              w.status === 'already_synced' ? 'text-blue-600 dark:text-blue-400' :
+                              'text-red-600 dark:text-red-400'
+                            }`}>
+                              {w.status === 'created' ? 'Created' :
+                               w.status === 'already_synced' ? 'Already synced' : 'Failed'}
+                            </span>
+                          </div>
+                          {w.eventId && (
+                            <div className="text-[10px] text-muted-foreground mt-1 truncate">
+                              Event ID: {w.eventId}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

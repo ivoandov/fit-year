@@ -1003,7 +1003,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let failed = 0;
       
       // Track workout details for response
-      const syncedWorkouts: { name: string; date: string; status: string; eventId?: string }[] = [];
+      const syncedWorkouts: { name: string; date: string; status: string; eventId?: string; calendarChecked?: string }[] = [];
       
       // Process each workout
       for (const workout of scheduledWorkouts) {
@@ -1012,15 +1012,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // If workout has an event ID, verify it still exists in the calendar
         if (workout.calendarEventId) {
-          console.log(`[Calendar Sync] Checking if event ${workout.calendarEventId} exists for "${workout.name}" in calendar ${selectedCalendarId || 'primary'}`);
+          const calendarToCheck = selectedCalendarId || 'primary';
           
-          const eventExists = await checkCalendarEventExists(
+          // First check the selected calendar
+          let eventExists = await checkCalendarEventExists(
             userId,
             workout.calendarEventId,
             selectedCalendarId
           );
           
-          console.log(`[Calendar Sync] Event ${workout.calendarEventId} exists: ${eventExists}`);
+          // If not found and we're using a specific calendar, also check primary as fallback
+          // (in case event was created in primary before user selected a different calendar)
+          if (!eventExists && selectedCalendarId && selectedCalendarId !== 'primary') {
+            const existsInPrimary = await checkCalendarEventExists(
+              userId,
+              workout.calendarEventId,
+              'primary'
+            );
+            if (existsInPrimary) {
+              eventExists = true;
+            }
+          }
           
           if (eventExists) {
             alreadySynced++;
@@ -1028,12 +1040,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               name: workout.name,
               date: localDateStr,
               status: 'already_synced',
-              eventId: workout.calendarEventId
+              eventId: workout.calendarEventId,
+              calendarChecked: calendarToCheck
             });
             continue;
           } else {
             // Event was deleted from calendar, clear the ID so it gets recreated
-            console.log(`[Calendar Sync] Event ${workout.calendarEventId} for "${workout.name}" was deleted from calendar, will recreate`);
             await storage.updateScheduledWorkoutCalendarEventId(workout.id, null);
           }
         }
