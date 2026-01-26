@@ -993,7 +993,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log all workouts for debugging
       for (const w of scheduledWorkouts) {
-        console.log(`[Calendar Sync] Workout: "${w.name}" on ${w.date.toISOString().split('T')[0]}, eventId: ${w.calendarEventId || 'none'}, routineInstanceId: ${w.routineInstanceId || 'none'}`);
+        const dateStr = w.date instanceof Date ? w.date.toISOString().split('T')[0] : String(w.date).split('T')[0];
+        console.log(`[Calendar Sync] Workout: "${w.name}" on ${dateStr}, eventId: ${w.calendarEventId || 'none'}, routineInstanceId: ${w.routineInstanceId || 'none'}`);
       }
       
       let created = 0;
@@ -1008,13 +1009,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         const scheduledEventName = `${workout.name} (Scheduled)`;
-        const localDateStr = workout.date.toISOString().split('T')[0];
+        const workoutDate = workout.date instanceof Date ? workout.date : new Date(workout.date);
+        const localDateStr = workoutDate.toISOString().split('T')[0];
         
         try {
           const eventId = await createUserCalendarEvent(
             userId,
             scheduledEventName,
-            workout.date,
+            workoutDate,
             selectedCalendarId,
             localDateStr
           );
