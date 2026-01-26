@@ -135,10 +135,10 @@ export default function SettingsPage() {
         description,
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Failed to sync calendar",
-        description: "Please try again.",
+        description: error?.message || "Please try again.",
         variant: "destructive",
       });
     },

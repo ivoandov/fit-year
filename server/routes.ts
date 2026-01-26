@@ -11,8 +11,7 @@ import {
   listUserCalendars, 
   createUserCalendarEvent, 
   deleteUserCalendarEvent,
-  updateUserCalendarEvent,
-  checkCalendarEventExists 
+  updateUserCalendarEvent 
 } from "./replit_integrations/google-calendar/user-calendar";
 import * as fs from "fs";
 import * as path from "path";
@@ -1041,9 +1040,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         failed,
         total: scheduledWorkouts.length
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to sync scheduled workouts:", error);
-      res.status(500).json({ error: "Failed to sync workouts to calendar" });
+      res.status(500).json({ 
+        error: "Failed to sync workouts to calendar",
+        details: error?.message || String(error)
+      });
     }
   });
 
