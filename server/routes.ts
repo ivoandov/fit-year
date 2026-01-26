@@ -1012,11 +1012,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // If workout has an event ID, verify it still exists in the calendar
         if (workout.calendarEventId) {
+          console.log(`[Calendar Sync] Checking if event ${workout.calendarEventId} exists for "${workout.name}" in calendar ${selectedCalendarId || 'primary'}`);
+          
           const eventExists = await checkCalendarEventExists(
             userId,
             workout.calendarEventId,
             selectedCalendarId
           );
+          
+          console.log(`[Calendar Sync] Event ${workout.calendarEventId} exists: ${eventExists}`);
           
           if (eventExists) {
             alreadySynced++;
