@@ -11,7 +11,8 @@ import {
   listUserCalendars, 
   createUserCalendarEvent, 
   deleteUserCalendarEvent,
-  updateUserCalendarEvent 
+  updateUserCalendarEvent,
+  checkCalendarEventExists 
 } from "./replit_integrations/google-calendar/user-calendar";
 import * as fs from "fs";
 import * as path from "path";
@@ -1009,15 +1010,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const workoutDate = workout.date instanceof Date ? workout.date : new Date(workout.date);
         const localDateStr = workoutDate.toISOString().split('T')[0];
         
+        // If workout has an event ID, verify it still exists in the calendar
         if (workout.calendarEventId) {
-          alreadySynced++;
-          syncedWorkouts.push({
-            name: workout.name,
-            date: localDateStr,
-            status: 'already_synced',
-            eventId: workout.calendarEventId
-          });
-          continue;
+          const eventExists = await checkCalendarEventExists(
+            userId,
+            workout.calendarEventId,
+            selectedCalendarId
+          );
+          
+          if (eventExists) {
+            alreadySynced++;
+            syncedWorkouts.push({
+              name: workout.name,
+              date: localDateStr,
+              status: 'already_synced',
+              eventId: workout.calendarEventId
+            });
+            continue;
+          } else {
+            // Event was deleted from calendar, clear the ID so it gets recreated
+            console.log(`[Calendar Sync] Event ${workout.calendarEventId} for "${workout.name}" was deleted from calendar, will recreate`);
+            await storage.updateScheduledWorkoutCalendarEventId(workout.id, null);
+          }
         }
         
         const scheduledEventName = `${workout.name} (Scheduled)`;
