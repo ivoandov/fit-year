@@ -990,6 +990,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
       
       const scheduledWorkouts = await storage.getScheduledWorkouts(userId);
+      console.log(`[Calendar Sync] Found ${scheduledWorkouts.length} scheduled workouts for user ${userId}`);
+      
+      // Log all workouts for debugging
+      for (const w of scheduledWorkouts) {
+        console.log(`[Calendar Sync] Workout: "${w.name}" on ${w.date.toISOString().split('T')[0]}, eventId: ${w.calendarEventId || 'none'}, routineInstanceId: ${w.routineInstanceId || 'none'}`);
+      }
+      
       let created = 0;
       let alreadySynced = 0;
       let recreated = 0;
