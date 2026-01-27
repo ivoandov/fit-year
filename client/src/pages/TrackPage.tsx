@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RestTimer } from "@/components/RestTimer";
 import { WorkoutEditorDialog, WorkoutData } from "@/components/WorkoutEditorDialog";
-import { ChevronRight, ChevronLeft, Check, Plus, Pencil } from "lucide-react";
+import { ChevronRight, ChevronLeft, Check, Plus, Pencil, Play } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useWorkout } from "@/context/WorkoutContext";
 import { useSettings } from "@/components/SettingsProvider";
@@ -566,6 +566,14 @@ export default function TrackPage() {
                   data-testid="input-rest-timer"
                 />
                 <span className="text-xs sm:text-sm text-muted-foreground">sec</span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setShowRestTimer(true)}
+                  data-testid="button-start-rest-timer"
+                >
+                  <Play className="h-4 w-4" />
+                </Button>
               </div>
 
               <Button
