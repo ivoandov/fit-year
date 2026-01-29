@@ -450,10 +450,11 @@ export default function TrackPage() {
                               setCurrentSets(newSets);
                               if (checked && index === currentSetIndex) {
                                 if (currentSetIndex < sets.length - 1) {
-                                  setCurrentSetIndex(currentSetIndex + 1);
                                   if (restTimerOnManualComplete) {
+                                    // Don't increment set index here - handleRestTimerClose will do it
                                     setTrackingState("resting");
                                   } else {
+                                    setCurrentSetIndex(currentSetIndex + 1);
                                     setTrackingState("not_started");
                                   }
                                 } else {
@@ -521,10 +522,11 @@ export default function TrackPage() {
                               setCurrentSets(newSets);
                               if (checked && index === currentSetIndex) {
                                 if (currentSetIndex < sets.length - 1) {
-                                  setCurrentSetIndex(currentSetIndex + 1);
                                   if (restTimerOnManualComplete) {
+                                    // Don't increment set index here - handleRestTimerClose will do it
                                     setTrackingState("resting");
                                   } else {
+                                    setCurrentSetIndex(currentSetIndex + 1);
                                     setTrackingState("not_started");
                                   }
                                 } else {
