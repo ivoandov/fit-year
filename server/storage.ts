@@ -526,6 +526,8 @@ export class DatabaseStorage implements IStorage {
       exercises: workout.exercises || [],
       templateId: workout.templateId || null,
       calendarEventId: null,
+      routineInstanceId: null,
+      routineDayIndex: null,
     };
   }
 
@@ -727,6 +729,8 @@ export class DatabaseStorage implements IStorage {
       exercises: workout.exercises,
       completedAt: workout.completedAt instanceof Date ? workout.completedAt : new Date(completedAtStr),
       calendarEventId: null,
+      routineInstanceId: null,
+      routineDayIndex: null,
     };
   }
 

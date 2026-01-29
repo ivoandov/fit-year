@@ -164,6 +164,10 @@ export default function WorkoutsPage() {
     })) as Exercise[],
   }));
 
+  const getTemplateCompletionCount = (templateId: string): number => {
+    return completedWorkouts.filter(w => w.templateId === templateId).length;
+  };
+
   const createTemplateMutation = useMutation({
     mutationFn: async (template: { name: string; exercises: Exercise[] }) => {
       return apiRequest("POST", "/api/workout-templates", {
@@ -564,8 +568,8 @@ export default function WorkoutsPage() {
     setWorkoutToDelete({ id, name, isTemplate: false, isCompleted: true });
   };
 
-  const handleScheduleAgain = (workout: { name: string; exercises: Exercise[]; templateId?: string }) => {
-    setScheduleAgainWorkout(workout);
+  const handleScheduleAgain = (workout: { name: string; exercises: Exercise[]; templateId?: string | null }) => {
+    setScheduleAgainWorkout({ ...workout, templateId: workout.templateId || undefined });
     setScheduleAgainDate(addDays(new Date(), 1)); // Default to tomorrow
   };
 
@@ -1056,9 +1060,16 @@ export default function WorkoutsPage() {
                       <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" />
                     </div>
                   <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
-                    <p className="text-sm sm:text-base text-muted-foreground">
-                      {template.exercises.length} exercises
-                    </p>
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-sm sm:text-base text-muted-foreground">
+                        {template.exercises.length} exercises
+                      </p>
+                      {getTemplateCompletionCount(template.id) > 0 && (
+                        <p className="text-xs text-muted-foreground/70">
+                          Completed {getTemplateCompletionCount(template.id)} time{getTemplateCompletionCount(template.id) !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
                     <Button
                       size="icon"
                       className="shrink-0 aspect-square"

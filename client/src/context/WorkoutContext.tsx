@@ -21,6 +21,7 @@ interface ActiveWorkout {
 export interface CompletedWorkoutRecord {
   id: string;
   displayId: string;
+  templateId?: string | null;
   name: string;
   exercises: Exercise[];
   completedAt: Date;
@@ -295,6 +296,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     return {
       id: w.id,
       displayId: w.displayId,
+      templateId: w.templateId || null,
       name: w.name,
       exercises: (w.exercises as any[]).map((ex: any) => ({
         ...ex,
