@@ -42,6 +42,7 @@ export default function RoutinesPage() {
   const [routineIsPublic, setRoutineIsPublic] = useState(false);
   const [routineEntries, setRoutineEntries] = useState<{ dayIndex: number; workoutTemplateId: string | null; workoutName: string | null; exercises: any[] | null }[]>([]);
   const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
+  const [updateActiveRoutineId, setUpdateActiveRoutineId] = useState<string | null>(null);
 
   const { data: myRoutines = [], isLoading: loadingMine } = useQuery<Routine[]>({
     queryKey: ["/api/routines"],
@@ -81,8 +82,6 @@ export default function RoutinesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/routines"] });
       queryClient.invalidateQueries({ queryKey: ["/api/routines/public"] });
-      toast({ title: "Routine updated", description: "Your changes have been saved." });
-      closeBuilder();
     },
     onError: () => {
       toast({ title: "Failed to update routine", variant: "destructive" });
@@ -134,6 +133,25 @@ export default function RoutinesPage() {
     },
     onError: () => {
       toast({ title: "Failed to cancel routine", variant: "destructive" });
+    },
+  });
+
+  const updateActiveInstancesMutation = useMutation({
+    mutationFn: async (routineId: string) => {
+      const response = await apiRequest("POST", `/api/routines/${routineId}/update-active-instances`);
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
+      toast({ 
+        title: "Active routines updated", 
+        description: `${data.updatedCount} remaining scheduled workouts have been updated.` 
+      });
+      setUpdateActiveRoutineId(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update active routines", variant: "destructive" });
+      setUpdateActiveRoutineId(null);
     },
   });
 
@@ -196,7 +214,7 @@ export default function RoutinesPage() {
     }
   };
 
-  const handleSaveRoutine = () => {
+  const handleSaveRoutine = async () => {
     if (!routineName.trim()) {
       toast({ title: "Please enter a routine name", variant: "destructive" });
       return;
@@ -211,7 +229,30 @@ export default function RoutinesPage() {
     };
 
     if (editingRoutine) {
-      updateRoutineMutation.mutate({ id: editingRoutine.id, data });
+      const routineId = editingRoutine.id;
+      try {
+        await updateRoutineMutation.mutateAsync({ id: routineId, data });
+        toast({ title: "Routine updated", description: "Your changes have been saved." });
+        closeBuilder();
+        
+        // Refetch active instances to ensure we have the latest data
+        try {
+          const result = await queryClient.fetchQuery<RoutineInstance[]>({ 
+            queryKey: ["/api/routine-instances/active"],
+            staleTime: 0 
+          });
+          
+          // Check if this routine has active instances
+          const hasActiveInstance = result.some(i => i.routineId === routineId);
+          if (hasActiveInstance) {
+            setUpdateActiveRoutineId(routineId);
+          }
+        } catch (fetchError) {
+          console.error("Failed to check for active instances:", fetchError);
+        }
+      } catch (error) {
+        // Error toast is handled by mutation onError
+      }
     } else {
       createRoutineMutation.mutate(data);
     }
@@ -750,6 +791,34 @@ export default function RoutinesPage() {
                 data-testid="button-confirm-apply"
               >
                 {startRoutineMutation.isPending ? "Starting..." : "Start Routine"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!updateActiveRoutineId} onOpenChange={(open) => { if (!open) setUpdateActiveRoutineId(null); }}>
+          <DialogContent data-testid="dialog-update-active-instances">
+            <DialogHeader>
+              <DialogTitle>Update Active Routine?</DialogTitle>
+              <DialogDescription>
+                This routine is currently in progress. Would you like to update the remaining scheduled workouts with the new changes?
+              </DialogDescription>
+            </DialogHeader>
+            
+            <p className="text-sm text-muted-foreground py-2">
+              Only future workouts that haven't been completed yet will be updated. Past and completed workouts will remain unchanged.
+            </p>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUpdateActiveRoutineId(null)} data-testid="button-skip-update-active">
+                Skip
+              </Button>
+              <Button 
+                onClick={() => updateActiveRoutineId && updateActiveInstancesMutation.mutate(updateActiveRoutineId)} 
+                disabled={updateActiveInstancesMutation.isPending}
+                data-testid="button-confirm-update-active"
+              >
+                {updateActiveInstancesMutation.isPending ? "Updating..." : "Update Future Workouts"}
               </Button>
             </DialogFooter>
           </DialogContent>

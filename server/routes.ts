@@ -1870,6 +1870,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Routines API - Update future scheduled workouts for active routine instances
+  app.post("/api/routines/:id/update-active-instances", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const routine = await storage.getRoutine(req.params.id);
+      if (!routine) {
+        return res.status(404).json({ error: "Routine not found" });
+      }
+      
+      // Only owner can update active instances
+      if (routine.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      // Get the routine entries
+      const entries = await storage.getRoutineEntries(req.params.id);
+      
+      // Get all active instances for this routine
+      const allInstances = await storage.getActiveRoutineInstances(userId);
+      const routineInstances = allInstances.filter(i => i.routineId === req.params.id);
+      
+      let totalUpdated = 0;
+      
+      // Update future scheduled workouts for each active instance
+      for (const instance of routineInstances) {
+        const updatedCount = await storage.updateFutureScheduledWorkoutsByRoutineInstance(
+          instance.id,
+          entries.map(e => ({
+            dayIndex: e.dayIndex,
+            workoutName: e.workoutName,
+            exercises: e.exercises
+          }))
+        );
+        totalUpdated += updatedCount;
+      }
+      
+      res.json({ 
+        success: true, 
+        updatedCount: totalUpdated,
+        instanceCount: routineInstances.length
+      });
+    } catch (error) {
+      console.error("Failed to update active routine instances:", error);
+      res.status(500).json({ error: "Failed to update active routine instances" });
+    }
+  });
+
   // Routines API - Start routine (create routine instance and scheduled workouts with progress tracking)
   app.post("/api/routines/:id/start", isAuthenticated, async (req: any, res) => {
     try {

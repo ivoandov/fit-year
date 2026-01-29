@@ -139,6 +139,7 @@ export interface IStorage {
   updateScheduledWorkoutsByRoutineInstanceAndName(routineInstanceId: string, originalName: string, newName: string): Promise<number>;
   updateScheduledWorkoutsByTemplateAndName(templateId: string, originalName: string, newName: string): Promise<number>;
   updateFutureScheduledWorkoutsByTemplate(templateId: string, name: string, exercises: any): Promise<number>;
+  updateFutureScheduledWorkoutsByRoutineInstance(routineInstanceId: string, routineEntries: { dayIndex: number; workoutName: string | null; exercises: any }[]): Promise<number>;
   updateScheduledWorkoutCalendarEventId(id: string, calendarEventId: string | null): Promise<void>;
   deleteScheduledWorkout(id: string): Promise<boolean>;
   
@@ -561,6 +562,39 @@ export class DatabaseStorage implements IStorage {
       RETURNING id
     `;
     return results.length;
+  }
+
+  async updateFutureScheduledWorkoutsByRoutineInstance(
+    routineInstanceId: string, 
+    routineEntries: { dayIndex: number; workoutName: string | null; exercises: any }[]
+  ): Promise<number> {
+    // Use start of today to include same-day scheduled workouts
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let updatedCount = 0;
+    
+    // Get all future scheduled workouts for this routine instance (from today onwards)
+    const futureWorkouts = await neonClient`
+      SELECT id, routine_day_index as "routineDayIndex"
+      FROM scheduled_workouts 
+      WHERE routine_instance_id = ${routineInstanceId} AND date >= ${today}
+    `;
+    
+    // Update each workout with the matching routine entry
+    for (const workout of futureWorkouts) {
+      const matchingEntry = routineEntries.find(e => e.dayIndex === workout.routineDayIndex);
+      if (matchingEntry && matchingEntry.exercises) {
+        await neonClient`
+          UPDATE scheduled_workouts 
+          SET name = ${matchingEntry.workoutName || 'Workout'}, 
+              exercises = ${JSON.stringify(matchingEntry.exercises)}
+          WHERE id = ${workout.id}
+        `;
+        updatedCount++;
+      }
+    }
+    
+    return updatedCount;
   }
 
   async updateScheduledWorkoutCalendarEventId(id: string, calendarEventId: string | null): Promise<void> {
