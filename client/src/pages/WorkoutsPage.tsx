@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { WorkoutEditorDialog, type WorkoutData } from "@/components/WorkoutEditorDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, Clock, Dumbbell, SkipForward } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, Clock, Dumbbell, SkipForward, FileEdit } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays, isBefore, startOfDay } from "date-fns";
@@ -728,8 +728,17 @@ export default function WorkoutsPage() {
                             data-testid={`button-edit-workout-${workout.displayId}`}
                           >
                             <Pencil className="h-4 w-4 mr-2" />
-                            Edit
+                            Edit This Instance
                           </DropdownMenuItem>
+                          {workout.templateId && (
+                            <DropdownMenuItem
+                              onClick={() => handleEditTemplate(workout.templateId!)}
+                              data-testid={`button-edit-source-${workout.displayId}`}
+                            >
+                              <FileEdit className="h-4 w-4 mr-2" />
+                              Edit Source Workout
+                            </DropdownMenuItem>
+                          )}
                           {workout.routineInstanceId && (
                             <DropdownMenuItem
                               onClick={() => handleSkipWorkout(workout.id)}
@@ -820,8 +829,17 @@ export default function WorkoutsPage() {
                             data-testid={`button-edit-workout-${workout.displayId}`}
                           >
                             <Pencil className="h-4 w-4 mr-2" />
-                            Edit
+                            Edit This Instance
                           </DropdownMenuItem>
+                          {workout.templateId && (
+                            <DropdownMenuItem
+                              onClick={() => handleEditTemplate(workout.templateId!)}
+                              data-testid={`button-edit-source-${workout.displayId}`}
+                            >
+                              <FileEdit className="h-4 w-4 mr-2" />
+                              Edit Source Workout
+                            </DropdownMenuItem>
+                          )}
                           {workout.routineInstanceId && (
                             <DropdownMenuItem
                               onClick={() => handleSkipWorkout(workout.id)}
