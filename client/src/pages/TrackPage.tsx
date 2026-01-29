@@ -448,16 +448,14 @@ export default function TrackPage() {
                               const newSets = [...sets];
                               newSets[index].completed = !!checked;
                               setCurrentSets(newSets);
-                              if (checked && index === currentSetIndex) {
-                                if (currentSetIndex < sets.length - 1) {
-                                  if (restTimerOnManualComplete) {
-                                    // Don't increment set index here - handleRestTimerClose will do it
-                                    setTrackingState("resting");
-                                  } else {
-                                    setCurrentSetIndex(currentSetIndex + 1);
-                                    setTrackingState("not_started");
-                                  }
-                                } else {
+                              if (checked) {
+                                // Start rest timer if setting is enabled
+                                if (restTimerOnManualComplete) {
+                                  setTrackingState("resting");
+                                }
+                                // If completing the current set, advance to next
+                                if (index === currentSetIndex && currentSetIndex < sets.length - 1 && !restTimerOnManualComplete) {
+                                  setCurrentSetIndex(currentSetIndex + 1);
                                   setTrackingState("not_started");
                                 }
                               }
@@ -520,16 +518,14 @@ export default function TrackPage() {
                               const newSets = [...sets];
                               newSets[index].completed = !!checked;
                               setCurrentSets(newSets);
-                              if (checked && index === currentSetIndex) {
-                                if (currentSetIndex < sets.length - 1) {
-                                  if (restTimerOnManualComplete) {
-                                    // Don't increment set index here - handleRestTimerClose will do it
-                                    setTrackingState("resting");
-                                  } else {
-                                    setCurrentSetIndex(currentSetIndex + 1);
-                                    setTrackingState("not_started");
-                                  }
-                                } else {
+                              if (checked) {
+                                // Start rest timer if setting is enabled
+                                if (restTimerOnManualComplete) {
+                                  setTrackingState("resting");
+                                }
+                                // If completing the current set, advance to next
+                                if (index === currentSetIndex && currentSetIndex < sets.length - 1 && !restTimerOnManualComplete) {
+                                  setCurrentSetIndex(currentSetIndex + 1);
                                   setTrackingState("not_started");
                                 }
                               }
