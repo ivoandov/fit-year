@@ -789,6 +789,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/workout-templates/:id/update-future-scheduled", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = (req.user as any)?.id;
+      
+      const template = await storage.getWorkoutTemplate(id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      if (template.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
+      const updatedCount = await storage.updateFutureScheduledWorkoutsByTemplate(
+        id,
+        template.name,
+        template.exercises
+      );
+      
+      res.json({ updatedCount });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update future scheduled workouts" });
+    }
+  });
+
   app.delete("/api/workout-templates/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;

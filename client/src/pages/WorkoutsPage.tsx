@@ -104,6 +104,8 @@ export default function WorkoutsPage() {
   const [editingCompletedWorkout, setEditingCompletedWorkout] = useState<{ id: string; name: string; exercises: Exercise[] } | null>(null);
   const [scheduleAgainWorkout, setScheduleAgainWorkout] = useState<{ name: string; exercises: Exercise[]; templateId?: string } | null>(null);
   const [scheduleAgainDate, setScheduleAgainDate] = useState<Date>(new Date());
+  const [updateFutureTemplateId, setUpdateFutureTemplateId] = useState<string | null>(null);
+  const [isUpdatingFuture, setIsUpdatingFuture] = useState(false);
 
   const { data: dbWorkouts = [], isLoading } = useQuery<DBScheduledWorkout[]>({
     queryKey: ["/api/scheduled-workouts"],
@@ -365,17 +367,33 @@ export default function WorkoutsPage() {
       }
       setEditingCompletedWorkout(null);
     } else if (editingTemplateId) {
-      // Editing an existing template
-      updateTemplateMutation.mutate({
-        id: editingTemplateId,
-        name: data.name,
-        exercises: data.exercises,
-      });
-      toast({
-        title: "Workout Updated",
-        description: `${data.name} has been updated successfully.`,
-      });
+      // Editing an existing template - use mutateAsync to await result
+      const templateId = editingTemplateId;
       setEditingTemplateId(null);
+      try {
+        await updateTemplateMutation.mutateAsync({
+          id: templateId,
+          name: data.name,
+          exercises: data.exercises,
+        });
+        toast({
+          title: "Workout Updated",
+          description: `${data.name} has been updated successfully.`,
+        });
+        // Check if there are future scheduled workouts with this template
+        const hasFutureScheduled = scheduledWorkouts.some(
+          w => w.templateId === templateId && w.date > new Date()
+        );
+        if (hasFutureScheduled) {
+          setUpdateFutureTemplateId(templateId);
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update workout. Please try again.",
+          variant: "destructive",
+        });
+      }
     } else if (data.id) {
       // Editing an existing scheduled workout
       updateMutation.mutate({
@@ -576,6 +594,31 @@ export default function WorkoutsPage() {
         });
       }
       setScheduleAgainWorkout(null);
+    }
+  };
+
+  const confirmUpdateFutureScheduled = async () => {
+    if (updateFutureTemplateId) {
+      setIsUpdatingFuture(true);
+      try {
+        const res = await apiRequest("POST", `/api/workout-templates/${updateFutureTemplateId}/update-future-scheduled`, {});
+        const result = await res.json();
+        queryClient.invalidateQueries({ queryKey: ["/api/scheduled-workouts"] });
+        toast({
+          title: "Future Workouts Updated",
+          description: `Updated ${result.updatedCount} future scheduled workout(s).`,
+        });
+      } catch (error) {
+        console.error("Failed to update future scheduled workouts:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update future scheduled workouts.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsUpdatingFuture(false);
+        setUpdateFutureTemplateId(null);
+      }
     }
   };
 
@@ -1081,6 +1124,23 @@ export default function WorkoutsPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!updateFutureTemplateId} onOpenChange={(open) => !open && setUpdateFutureTemplateId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Update Future Scheduled Workouts?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You have future scheduled workouts based on this workout. Would you like to update them with the new exercises?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-skip-update-future">No, keep them as is</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmUpdateFutureScheduled} disabled={isUpdatingFuture} data-testid="button-confirm-update-future">
+                {isUpdatingFuture ? "Updating..." : "Yes, update future workouts"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
