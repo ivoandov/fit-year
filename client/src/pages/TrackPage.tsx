@@ -491,10 +491,11 @@ export default function TrackPage() {
                         <div className="font-medium text-sm sm:text-base">{set.setNumber}</div>
                         <Input
                           type="number"
+                          step="0.1"
                           value={set.weight || ""}
                           onChange={(e) => {
                             const newSets = [...sets];
-                            newSets[index].weight = e.target.value === "" ? 0 : parseInt(e.target.value);
+                            newSets[index].weight = e.target.value === "" ? 0 : parseFloat(e.target.value);
                             setCurrentSets(newSets);
                           }}
                           className="text-center text-sm h-9 sm:h-10"
