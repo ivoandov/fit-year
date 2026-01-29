@@ -57,6 +57,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Backfill templateId for existing scheduled and completed workouts
+  app.post("/api/migrate-template-ids", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, error: "Not authenticated" });
+      }
+
+      // Get all workout templates for this user
+      const templates = await storage.getWorkoutTemplates(userId);
+      const templateMap = new Map<string, string>();
+      templates.forEach(t => {
+        if (t.name) {
+          templateMap.set(t.name.toLowerCase().trim(), t.id);
+        }
+      });
+
+      // Get scheduled workouts without templateId
+      const scheduledWorkouts = await storage.getScheduledWorkouts(userId);
+      let scheduledUpdated = 0;
+      for (const sw of scheduledWorkouts) {
+        if (!sw.templateId && sw.name) {
+          const matchedTemplateId = templateMap.get(sw.name.toLowerCase().trim());
+          if (matchedTemplateId) {
+            await storage.updateScheduledWorkout(sw.id, { templateId: matchedTemplateId });
+            scheduledUpdated++;
+          }
+        }
+      }
+
+      // Get completed workouts without templateId
+      const completedWorkouts = await storage.getCompletedWorkouts(userId);
+      let completedUpdated = 0;
+      for (const cw of completedWorkouts) {
+        if (!cw.templateId && cw.name) {
+          const matchedTemplateId = templateMap.get(cw.name.toLowerCase().trim());
+          if (matchedTemplateId) {
+            await storage.updateCompletedWorkout(cw.id, { templateId: matchedTemplateId });
+            completedUpdated++;
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        scheduledUpdated,
+        completedUpdated,
+        message: `Updated ${scheduledUpdated} scheduled workouts and ${completedUpdated} completed workouts`
+      });
+    } catch (error: any) {
+      console.error("Template ID migration error:", error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
   // Migrate base64 images to files - processes one at a time to avoid memory issues
   app.post("/api/migrate-images", async (req, res) => {
     try {

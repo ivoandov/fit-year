@@ -198,6 +198,34 @@ export default function SettingsPage() {
     });
   };
 
+  // Migrate template IDs for existing workouts
+  const migrateTemplateIdsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/migrate-template-ids');
+      return response.json();
+    },
+    onSuccess: (data: { scheduledUpdated: number; completedUpdated: number; message: string }) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/scheduled-workouts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/completed-workouts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/workout-templates'] });
+      toast({
+        title: "Template history synced",
+        description: data.message,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to sync template history",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleMigrateTemplateIds = () => {
+    migrateTemplateIdsMutation.mutate();
+  };
+
   const themeOptions = [
     {
       value: "light",
@@ -617,6 +645,46 @@ export default function SettingsPage() {
                 No muscle groups defined. Add some or reset to defaults.
               </p>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Data Migration */}
+        <Card data-testid="card-data-migration">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5" />
+              Workout Template History
+            </CardTitle>
+            <CardDescription>
+              Link your existing scheduled and completed workouts to their source templates to track completion history.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Sync Template Connections</p>
+                <p className="text-xs text-muted-foreground">
+                  Match workouts to templates by name to enable completion tracking
+                </p>
+              </div>
+              <Button
+                onClick={handleMigrateTemplateIds}
+                disabled={migrateTemplateIdsMutation.isPending}
+                data-testid="button-sync-template-history"
+              >
+                {migrateTemplateIdsMutation.isPending ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Sync Now
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
