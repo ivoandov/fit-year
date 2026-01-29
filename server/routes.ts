@@ -838,6 +838,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/workout-templates/:id/history", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = (req.user as any)?.id;
+      
+      const template = await storage.getWorkoutTemplate(id);
+      if (!template) {
+        return res.status(404).json({ error: "Template not found" });
+      }
+      
+      // Get all completed workouts that came from this template
+      const completedWorkouts = await storage.getCompletedWorkoutsByTemplateId(id, userId);
+      
+      res.json({
+        templateId: id,
+        templateName: template.name,
+        completionCount: completedWorkouts.length,
+        completions: completedWorkouts,
+      });
+    } catch (error) {
+      console.error("Failed to fetch template history:", error);
+      res.status(500).json({ error: "Failed to fetch template history" });
+    }
+  });
+
   // Scheduled Workouts (requires authentication)
   app.get("/api/scheduled-workouts", isAuthenticated, async (req: any, res) => {
     try {
@@ -1240,15 +1265,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/completed-workouts", isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any)?.id;
-      const { displayId, name, exercises, completedAt, localDate, scheduledWorkoutId } = req.body;
+      const { displayId, name, exercises, completedAt, localDate, scheduledWorkoutId, templateId } = req.body;
       
       if (!displayId || !name || !exercises) {
         return res.status(400).json({ error: "Missing required fields: displayId, name, exercises" });
       }
       
+      // Determine templateId - use provided value, or get from scheduled workout if available
+      let resolvedTemplateId = templateId || null;
+      if (!resolvedTemplateId && scheduledWorkoutId) {
+        const scheduledWorkout = await storage.getScheduledWorkout(scheduledWorkoutId);
+        if (scheduledWorkout?.templateId) {
+          resolvedTemplateId = scheduledWorkout.templateId;
+        }
+      }
+      
       const completedDate = completedAt ? new Date(completedAt) : new Date();
       const workout = await storage.createCompletedWorkout({
         userId,
+        templateId: resolvedTemplateId,
         displayId,
         name,
         exercises,

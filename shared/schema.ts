@@ -56,6 +56,7 @@ export const scheduledWorkouts = pgTable("scheduled_workouts", {
 export const completedWorkouts = pgTable("completed_workouts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id"),
+  templateId: varchar("template_id"),
   displayId: text("display_id").notNull(),
   name: text("name").notNull(),
   exercises: jsonb("exercises").notNull(),
