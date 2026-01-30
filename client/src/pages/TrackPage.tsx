@@ -568,7 +568,7 @@ export default function TrackPage() {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => setShowRestTimer(true)}
+                  onClick={() => setTrackingState("resting")}
                   data-testid="button-start-rest-timer"
                 >
                   <Play className="h-4 w-4" />
