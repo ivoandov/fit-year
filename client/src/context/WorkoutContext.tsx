@@ -93,10 +93,36 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     userRef.current = user;
   }, [user]);
 
-  // Load active workout from server when user is authenticated
+  // Helper to load from localStorage
+  const loadFromLocalStorage = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY);
+      if (saved) {
+        const localWorkout = JSON.parse(saved);
+        console.log("Restored active workout from localStorage:", localWorkout.name);
+        setActiveWorkout(localWorkout);
+        // Also load tracking progress from localStorage
+        const trackingSaved = localStorage.getItem(TRACKING_STORAGE_KEY);
+        if (trackingSaved) {
+          const trackingData = JSON.parse(trackingSaved);
+          if (trackingData.workoutDisplayId === localWorkout.displayId) {
+            setTrackingProgress(trackingData);
+          }
+        }
+        return true;
+      }
+    } catch (e) {
+      console.error("Failed to load from localStorage:", e);
+    }
+    return false;
+  }, []);
+
+  // Load active workout - from server for authenticated users, localStorage for guests
   useEffect(() => {
-    if (user && !hasLoadedFromServer) {
-      // First try to load from server
+    if (hasLoadedFromServer) return;
+    
+    if (user) {
+      // Authenticated user: try server first, then localStorage fallback
       fetch("/api/active-workout", { credentials: "include" })
         .then(res => res.ok ? res.json() : null)
         .then(data => {
@@ -108,44 +134,26 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
             }
           } else {
             // Fall back to localStorage for backward compatibility
-            try {
-              const saved = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY);
-              if (saved) {
-                const localWorkout = JSON.parse(saved);
-                setActiveWorkout(localWorkout);
-                // Also load tracking progress from localStorage
-                const trackingSaved = localStorage.getItem(TRACKING_STORAGE_KEY);
-                if (trackingSaved) {
-                  const trackingData = JSON.parse(trackingSaved);
-                  if (trackingData.workoutDisplayId === localWorkout.displayId) {
-                    setTrackingProgress(trackingData);
-                  }
-                }
-              }
-            } catch (e) {
-              console.error("Failed to load from localStorage:", e);
-            }
+            loadFromLocalStorage();
           }
           setHasLoadedFromServer(true);
         })
         .catch(err => {
           console.error("Failed to load active workout from server:", err);
-          // Fall back to localStorage
-          try {
-            const saved = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY);
-            if (saved) {
-              setActiveWorkout(JSON.parse(saved));
-            }
-          } catch (e) {
-            console.error("Failed to load from localStorage:", e);
-          }
+          loadFromLocalStorage();
           setHasLoadedFromServer(true);
         });
-    } else if (!user) {
-      // User logged out - don't clear workout, just reset server load state
-      setHasLoadedFromServer(false);
+    } else {
+      // Guest user: load from localStorage only
+      loadFromLocalStorage();
+      setHasLoadedFromServer(true);
     }
-  }, [user, hasLoadedFromServer]);
+  }, [user, hasLoadedFromServer, loadFromLocalStorage]);
+  
+  // Reset load state when user changes (login/logout)
+  useEffect(() => {
+    setHasLoadedFromServer(false);
+  }, [user?.id]);
 
   // Save to localStorage (synchronous, always works)
   const saveToLocalStorage = useCallback((workout: ActiveWorkout | null, progress: TrackingProgress | null) => {
