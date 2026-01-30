@@ -9,6 +9,7 @@ The app is structured as a utility-focused productivity tool with clear informat
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Testing preference: User tests on the published app, so any debugging/logging changes should be published before testing.
 
 ## System Architecture
 
