@@ -684,7 +684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if exercise exists and user has permission to edit
       const existingExercise = await storage.getExerciseWithImage(id);
       if (existingExercise) {
-        // Can only edit user's own exercises, not global ones
+        // Can only edit user's own exercises or global exercises (not other users' exercises)
         if (existingExercise.userId !== null && existingExercise.userId !== userId) {
           return res.status(403).json({ error: "Not authorized to edit this exercise" });
         }
@@ -694,26 +694,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parsed.success) {
         console.error("Validation error:", parsed.error.message);
         return res.status(400).json({ error: parsed.error.message });
-      }
-      
-      // If trying to edit a global exercise, create a user copy with the changes
-      if (existingExercise && existingExercise.userId === null) {
-        const muscleGroups = (parsed.data.muscleGroups || existingExercise.muscleGroups) as string[] || [];
-        const isPublic = !hasCustomMuscleGroup(muscleGroups);
-        
-        // Create user's copy of the exercise with the requested changes
-        const newExercise = await storage.createExercise({
-          name: parsed.data.name || existingExercise.name,
-          muscleGroups: muscleGroups,
-          description: parsed.data.description || existingExercise.description || "",
-          imageUrl: existingExercise.imageUrl,
-          exerciseType: parsed.data.exerciseType || existingExercise.exerciseType,
-          isAssisted: parsed.data.isAssisted !== undefined ? parsed.data.isAssisted : (existingExercise.isAssisted || false),
-          userId: userId,
-          isPublic: isPublic,
-        });
-        
-        return res.json(newExercise);
       }
       
       // If muscleGroups are being updated, recalculate isPublic
