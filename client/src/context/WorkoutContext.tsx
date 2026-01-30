@@ -97,22 +97,24 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   const loadFromLocalStorage = useCallback(() => {
     try {
       const saved = localStorage.getItem(ACTIVE_WORKOUT_STORAGE_KEY);
+      console.log("[WorkoutContext] localStorage has workout:", !!saved);
       if (saved) {
         const localWorkout = JSON.parse(saved);
-        console.log("Restored active workout from localStorage:", localWorkout.name);
+        console.log("[WorkoutContext] Restored active workout from localStorage:", localWorkout.name);
         setActiveWorkout(localWorkout);
         // Also load tracking progress from localStorage
         const trackingSaved = localStorage.getItem(TRACKING_STORAGE_KEY);
         if (trackingSaved) {
           const trackingData = JSON.parse(trackingSaved);
           if (trackingData.workoutDisplayId === localWorkout.displayId) {
+            console.log("[WorkoutContext] Restored tracking progress from localStorage");
             setTrackingProgress(trackingData);
           }
         }
         return true;
       }
     } catch (e) {
-      console.error("Failed to load from localStorage:", e);
+      console.error("[WorkoutContext] Failed to load from localStorage:", e);
     }
     return false;
   }, []);
@@ -121,30 +123,38 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (hasLoadedFromServer) return;
     
+    console.log("[WorkoutContext] Loading workout, user:", user ? user.id : "guest");
+    
     if (user) {
       // Authenticated user: try server first, then localStorage fallback
       fetch("/api/active-workout", { credentials: "include" })
-        .then(res => res.ok ? res.json() : null)
+        .then(res => {
+          console.log("[WorkoutContext] Server response status:", res.status);
+          return res.ok ? res.json() : null;
+        })
         .then(data => {
+          console.log("[WorkoutContext] Server data:", data);
           if (data && data.workoutData) {
-            console.log("Restored active workout from server:", data.workoutData.name);
+            console.log("[WorkoutContext] Restored active workout from server:", data.workoutData.name);
             setActiveWorkout(data.workoutData);
             if (data.trackingProgress) {
               setTrackingProgress(data.trackingProgress);
             }
           } else {
             // Fall back to localStorage for backward compatibility
+            console.log("[WorkoutContext] No server data, falling back to localStorage");
             loadFromLocalStorage();
           }
           setHasLoadedFromServer(true);
         })
         .catch(err => {
-          console.error("Failed to load active workout from server:", err);
+          console.error("[WorkoutContext] Failed to load active workout from server:", err);
           loadFromLocalStorage();
           setHasLoadedFromServer(true);
         });
     } else {
       // Guest user: load from localStorage only
+      console.log("[WorkoutContext] Guest user, loading from localStorage");
       loadFromLocalStorage();
       setHasLoadedFromServer(true);
     }
@@ -157,6 +167,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
 
   // Save to localStorage (synchronous, always works)
   const saveToLocalStorage = useCallback((workout: ActiveWorkout | null, progress: TrackingProgress | null) => {
+    console.log("[WorkoutContext] Saving to localStorage:", workout?.name || "null");
     if (workout) {
       localStorage.setItem(ACTIVE_WORKOUT_STORAGE_KEY, JSON.stringify(workout));
       if (progress) {
