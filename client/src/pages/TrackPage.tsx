@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { useWorkout } from "@/context/WorkoutContext";
 import { useSettings } from "@/components/SettingsProvider";
 import { useQuery } from "@tanstack/react-query";
 import type { Exercise } from "@shared/schema";
+import { useExerciseDetails } from "@/hooks/useExerciseDetails";
 
 interface SetData {
   setNumber: number;
@@ -60,6 +61,13 @@ export default function TrackPage() {
   const { data: exercises = [] } = useQuery<Exercise[]>({
     queryKey: ["/api/exercises"],
   });
+
+  const { enrichExercises } = useExerciseDetails();
+
+  const enrichedWorkoutExercises = useMemo(() => {
+    if (!activeWorkout?.exercises) return [];
+    return enrichExercises(activeWorkout.exercises as any[]);
+  }, [activeWorkout?.exercises, enrichExercises]);
 
   // Load saved progress from context on mount
   useEffect(() => {
@@ -213,11 +221,11 @@ export default function TrackPage() {
     );
   }
 
-  const currentExercise = activeWorkout.exercises[currentExerciseIndex];
+  const currentExercise = enrichedWorkoutExercises[currentExerciseIndex];
   const sets = getCurrentSets();
-  const progress = ((currentExerciseIndex + 1) / activeWorkout.exercises.length) * 100;
+  const progress = ((currentExerciseIndex + 1) / enrichedWorkoutExercises.length) * 100;
   const allSetsCompleted = sets.every(s => s.completed);
-  const isLastExercise = currentExerciseIndex === activeWorkout.exercises.length - 1;
+  const isLastExercise = currentExerciseIndex === enrichedWorkoutExercises.length - 1;
 
   const handlePrimaryAction = () => {
     if (trackingState === "not_started") {
@@ -271,7 +279,7 @@ export default function TrackPage() {
   };
 
   const handleNextExercise = () => {
-    if (currentExerciseIndex < activeWorkout.exercises.length - 1) {
+    if (currentExerciseIndex < enrichedWorkoutExercises.length - 1) {
       setCurrentExerciseIndex(currentExerciseIndex + 1);
       setCurrentSetIndex(0);
       setTrackingState("not_started");
@@ -351,7 +359,7 @@ export default function TrackPage() {
             {activeWorkout.name}
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Exercise {currentExerciseIndex + 1} of {activeWorkout.exercises.length}
+            Exercise {currentExerciseIndex + 1} of {enrichedWorkoutExercises.length}
           </p>
           <Progress value={progress} className="mt-3 sm:mt-4" data-testid="progress-workout" />
         </div>
@@ -380,7 +388,7 @@ export default function TrackPage() {
                 variant="outline"
                 size="icon"
                 onClick={handleNextExercise}
-                disabled={currentExerciseIndex === activeWorkout.exercises.length - 1}
+                disabled={currentExerciseIndex === enrichedWorkoutExercises.length - 1}
                 data-testid="button-next-exercise"
               >
                 <ChevronRight className="h-5 w-5" />
@@ -614,7 +622,7 @@ export default function TrackPage() {
           onClose={handleRestTimerClose}
           initialSeconds={restTimerDuration}
           exerciseName={currentExercise?.name}
-          nextExerciseName={currentExerciseIndex < activeWorkout.exercises.length - 1 ? activeWorkout.exercises[currentExerciseIndex + 1]?.name : undefined}
+          nextExerciseName={currentExerciseIndex < enrichedWorkoutExercises.length - 1 ? enrichedWorkoutExercises[currentExerciseIndex + 1]?.name : undefined}
         />
       </div>
     </div>

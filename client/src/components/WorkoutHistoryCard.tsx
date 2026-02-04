@@ -5,11 +5,12 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useWorkout } from "@/context/WorkoutContext";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useExerciseDetails } from "@/hooks/useExerciseDetails";
 
 interface SetDetail {
   setNumber?: number;
@@ -58,6 +59,11 @@ export function WorkoutHistoryCard({
   const [editedExercises, setEditedExercises] = useState<ExerciseDetail[]>([]);
   const { updateCompletedWorkout } = useWorkout();
   const { toast } = useToast();
+  const { enrichExercises } = useExerciseDetails();
+
+  const enrichedExercises = useMemo(() => {
+    return enrichExercises(exercises.map(ex => ({ ...ex, id: ex.id || "" })));
+  }, [exercises, enrichExercises]);
 
   const syncCalendarMutation = useMutation({
     mutationFn: async () => {
@@ -80,12 +86,12 @@ export function WorkoutHistoryCard({
     },
   });
 
-  const completedSets = totalSets || exercises.reduce((total, ex) => 
+  const completedSets = totalSets || enrichedExercises.reduce((total, ex) => 
     total + ex.sets.filter(s => s.completed).length, 0
   );
 
   const startEditing = () => {
-    setEditedExercises(exercises.map(ex => {
+    setEditedExercises(enrichedExercises.map(ex => {
       // If exercise has no sets, seed with one empty set so user can add data
       const sets = ex.sets.length > 0 
         ? ex.sets.map(s => ({ ...s }))
@@ -160,7 +166,7 @@ export function WorkoutHistoryCard({
     });
   };
 
-  const displayExercises = isEditing ? editedExercises : exercises;
+  const displayExercises = isEditing ? editedExercises : enrichedExercises;
 
   return (
     <Card data-testid={`card-history-${id}`}>
