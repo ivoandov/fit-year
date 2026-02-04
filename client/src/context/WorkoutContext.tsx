@@ -5,6 +5,7 @@ import { type Exercise } from "@/data/exercises";
 import { useAuth } from "@/hooks/use-auth";
 
 interface WorkoutExercise extends Exercise {
+  instanceId: string; // Unique ID for this exercise instance in the workout (stable across edits/reorders)
   sets: number;
   defaultWeight: number;
   defaultReps: number;
@@ -39,7 +40,7 @@ interface ExerciseSetData {
 
 interface TrackingProgress {
   workoutDisplayId: string;
-  exerciseSets: [number, ExerciseSetData[]][]; // Keyed by exercise index for stability during edits
+  exerciseSets: [string, ExerciseSetData[]][]; // Keyed by exercise instanceId for stability during edits/reorders
   currentExerciseIndex: number;
   currentSetIndex: number;
   restTimerDuration: number;
@@ -51,8 +52,8 @@ interface WorkoutContextType {
   isLoading: boolean;
   trackingProgress: TrackingProgress | null;
   startWorkout: (workout: { id: string; displayId: string; scheduledWorkoutId?: string; name: string; exercises: Exercise[] }) => void;
-  endWorkout: (exerciseSets?: Map<number, ExerciseSetData[]>) => void;
-  completeWorkout: (exerciseSets?: Map<number, ExerciseSetData[]>) => void;
+  endWorkout: (exerciseSets?: Map<string, ExerciseSetData[]>) => void;
+  completeWorkout: (exerciseSets?: Map<string, ExerciseSetData[]>) => void;
   isWorkoutCompleted: (displayId: string) => boolean;
   restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
   updateCompletedWorkout: (id: string, name: string, exercises?: any[]) => void;
@@ -400,8 +401,9 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       displayId: workout.displayId,
       scheduledWorkoutId: workout.scheduledWorkoutId || null,
       name: workout.name,
-      exercises: workout.exercises.map(ex => ({
+      exercises: workout.exercises.map((ex, index) => ({
         ...ex,
+        instanceId: `${workout.displayId}-${index}-${Date.now()}`, // Unique instance ID for this exercise
         sets: 3,
         defaultWeight: 135,
         defaultReps: 10,
@@ -410,7 +412,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     setActiveWorkout(workoutWithSets);
   };
 
-  const endWorkout = (exerciseSets?: Map<number, ExerciseSetData[]>) => {
+  const endWorkout = (exerciseSets?: Map<string, ExerciseSetData[]>) => {
     // Save the workout with whatever progress exists before ending
     if (activeWorkout) {
       completeWorkout(exerciseSets);
@@ -420,11 +422,11 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const completeWorkout = (exerciseSets?: Map<number, ExerciseSetData[]>) => {
+  const completeWorkout = (exerciseSets?: Map<string, ExerciseSetData[]>) => {
     if (activeWorkout) {
-      // Merge set data into exercises by index
-      const exercisesWithSets = activeWorkout.exercises.map((exercise, index) => {
-        const sets = exerciseSets?.get(index);
+      // Merge set data into exercises by instanceId
+      const exercisesWithSets = activeWorkout.exercises.map((exercise) => {
+        const sets = exerciseSets?.get(exercise.instanceId);
         if (sets) {
           const completedSets = sets.filter(s => s.completed);
           return {
@@ -484,15 +486,33 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
 
   const updateActiveWorkout = (name: string, exercises: Exercise[]) => {
     if (activeWorkout) {
-      setActiveWorkout({
-        ...activeWorkout,
-        name,
-        exercises: exercises.map(ex => ({
+      // Preserve instanceIds for existing exercises, create new ones for added exercises
+      const updatedExercises = exercises.map((ex, index) => {
+        // Check if this exercise already has an instanceId (from existing workout)
+        const existingExercise = activeWorkout.exercises.find(
+          (existing) => (existing as any).instanceId && 
+            (existing.id === ex.id || index < activeWorkout.exercises.length)
+        );
+        
+        // Try to match by position first (for swapped exercises that keep their slot)
+        const exerciseAtPosition = activeWorkout.exercises[index];
+        const instanceId = (exerciseAtPosition as any)?.instanceId || 
+          (existingExercise as any)?.instanceId || 
+          `${activeWorkout.displayId}-${index}-${Date.now()}`;
+        
+        return {
           ...ex,
+          instanceId,
           sets: 3,
           defaultWeight: 135,
           defaultReps: 10,
-        })),
+        };
+      });
+      
+      setActiveWorkout({
+        ...activeWorkout,
+        name,
+        exercises: updatedExercises,
       });
     }
   };

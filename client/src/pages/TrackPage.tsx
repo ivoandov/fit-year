@@ -28,7 +28,7 @@ const TRACKING_STORAGE_KEY = "workout_tracking_progress";
 
 interface SavedTrackingProgress {
   workoutDisplayId: string;
-  exerciseSets: [number, SetData[]][]; // Keyed by exercise index for stability during edits
+  exerciseSets: [string, SetData[]][]; // Keyed by exercise instanceId for stability during edits/reorders
   currentExerciseIndex: number;
   currentSetIndex: number;
   restTimerDuration: number;
@@ -53,7 +53,7 @@ export default function TrackPage() {
   const [trackingState, setTrackingState] = useState<TrackingState>("not_started");
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [restTimerDuration, setRestTimerDuration] = useState(90);
-  const [exerciseSets, setExerciseSets] = useState<Map<number, SetData[]>>(new Map()); // Keyed by exercise index for stability during edits
+  const [exerciseSets, setExerciseSets] = useState<Map<string, SetData[]>>(new Map()); // Keyed by exercise instanceId for stability
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [hasLoadedSavedProgress, setHasLoadedSavedProgress] = useState(false);
 
@@ -66,10 +66,10 @@ export default function TrackPage() {
     if (activeWorkout && !hasLoadedSavedProgress) {
       if (trackingProgress && trackingProgress.workoutDisplayId === activeWorkout.displayId) {
         console.log("Restoring tracking progress from server");
-        // Restore progress - key is the numeric index
-        const restoredMap = new Map<number, SetData[]>();
-        for (const [index, sets] of trackingProgress.exerciseSets) {
-          restoredMap.set(index, sets);
+        // Restore progress - key is the instanceId
+        const restoredMap = new Map<string, SetData[]>();
+        for (const [instanceId, sets] of trackingProgress.exerciseSets) {
+          restoredMap.set(instanceId, sets);
         }
         setExerciseSets(restoredMap);
         setCurrentExerciseIndex(trackingProgress.currentExerciseIndex);
@@ -170,25 +170,26 @@ export default function TrackPage() {
   };
 
   const getCurrentSets = (): SetData[] => {
-    const currentExercise = activeWorkout?.exercises[currentExerciseIndex];
+    const currentExercise = activeWorkout?.exercises[currentExerciseIndex] as any;
     if (!currentExercise) return getDefaultSets();
-    return exerciseSets.get(currentExerciseIndex) || getDefaultSets(currentExercise.id, currentExercise.exerciseType);
+    const instanceId = currentExercise.instanceId;
+    return exerciseSets.get(instanceId) || getDefaultSets(currentExercise.id, currentExercise.exerciseType);
   };
 
   const setCurrentSets = (sets: SetData[]) => {
-    const currentExercise = activeWorkout?.exercises[currentExerciseIndex];
-    if (!currentExercise) return;
+    const currentExercise = activeWorkout?.exercises[currentExerciseIndex] as any;
+    if (!currentExercise?.instanceId) return;
     const newMap = new Map(exerciseSets);
-    newMap.set(currentExerciseIndex, sets);
+    newMap.set(currentExercise.instanceId, sets);
     setExerciseSets(newMap);
   };
 
   useEffect(() => {
     if (activeWorkout) {
-      const currentEx = activeWorkout.exercises[currentExerciseIndex];
-      if (currentEx && !exerciseSets.has(currentExerciseIndex)) {
+      const currentEx = activeWorkout.exercises[currentExerciseIndex] as any;
+      if (currentEx?.instanceId && !exerciseSets.has(currentEx.instanceId)) {
         const newMap = new Map(exerciseSets);
-        newMap.set(currentExerciseIndex, getDefaultSets(currentEx.id, currentEx.exerciseType));
+        newMap.set(currentEx.instanceId, getDefaultSets(currentEx.id, currentEx.exerciseType));
         setExerciseSets(newMap);
       }
     }
