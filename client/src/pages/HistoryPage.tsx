@@ -21,10 +21,12 @@ export default function HistoryPage() {
       const enrichedEx = enrichExercise({ ...ex, id: ex.id || "" });
       const sets = ex.setsData || [];
       sets.forEach((set: any) => {
-        if (set.completed && set.weight && set.reps) {
-          workoutVolume += set.weight * set.reps;
-        }
-        if (set.completed) {
+        // Count sets that have data (weight/reps or distance/time) or are marked completed
+        const hasData = (set.weight && set.reps) || (set.distance && set.time);
+        if (hasData || set.completed) {
+          if (set.weight && set.reps) {
+            workoutVolume += set.weight * set.reps;
+          }
           totalSets++;
         }
       });
@@ -85,9 +87,12 @@ export default function HistoryPage() {
     historyData.forEach((workout) => {
       if (isWithinRange(workout.date, last7DaysStart, todayEnd)) {
         workout.exercises?.forEach((exercise) => {
-          const completedSetCount = exercise.sets?.filter((s: any) => s.completed).length || 0;
+          // Count sets that have data or are marked completed
+          const setCount = exercise.sets?.filter((s: any) => 
+            (s.weight && s.reps) || (s.distance && s.time) || s.completed
+          ).length || 0;
           exercise.muscleGroups?.forEach((muscle: string) => {
-            setsByMuscle[muscle] = (setsByMuscle[muscle] || 0) + completedSetCount;
+            setsByMuscle[muscle] = (setsByMuscle[muscle] || 0) + setCount;
           });
         });
       }

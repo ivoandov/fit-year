@@ -114,12 +114,13 @@ export function WorkoutHistoryCard({
   const saveEditing = async () => {
     if (!workoutId) return;
     
+    // Ensure all sets are marked as completed when saving a completed workout edit
     const updatedExercises = editedExercises.map(ex => ({
       id: ex.id,
       name: ex.name,
       muscleGroups: ex.muscleGroups || [],
       exerciseType: ex.exerciseType || 'weight_reps',
-      setsData: ex.sets,
+      setsData: ex.sets.map(set => ({ ...set, completed: true })),
     }));
     
     setIsSaving(true);
@@ -255,12 +256,15 @@ export function WorkoutHistoryCard({
             </div>
             <div className="space-y-3 sm:space-y-4">
               {displayExercises.map((exercise, exIdx) => {
-                const completedSetsForExercise = exercise.sets.filter(s => s.completed);
-                // In edit mode, show exercises even with no completed sets so user can add data
-                // In view mode, skip exercises with no completed sets
-                if (completedSetsForExercise.length === 0 && !isEditing) return null;
+                // For completed workouts, show all sets (they're all considered completed)
+                // In edit mode, show all sets for editing
+                // In view mode, show all sets with data (weight/reps or distance/time)
+                const setsWithData = exercise.sets.filter(s => 
+                  (s.weight && s.reps) || (s.distance && s.time) || s.completed
+                );
+                if (setsWithData.length === 0 && !isEditing) return null;
                 
-                const setsToDisplay = isEditing ? exercise.sets : completedSetsForExercise;
+                const setsToDisplay = isEditing ? exercise.sets : setsWithData;
                 const isCardioStyle = exercise.exerciseType === 'time_distance';
                 
                 return (
