@@ -39,7 +39,7 @@ interface ExerciseSetData {
 
 interface TrackingProgress {
   workoutDisplayId: string;
-  exerciseSets: [string, ExerciseSetData[]][]; // Keyed by exercise ID for stability
+  exerciseSets: [number, ExerciseSetData[]][]; // Keyed by exercise index for stability during edits
   currentExerciseIndex: number;
   currentSetIndex: number;
   restTimerDuration: number;
@@ -51,8 +51,8 @@ interface WorkoutContextType {
   isLoading: boolean;
   trackingProgress: TrackingProgress | null;
   startWorkout: (workout: { id: string; displayId: string; scheduledWorkoutId?: string; name: string; exercises: Exercise[] }) => void;
-  endWorkout: (exerciseSets?: Map<string, ExerciseSetData[]>) => void;
-  completeWorkout: (exerciseSets?: Map<string, ExerciseSetData[]>) => void;
+  endWorkout: (exerciseSets?: Map<number, ExerciseSetData[]>) => void;
+  completeWorkout: (exerciseSets?: Map<number, ExerciseSetData[]>) => void;
   isWorkoutCompleted: (displayId: string) => boolean;
   restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
   updateCompletedWorkout: (id: string, name: string, exercises?: any[]) => void;
@@ -410,7 +410,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     setActiveWorkout(workoutWithSets);
   };
 
-  const endWorkout = (exerciseSets?: Map<string, ExerciseSetData[]>) => {
+  const endWorkout = (exerciseSets?: Map<number, ExerciseSetData[]>) => {
     // Save the workout with whatever progress exists before ending
     if (activeWorkout) {
       completeWorkout(exerciseSets);
@@ -420,13 +420,11 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const completeWorkout = (exerciseSets?: Map<string, ExerciseSetData[]>) => {
+  const completeWorkout = (exerciseSets?: Map<number, ExerciseSetData[]>) => {
     if (activeWorkout) {
-      // Merge set data into exercises by index-exerciseId key
+      // Merge set data into exercises by index
       const exercisesWithSets = activeWorkout.exercises.map((exercise, index) => {
-        // Key format is "index-exerciseId" to ensure uniqueness for duplicate exercises
-        const key = `${index}-${exercise.id}`;
-        const sets = exerciseSets?.get(key);
+        const sets = exerciseSets?.get(index);
         if (sets) {
           const completedSets = sets.filter(s => s.completed);
           return {
