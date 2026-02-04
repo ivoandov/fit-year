@@ -422,9 +422,11 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
 
   const completeWorkout = (exerciseSets?: Map<string, ExerciseSetData[]>) => {
     if (activeWorkout) {
-      // Merge set data into exercises by exercise ID
-      const exercisesWithSets = activeWorkout.exercises.map((exercise) => {
-        const sets = exerciseSets?.get(exercise.id);
+      // Merge set data into exercises by index-exerciseId key
+      const exercisesWithSets = activeWorkout.exercises.map((exercise, index) => {
+        // Key format is "index-exerciseId" to ensure uniqueness for duplicate exercises
+        const key = `${index}-${exercise.id}`;
+        const sets = exerciseSets?.get(key);
         if (sets) {
           const completedSets = sets.filter(s => s.completed);
           return {

@@ -53,8 +53,11 @@ export default function TrackPage() {
   const [trackingState, setTrackingState] = useState<TrackingState>("not_started");
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
   const [restTimerDuration, setRestTimerDuration] = useState(90);
-  const [exerciseSets, setExerciseSets] = useState<Map<string, SetData[]>>(new Map()); // Keyed by exercise ID
+  const [exerciseSets, setExerciseSets] = useState<Map<string, SetData[]>>(new Map()); // Keyed by index-exerciseId for uniqueness
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Create a unique key for each exercise position in the workout
+  const getExerciseKey = (index: number, exerciseId: string) => `${index}-${exerciseId}`;
   const [hasLoadedSavedProgress, setHasLoadedSavedProgress] = useState(false);
 
   const { data: exercises = [] } = useQuery<Exercise[]>({
@@ -66,19 +69,11 @@ export default function TrackPage() {
     if (activeWorkout && !hasLoadedSavedProgress) {
       if (trackingProgress && trackingProgress.workoutDisplayId === activeWorkout.displayId) {
         console.log("Restoring tracking progress from server");
-        // Handle backward compatibility: old data used numeric indices, new uses exercise IDs
+        // Handle backward compatibility and restore progress
         const restoredMap = new Map<string, SetData[]>();
         for (const [key, sets] of trackingProgress.exerciseSets) {
-          if (typeof key === 'number') {
-            // Old format: numeric index - convert to exercise ID
-            const exercise = activeWorkout.exercises[key];
-            if (exercise) {
-              restoredMap.set(exercise.id, sets);
-            }
-          } else {
-            // New format: string exercise ID
-            restoredMap.set(key, sets);
-          }
+          // Key format is now "index-exerciseId"
+          restoredMap.set(key, sets);
         }
         setExerciseSets(restoredMap);
         setCurrentExerciseIndex(trackingProgress.currentExerciseIndex);
@@ -181,24 +176,29 @@ export default function TrackPage() {
   const getCurrentSets = (): SetData[] => {
     const currentExercise = activeWorkout?.exercises[currentExerciseIndex];
     if (!currentExercise) return getDefaultSets();
-    return exerciseSets.get(currentExercise.id) || getDefaultSets(currentExercise.id, currentExercise.exerciseType);
+    const key = getExerciseKey(currentExerciseIndex, currentExercise.id);
+    return exerciseSets.get(key) || getDefaultSets(currentExercise.id, currentExercise.exerciseType);
   };
 
   const setCurrentSets = (sets: SetData[]) => {
     const currentExercise = activeWorkout?.exercises[currentExerciseIndex];
     if (!currentExercise) return;
+    const key = getExerciseKey(currentExerciseIndex, currentExercise.id);
     const newMap = new Map(exerciseSets);
-    newMap.set(currentExercise.id, sets);
+    newMap.set(key, sets);
     setExerciseSets(newMap);
   };
 
   useEffect(() => {
     if (activeWorkout) {
       const currentEx = activeWorkout.exercises[currentExerciseIndex];
-      if (currentEx && !exerciseSets.has(currentEx.id)) {
-        const newMap = new Map(exerciseSets);
-        newMap.set(currentEx.id, getDefaultSets(currentEx.id, currentEx.exerciseType));
-        setExerciseSets(newMap);
+      if (currentEx) {
+        const key = getExerciseKey(currentExerciseIndex, currentEx.id);
+        if (!exerciseSets.has(key)) {
+          const newMap = new Map(exerciseSets);
+          newMap.set(key, getDefaultSets(currentEx.id, currentEx.exerciseType));
+          setExerciseSets(newMap);
+        }
       }
     }
   }, [currentExerciseIndex, activeWorkout]);
