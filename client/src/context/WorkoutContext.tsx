@@ -56,7 +56,7 @@ interface WorkoutContextType {
   completeWorkout: (exerciseSets?: Map<string, ExerciseSetData[]>) => void;
   isWorkoutCompleted: (displayId: string) => boolean;
   restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
-  updateCompletedWorkout: (id: string, name: string, exercises?: any[]) => void;
+  updateCompletedWorkout: (id: string, name: string, exercises?: any[]) => Promise<boolean>;
   deleteCompletedWorkout: (id: string) => void;
   updateActiveWorkout: (name: string, exercises: Exercise[]) => void;
   saveTrackingProgress: (progress: TrackingProgress) => void;
@@ -476,8 +476,14 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateCompletedWorkout = (id: string, name: string, exercises?: any[]) => {
-    updateCompletedMutation.mutate({ id, name, exercises });
+  const updateCompletedWorkout = async (id: string, name: string, exercises?: any[]): Promise<boolean> => {
+    try {
+      await updateCompletedMutation.mutateAsync({ id, name, exercises });
+      return true;
+    } catch (error) {
+      console.error("Failed to update completed workout:", error);
+      return false;
+    }
   };
 
   const deleteCompletedWorkout = (id: string) => {

@@ -109,7 +109,9 @@ export function WorkoutHistoryCard({
     setEditedExercises([]);
   };
 
-  const saveEditing = () => {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const saveEditing = async () => {
     if (!workoutId) return;
     
     const updatedExercises = editedExercises.map(ex => ({
@@ -120,9 +122,24 @@ export function WorkoutHistoryCard({
       setsData: ex.sets,
     }));
     
-    updateCompletedWorkout(workoutId, workoutName, updatedExercises);
-    setIsEditing(false);
-    setEditedExercises([]);
+    setIsSaving(true);
+    const success = await updateCompletedWorkout(workoutId, workoutName, updatedExercises);
+    setIsSaving(false);
+    
+    if (success) {
+      setIsEditing(false);
+      setEditedExercises([]);
+      toast({
+        title: "Saved",
+        description: "Workout updated successfully",
+      });
+    } else {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save workout changes. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const updateSet = (exerciseIdx: number, setIdx: number, field: keyof SetDetail, value: number) => {
@@ -210,9 +227,9 @@ export function WorkoutHistoryCard({
                     <X className="h-4 w-4 mr-1" />
                     Cancel
                   </Button>
-                  <Button size="sm" onClick={saveEditing} data-testid={`button-save-edit-${id}`}>
+                  <Button size="sm" onClick={saveEditing} disabled={isSaving} data-testid={`button-save-edit-${id}`}>
                     <Check className="h-4 w-4 mr-1" />
-                    Save
+                    {isSaving ? "Saving..." : "Save"}
                   </Button>
                 </>
               ) : (
