@@ -90,6 +90,8 @@ export default function ExercisesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/exercises"] });
+      // Also invalidate completed workouts so stats update with new muscle groups
+      queryClient.invalidateQueries({ queryKey: ["/api/completed-workouts"] });
       setEditingExercise(null);
       toast({
         title: "Exercise Updated",
