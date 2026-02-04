@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { WorkoutHistoryCard } from "@/components/WorkoutHistoryCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Calendar, Flame, Activity } from "lucide-react";
@@ -5,17 +6,19 @@ import { Progress } from "@/components/ui/progress";
 import { startOfWeek, startOfMonth, isAfter, isBefore, isEqual, endOfDay } from "date-fns";
 import { useWorkout } from "@/context/WorkoutContext";
 import { useSettings } from "@/components/SettingsProvider";
+import { useExerciseDetails } from "@/hooks/useExerciseDetails";
 
 export default function HistoryPage() {
   const { completedWorkouts } = useWorkout();
   const { weekStart: weekStartDay, muscleGroups } = useSettings();
+  const { enrichExercise } = useExerciseDetails();
 
-  const historyData = completedWorkouts.map((workout, index) => {
-    // Calculate total volume from actual set data (weight × reps)
+  const historyData = useMemo(() => completedWorkouts.map((workout, index) => {
     let workoutVolume = 0;
     let totalSets = 0;
     
     const exercises = workout.exercises.map((ex: any) => {
+      const enrichedEx = enrichExercise({ ...ex, id: ex.id || "" });
       const sets = ex.setsData || [];
       sets.forEach((set: any) => {
         if (set.completed && set.weight && set.reps) {
@@ -26,8 +29,10 @@ export default function HistoryPage() {
         }
       });
       return {
-        name: ex.name,
-        muscleGroups: ex.muscleGroups || [],
+        id: enrichedEx.id,
+        name: enrichedEx.name,
+        muscleGroups: enrichedEx.muscleGroups || [],
+        exerciseType: enrichedEx.exerciseType,
         sets,
       };
     });
@@ -37,14 +42,14 @@ export default function HistoryPage() {
       workoutId: workout.id,
       workoutName: workout.name,
       date: workout.completedAt,
-      duration: 0, // Duration tracking not yet implemented
+      duration: 0,
       exerciseCount: workout.exercises.length,
       totalVolume: workoutVolume,
       totalSets,
       exercises,
       calendarEventId: workout.calendarEventId,
     };
-  });
+  }), [completedWorkouts, enrichExercise]);
 
   const now = new Date();
   const todayEnd = endOfDay(now);

@@ -84,6 +84,13 @@ Testing preference: User tests on the published app, so any debugging/logging ch
 - The frontend fetches all exercises from `/api/exercises` - no client-side merging needed
 - Image regeneration via AI is available for all exercises (both built-in and custom)
 
+**Exercise Reference Architecture**
+- Exercises are always referenced by ID throughout the system (workouts, routines, history)
+- The `useExerciseDetails` hook enriches stored exercise data with fresh data from the source exercise
+- This ensures that exercise updates (name changes, image regeneration, etc.) are reflected everywhere
+- Stored workout data contains exercise IDs; display components fetch current exercise details at render time
+- If a source exercise is deleted, the stored name/data serves as a fallback
+
 **Schema Features**
 - UUID primary keys using PostgreSQL's `gen_random_uuid()`
 - Text arrays for storing exercise collections in workouts

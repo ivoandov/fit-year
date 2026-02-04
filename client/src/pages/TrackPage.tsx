@@ -178,14 +178,14 @@ export default function TrackPage() {
   };
 
   const getCurrentSets = (): SetData[] => {
-    const currentExercise = activeWorkout?.exercises[currentExerciseIndex] as any;
+    const currentExercise = enrichedWorkoutExercises[currentExerciseIndex] as any;
     if (!currentExercise) return getDefaultSets();
     const instanceId = currentExercise.instanceId;
     return exerciseSets.get(instanceId) || getDefaultSets(currentExercise.id, currentExercise.exerciseType);
   };
 
   const setCurrentSets = (sets: SetData[]) => {
-    const currentExercise = activeWorkout?.exercises[currentExerciseIndex] as any;
+    const currentExercise = enrichedWorkoutExercises[currentExerciseIndex] as any;
     if (!currentExercise?.instanceId) return;
     const newMap = new Map(exerciseSets);
     newMap.set(currentExercise.instanceId, sets);
@@ -193,15 +193,15 @@ export default function TrackPage() {
   };
 
   useEffect(() => {
-    if (activeWorkout) {
-      const currentEx = activeWorkout.exercises[currentExerciseIndex] as any;
+    if (enrichedWorkoutExercises.length > 0) {
+      const currentEx = enrichedWorkoutExercises[currentExerciseIndex] as any;
       if (currentEx?.instanceId && !exerciseSets.has(currentEx.instanceId)) {
         const newMap = new Map(exerciseSets);
         newMap.set(currentEx.instanceId, getDefaultSets(currentEx.id, currentEx.exerciseType));
         setExerciseSets(newMap);
       }
     }
-  }, [currentExerciseIndex, activeWorkout]);
+  }, [currentExerciseIndex, enrichedWorkoutExercises]);
 
   if (!activeWorkout) {
     return (

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useCallback } from "react";
 import type { Exercise } from "@shared/schema";
 
 interface StoredExercise {
@@ -27,12 +28,12 @@ export function useExerciseDetails() {
     queryKey: ["/api/exercises"],
   });
 
-  const getExerciseById = (id: string): Exercise | undefined => {
+  const getExerciseById = useCallback((id: string): Exercise | undefined => {
     return allExercises.find(ex => ex.id === id);
-  };
+  }, [allExercises]);
 
-  const enrichExercise = <T extends StoredExercise>(storedExercise: T): T & EnrichedExercise => {
-    const sourceExercise = getExerciseById(storedExercise.id);
+  const enrichExercise = useCallback(<T extends StoredExercise>(storedExercise: T): T & EnrichedExercise => {
+    const sourceExercise = allExercises.find(ex => ex.id === storedExercise.id);
     
     if (sourceExercise) {
       return {
@@ -55,11 +56,11 @@ export function useExerciseDetails() {
       exerciseType: storedExercise.exerciseType || "weight_reps",
       isAssisted: storedExercise.isAssisted || false,
     } as T & EnrichedExercise;
-  };
+  }, [allExercises]);
 
-  const enrichExercises = <T extends StoredExercise>(storedExercises: T[]): (T & EnrichedExercise)[] => {
+  const enrichExercises = useCallback(<T extends StoredExercise>(storedExercises: T[]): (T & EnrichedExercise)[] => {
     return storedExercises.map(ex => enrichExercise(ex));
-  };
+  }, [enrichExercise]);
 
   return {
     allExercises,
