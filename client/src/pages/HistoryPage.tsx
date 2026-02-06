@@ -22,9 +22,9 @@ export default function HistoryPage() {
       const sets = ex.setsData || [];
       sets.forEach((set: any) => {
         // Count sets that have data (weight/reps or distance/time) or are marked completed
-        const hasData = (set.weight && set.reps) || (set.distance && set.time);
+        const hasData = (set.weight != null && set.reps) || (set.distance && set.time);
         if (hasData || set.completed) {
-          if (set.weight && set.reps) {
+          if (set.weight != null && set.reps) {
             workoutVolume += set.weight * set.reps;
           }
           totalSets++;
@@ -89,7 +89,7 @@ export default function HistoryPage() {
         workout.exercises?.forEach((exercise) => {
           // Count sets that have data or are marked completed
           const setCount = exercise.sets?.filter((s: any) => 
-            (s.weight && s.reps) || (s.distance && s.time) || s.completed
+            (s.weight != null && s.reps) || (s.distance && s.time) || s.completed
           ).length || 0;
           exercise.muscleGroups?.forEach((muscle: string) => {
             setsByMuscle[muscle] = (setsByMuscle[muscle] || 0) + setCount;

@@ -260,7 +260,7 @@ export function WorkoutHistoryCard({
                 // In edit mode, show all sets for editing
                 // In view mode, show all sets with data (weight/reps or distance/time)
                 const setsWithData = exercise.sets.filter(s => 
-                  (s.weight && s.reps) || (s.distance && s.time) || s.completed
+                  (s.weight != null && s.reps) || (s.distance && s.time) || s.completed
                 );
                 if (setsWithData.length === 0 && !isEditing) return null;
                 
@@ -302,7 +302,7 @@ export function WorkoutHistoryCard({
                                 <>
                                   <Input
                                     type="number"
-                                    value={set.weight || ""}
+                                    value={set.weight ?? ""}
                                     onChange={(e) => updateSet(exIdx, originalSetIdx, 'weight', parseInt(e.target.value) || 0)}
                                     className="w-16 h-8 text-center"
                                     data-testid={`input-weight-${id}-${exIdx}-${setIdx}`}
@@ -310,7 +310,7 @@ export function WorkoutHistoryCard({
                                   <span>lbs ×</span>
                                   <Input
                                     type="number"
-                                    value={set.reps || ""}
+                                    value={set.reps ?? ""}
                                     onChange={(e) => updateSet(exIdx, originalSetIdx, 'reps', parseInt(e.target.value) || 0)}
                                     className="w-16 h-8 text-center"
                                     data-testid={`input-reps-${id}-${exIdx}-${setIdx}`}
@@ -335,7 +335,7 @@ export function WorkoutHistoryCard({
                         
                         return (
                           <div key={setIdx} data-testid={`text-set-${id}-${exIdx}-${setIdx}`}>
-                            {set.weight && set.reps ? (
+                            {set.weight != null && set.reps ? (
                               `Set ${setIdx + 1}: ${set.weight} lbs × ${set.reps}`
                             ) : set.distance && set.time ? (
                               `Set ${setIdx + 1}: ${set.distance} mi in ${set.time} min`

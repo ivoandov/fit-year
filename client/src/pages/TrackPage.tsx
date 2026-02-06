@@ -492,7 +492,7 @@ export default function TrackPage() {
                         <Input
                           type="number"
                           step="0.1"
-                          value={set.weight || ""}
+                          value={set.weight ?? ""}
                           onChange={(e) => {
                             const newSets = [...sets];
                             newSets[index].weight = e.target.value === "" ? 0 : parseFloat(e.target.value);
@@ -503,7 +503,7 @@ export default function TrackPage() {
                         />
                         <Input
                           type="number"
-                          value={set.reps || ""}
+                          value={set.reps ?? ""}
                           onChange={(e) => {
                             const newSets = [...sets];
                             newSets[index].reps = e.target.value === "" ? 0 : parseInt(e.target.value);
