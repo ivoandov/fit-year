@@ -283,16 +283,16 @@ export function WorkoutHistoryCard({
                                   <Input
                                     type="number"
                                     step="0.1"
-                                    value={set.distance || ""}
-                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'distance', parseFloat(e.target.value) || 0)}
+                                    value={set.distance ?? ""}
+                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'distance', e.target.value === "" ? 0 : parseFloat(e.target.value))}
                                     className="w-16 h-8 text-center"
                                     data-testid={`input-distance-${id}-${exIdx}-${setIdx}`}
                                   />
                                   <span>mi in</span>
                                   <Input
                                     type="number"
-                                    value={set.time || ""}
-                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'time', parseInt(e.target.value) || 0)}
+                                    value={set.time ?? ""}
+                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'time', e.target.value === "" ? 0 : parseInt(e.target.value))}
                                     className="w-16 h-8 text-center"
                                     data-testid={`input-time-${id}-${exIdx}-${setIdx}`}
                                   />
@@ -303,7 +303,7 @@ export function WorkoutHistoryCard({
                                   <Input
                                     type="number"
                                     value={set.weight ?? ""}
-                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'weight', parseInt(e.target.value) || 0)}
+                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'weight', e.target.value === "" ? 0 : parseInt(e.target.value))}
                                     className="w-16 h-8 text-center"
                                     data-testid={`input-weight-${id}-${exIdx}-${setIdx}`}
                                   />
@@ -311,7 +311,7 @@ export function WorkoutHistoryCard({
                                   <Input
                                     type="number"
                                     value={set.reps ?? ""}
-                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'reps', parseInt(e.target.value) || 0)}
+                                    onChange={(e) => updateSet(exIdx, originalSetIdx, 'reps', e.target.value === "" ? 0 : parseInt(e.target.value))}
                                     className="w-16 h-8 text-center"
                                     data-testid={`input-reps-${id}-${exIdx}-${setIdx}`}
                                   />

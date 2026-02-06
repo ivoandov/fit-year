@@ -31,10 +31,10 @@ export interface CompletedWorkoutRecord {
 
 interface ExerciseSetData {
   setNumber: number;
-  weight: number;
-  reps: number;
-  distance: number;
-  time: number;
+  weight: number | null;
+  reps: number | null;
+  distance: number | null;
+  time: number | null;
   completed: boolean;
 }
 
@@ -428,11 +428,18 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
       const exercisesWithSets = activeWorkout.exercises.map((exercise) => {
         const sets = exerciseSets?.get(exercise.instanceId);
         if (sets) {
-          const completedSets = sets.filter(s => s.completed);
+          const normalizedSets = sets.map(s => ({
+            ...s,
+            weight: s.weight ?? 0,
+            reps: s.reps ?? 0,
+            distance: s.distance ?? 0,
+            time: s.time ?? 0,
+          }));
+          const completedSets = normalizedSets.filter(s => s.completed);
           return {
             ...exercise,
             completedSets: completedSets.length,
-            setsData: sets,
+            setsData: normalizedSets,
           };
         }
         return {

@@ -16,10 +16,10 @@ import { useExerciseDetails } from "@/hooks/useExerciseDetails";
 
 interface SetData {
   setNumber: number;
-  weight: number;
-  reps: number;
-  distance: number;
-  time: number;
+  weight: number | null;
+  reps: number | null;
+  distance: number | null;
+  time: number | null;
   completed: boolean;
 }
 
@@ -133,10 +133,10 @@ export default function TrackPage() {
         if (completedSets.length > 0) {
           const lastSet = completedSets[completedSets.length - 1];
           return {
-            weight: lastSet.weight || 0,
-            reps: lastSet.reps || 0,
-            distance: lastSet.distance || 0,
-            time: lastSet.time || 0,
+            weight: lastSet.weight ?? null,
+            reps: lastSet.reps ?? null,
+            distance: lastSet.distance ?? null,
+            time: lastSet.time ?? null,
           };
         }
       }
@@ -151,7 +151,6 @@ export default function TrackPage() {
     const isDistanceTime = exerciseType === "distance_time";
     
     if (lastValues) {
-      // Only apply previous values to the first set, remaining sets start blank
       if (isDistanceTime) {
         return [
           { setNumber: 1, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
@@ -159,21 +158,20 @@ export default function TrackPage() {
       }
       return [
         { setNumber: 1, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
-        { setNumber: 2, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
-        { setNumber: 3, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
+        { setNumber: 2, weight: null, reps: null, distance: null, time: null, completed: false },
+        { setNumber: 3, weight: null, reps: null, distance: null, time: null, completed: false },
       ];
     }
     
-    // Default to blank values (0) if no history
     if (isDistanceTime) {
       return [
-        { setNumber: 1, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
+        { setNumber: 1, weight: null, reps: null, distance: null, time: null, completed: false },
       ];
     }
     return [
-      { setNumber: 1, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
-      { setNumber: 2, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
-      { setNumber: 3, weight: 0, reps: 0, distance: 0, time: 0, completed: false },
+      { setNumber: 1, weight: null, reps: null, distance: null, time: null, completed: false },
+      { setNumber: 2, weight: null, reps: null, distance: null, time: null, completed: false },
+      { setNumber: 3, weight: null, reps: null, distance: null, time: null, completed: false },
     ];
   };
 
@@ -260,10 +258,10 @@ export default function TrackPage() {
     const lastSet = sets[sets.length - 1];
     const newSet: SetData = {
       setNumber: newSetNumber,
-      weight: lastSet?.weight ?? 0,
-      reps: lastSet?.reps ?? 0,
-      distance: lastSet?.distance ?? 0,
-      time: lastSet?.time ?? 0,
+      weight: lastSet?.weight ?? null,
+      reps: lastSet?.reps ?? null,
+      distance: lastSet?.distance ?? null,
+      time: lastSet?.time ?? null,
       completed: false,
     };
     setCurrentSets([...sets, newSet]);
@@ -421,10 +419,10 @@ export default function TrackPage() {
                         <Input
                           type="number"
                           step="0.1"
-                          value={set.distance || ""}
+                          value={set.distance ?? ""}
                           onChange={(e) => {
                             const newSets = [...sets];
-                            newSets[index].distance = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                            newSets[index].distance = e.target.value === "" ? null : parseFloat(e.target.value);
                             setCurrentSets(newSets);
                           }}
                           className="text-center text-sm h-9 sm:h-10"
@@ -432,10 +430,10 @@ export default function TrackPage() {
                         />
                         <Input
                           type="number"
-                          value={set.time || ""}
+                          value={set.time ?? ""}
                           onChange={(e) => {
                             const newSets = [...sets];
-                            newSets[index].time = e.target.value === "" ? 0 : parseInt(e.target.value);
+                            newSets[index].time = e.target.value === "" ? null : parseInt(e.target.value);
                             setCurrentSets(newSets);
                           }}
                           className="text-center text-sm h-9 sm:h-10"
@@ -495,7 +493,7 @@ export default function TrackPage() {
                           value={set.weight ?? ""}
                           onChange={(e) => {
                             const newSets = [...sets];
-                            newSets[index].weight = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                            newSets[index].weight = e.target.value === "" ? null : parseFloat(e.target.value);
                             setCurrentSets(newSets);
                           }}
                           className="text-center text-sm h-9 sm:h-10"
@@ -506,7 +504,7 @@ export default function TrackPage() {
                           value={set.reps ?? ""}
                           onChange={(e) => {
                             const newSets = [...sets];
-                            newSets[index].reps = e.target.value === "" ? 0 : parseInt(e.target.value);
+                            newSets[index].reps = e.target.value === "" ? null : parseInt(e.target.value);
                             setCurrentSets(newSets);
                           }}
                           className="text-center text-sm h-9 sm:h-10"
