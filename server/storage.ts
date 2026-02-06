@@ -166,6 +166,7 @@ export interface IStorage {
   deleteRoutine(id: string): Promise<boolean>;
   
   getRoutinesUsingTemplate(templateId: string, userId: string): Promise<Routine[]>;
+  getTemplateRoutineMap(userId: string): Promise<Record<string, string[]>>;
   getRoutineEntries(routineId: string): Promise<RoutineEntry[]>;
   createRoutineEntry(entry: InsertRoutineEntry): Promise<RoutineEntry>;
   updateRoutineEntry(id: string, entry: Partial<InsertRoutineEntry>): Promise<RoutineEntry | undefined>;
@@ -1030,6 +1031,31 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error finding routines using template:", error);
       return [];
+    }
+  }
+
+  async getTemplateRoutineMap(userId: string): Promise<Record<string, string[]>> {
+    try {
+      const results = await neonClient`
+        SELECT re.workout_template_id as "templateId", r.name as "routineName"
+        FROM routine_entries re
+        JOIN routines r ON r.id = re.routine_id
+        WHERE r.user_id = ${userId}
+          AND re.workout_template_id IS NOT NULL
+      `;
+      const map: Record<string, string[]> = {};
+      for (const row of results || []) {
+        if (!map[row.templateId]) {
+          map[row.templateId] = [];
+        }
+        if (!map[row.templateId].includes(row.routineName)) {
+          map[row.templateId].push(row.routineName);
+        }
+      }
+      return map;
+    } catch (error) {
+      console.error("Error building template routine map:", error);
+      return {};
     }
   }
 

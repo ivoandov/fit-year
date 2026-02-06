@@ -67,6 +67,7 @@ export default function RoutinesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/routines"] });
       queryClient.invalidateQueries({ queryKey: ["/api/routines/public"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workout-templates/routine-usage"] });
       toast({ title: "Routine created", description: "Your routine has been saved." });
       closeBuilder();
     },
@@ -82,6 +83,7 @@ export default function RoutinesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/routines"] });
       queryClient.invalidateQueries({ queryKey: ["/api/routines/public"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workout-templates/routine-usage"] });
     },
     onError: () => {
       toast({ title: "Failed to update routine", variant: "destructive" });
@@ -95,6 +97,7 @@ export default function RoutinesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/routines"] });
       queryClient.invalidateQueries({ queryKey: ["/api/routines/public"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workout-templates/routine-usage"] });
       toast({ title: "Routine deleted" });
     },
     onError: () => {

@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { WorkoutEditorDialog, type WorkoutData } from "@/components/WorkoutEditorDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, Clock, Dumbbell, SkipForward, FileEdit } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Pencil, Trash2, Play, Check, Clock, Dumbbell, SkipForward, FileEdit, Link2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays, isBefore, startOfDay } from "date-fns";
@@ -117,6 +117,10 @@ export default function WorkoutsPage() {
 
   const { data: dbExercises = [] } = useQuery<DBExercise[]>({
     queryKey: ["/api/exercises"],
+  });
+
+  const { data: templateRoutineUsage = {} } = useQuery<Record<string, string[]>>({
+    queryKey: ["/api/workout-templates/routine-usage"],
   });
 
   const { data: dbRoutineInstances = [] } = useQuery<DBRoutineInstance[]>({
@@ -1090,6 +1094,12 @@ export default function WorkoutsPage() {
                         <p className="text-xs text-muted-foreground/70">
                           Completed {getTemplateCompletionCount(template.id)} time{getTemplateCompletionCount(template.id) !== 1 ? 's' : ''}
                         </p>
+                      )}
+                      {templateRoutineUsage[template.id] && (
+                        <div className="flex items-center gap-1 text-xs text-primary/80">
+                          <Link2 className="h-3 w-3" />
+                          <span className="truncate">{templateRoutineUsage[template.id].join(", ")}</span>
+                        </div>
                       )}
                     </div>
                     <Button

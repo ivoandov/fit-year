@@ -869,6 +869,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/workout-templates/routine-usage", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const templateRoutineMap = await storage.getTemplateRoutineMap(userId);
+      res.json(templateRoutineMap);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get routine usage" });
+    }
+  });
+
   app.delete("/api/workout-templates/:id", isAuthenticated, async (req: any, res) => {
     try {
       const { id } = req.params;
