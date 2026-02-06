@@ -168,6 +168,24 @@ export default function WorkoutsPage() {
     })) as Exercise[],
   }));
 
+  const originalWorkoutIds = new Set<string>();
+  {
+    const templateGroups = new Map<string, ScheduledWorkout[]>();
+    for (const w of scheduledWorkouts) {
+      if (w.templateId && !w.routineInstanceId) {
+        const group = templateGroups.get(w.templateId) || [];
+        group.push(w);
+        templateGroups.set(w.templateId, group);
+      }
+    }
+    templateGroups.forEach((workouts) => {
+      if (workouts.length > 1) {
+        workouts.sort((a, b) => a.date.getTime() - b.date.getTime());
+        originalWorkoutIds.add(workouts[0].id);
+      }
+    });
+  }
+
   const getTemplateCompletionCount = (templateId: string): number => {
     return completedWorkouts.filter(w => w.templateId === templateId).length;
   };
@@ -808,6 +826,11 @@ export default function WorkoutsPage() {
                             {routineInstanceMap.get(workout.routineInstanceId) || "Routine"}
                           </Badge>
                         )}
+                        {originalWorkoutIds.has(workout.id) && (
+                          <Badge variant="outline" className="text-blue-400 border-blue-400/50" data-testid={`badge-original-${workout.displayId}`}>
+                            Original
+                          </Badge>
+                        )}
                       </div>
                       <Button
                         size="icon"
@@ -912,6 +935,11 @@ export default function WorkoutsPage() {
                         {workout.routineInstanceId && (
                           <Badge variant="outline" className="text-primary border-primary/50">
                             {routineInstanceMap.get(workout.routineInstanceId) || "Routine"}
+                          </Badge>
+                        )}
+                        {originalWorkoutIds.has(workout.id) && (
+                          <Badge variant="outline" className="text-blue-400 border-blue-400/50" data-testid={`badge-original-${workout.displayId}`}>
+                            Original
                           </Badge>
                         )}
                       </div>
