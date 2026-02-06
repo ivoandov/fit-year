@@ -883,6 +883,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       
+      const routinesUsingTemplate = await storage.getRoutinesUsingTemplate(id, userId);
+      if (routinesUsingTemplate.length > 0) {
+        const routineNames = routinesUsingTemplate.map(r => r.name).join(", ");
+        return res.status(409).json({
+          error: "template_in_use",
+          message: `This workout is used by the following routines: ${routineNames}. Remove it from those routines first before deleting.`,
+          routineNames: routinesUsingTemplate.map(r => r.name),
+        });
+      }
+
       const deleted = await storage.deleteWorkoutTemplate(id);
       if (!deleted) {
         return res.status(404).json({ error: "Template not found" });

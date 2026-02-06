@@ -210,10 +210,36 @@ export default function WorkoutsPage() {
 
   const deleteTemplateMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/workout-templates/${id}`);
+      const res = await apiRequest("DELETE", `/api/workout-templates/${id}`);
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/workout-templates"] });
+      toast({
+        title: "Workout Deleted",
+        description: "The workout has been removed from your library.",
+      });
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.message || "";
+      try {
+        const jsonStr = errorMessage.replace(/^\d+:\s*/, "");
+        const data = JSON.parse(jsonStr);
+        if (data?.error === "template_in_use") {
+          const names = data.routineNames?.join(", ") || "some routines";
+          toast({
+            title: "Cannot Delete Workout",
+            description: `This workout is used by: ${names}. Remove it from those routines first.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch {}
+      toast({
+        title: "Error",
+        description: "Failed to delete workout. Please try again.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -489,10 +515,6 @@ export default function WorkoutsPage() {
     if (workoutToDelete) {
       if (workoutToDelete.isTemplate) {
         deleteTemplateMutation.mutate(workoutToDelete.id);
-        toast({
-          title: "Workout Deleted",
-          description: "The workout has been removed from your library.",
-        });
       } else if (workoutToDelete.isCompleted) {
         deleteCompletedWorkout(workoutToDelete.id);
         toast({

@@ -165,6 +165,7 @@ export interface IStorage {
   updateRoutine(id: string, routine: Partial<InsertRoutine>): Promise<Routine | undefined>;
   deleteRoutine(id: string): Promise<boolean>;
   
+  getRoutinesUsingTemplate(templateId: string, userId: string): Promise<Routine[]>;
   getRoutineEntries(routineId: string): Promise<RoutineEntry[]>;
   createRoutineEntry(entry: InsertRoutineEntry): Promise<RoutineEntry>;
   updateRoutineEntry(id: string, entry: Partial<InsertRoutineEntry>): Promise<RoutineEntry | undefined>;
@@ -1012,6 +1013,23 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting routine:", error);
       return false;
+    }
+  }
+
+  async getRoutinesUsingTemplate(templateId: string, userId: string): Promise<Routine[]> {
+    try {
+      const results = await neonClient`
+        SELECT DISTINCT r.id, r.name, r.description, r.duration_days as "durationDays",
+               r.is_public as "isPublic", r.user_id as "userId", r.created_at as "createdAt"
+        FROM routines r
+        JOIN routine_entries re ON re.routine_id = r.id
+        WHERE re.workout_template_id = ${templateId}
+          AND r.user_id = ${userId}
+      `;
+      return (results || []) as Routine[];
+    } catch (error) {
+      console.error("Error finding routines using template:", error);
+      return [];
     }
   }
 
