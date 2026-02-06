@@ -90,7 +90,7 @@ export default function TrackPage() {
 
   // Auto-save progress to context whenever tracking state changes
   useEffect(() => {
-    if (activeWorkout && hasLoadedSavedProgress) {
+    if (activeWorkout && hasLoadedSavedProgress && exerciseSets.size > 0) {
       const progress: SavedTrackingProgress = {
         workoutDisplayId: activeWorkout.displayId,
         exerciseSets: Array.from(exerciseSets.entries()),
@@ -191,15 +191,19 @@ export default function TrackPage() {
   };
 
   useEffect(() => {
+    if (!hasLoadedSavedProgress) return;
     if (enrichedWorkoutExercises.length > 0) {
       const currentEx = enrichedWorkoutExercises[currentExerciseIndex] as any;
-      if (currentEx?.instanceId && !exerciseSets.has(currentEx.instanceId)) {
-        const newMap = new Map(exerciseSets);
-        newMap.set(currentEx.instanceId, getDefaultSets(currentEx.id, currentEx.exerciseType));
-        setExerciseSets(newMap);
+      if (currentEx?.instanceId) {
+        setExerciseSets(prev => {
+          if (prev.has(currentEx.instanceId)) return prev;
+          const newMap = new Map(prev);
+          newMap.set(currentEx.instanceId, getDefaultSets(currentEx.id, currentEx.exerciseType));
+          return newMap;
+        });
       }
     }
-  }, [currentExerciseIndex, enrichedWorkoutExercises]);
+  }, [currentExerciseIndex, enrichedWorkoutExercises, hasLoadedSavedProgress]);
 
   if (!activeWorkout) {
     return (
