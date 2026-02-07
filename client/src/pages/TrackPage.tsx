@@ -274,7 +274,7 @@ export default function TrackPage() {
   };
 
   const handleRestTimerClose = () => {
-    setTrackingState("in_set");
+    setTrackingState("not_started");
     if (currentSetIndex < sets.length - 1) {
       setCurrentSetIndex(currentSetIndex + 1);
     }
