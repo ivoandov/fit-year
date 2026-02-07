@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,7 @@ export default function TrackPage() {
   const [exerciseSets, setExerciseSets] = useState<Map<string, SetData[]>>(new Map()); // Keyed by exercise instanceId for stability
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [hasLoadedSavedProgress, setHasLoadedSavedProgress] = useState(false);
+  const restCloseProcessed = useRef(false);
 
   const { data: exercises = [] } = useQuery<Exercise[]>({
     queryKey: ["/api/exercises"],
@@ -273,8 +274,16 @@ export default function TrackPage() {
     setTrackingState("not_started");
   };
 
+  useEffect(() => {
+    if (trackingState === "resting") {
+      restCloseProcessed.current = false;
+    }
+  }, [trackingState]);
+
   const handleRestTimerClose = () => {
-    setTrackingState("not_started");
+    if (restCloseProcessed.current) return;
+    restCloseProcessed.current = true;
+    setTrackingState("in_set");
     if (currentSetIndex < sets.length - 1) {
       setCurrentSetIndex(currentSetIndex + 1);
     }
