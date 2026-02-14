@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { seedBuiltInExercises } from "./storage";
+import { seedBuiltInExercises, mergeExerciseDuplicates } from "./storage";
 import { ObjectStorageService, objectStorageClient } from "./replit_integrations/object_storage";
 
 const app = express();
@@ -83,6 +83,7 @@ app.use((req, res, next) => {
   });
   
   await seedBuiltInExercises();
+  await mergeExerciseDuplicates();
   
   const server = await registerRoutes(app);
 

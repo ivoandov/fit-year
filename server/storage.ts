@@ -73,6 +73,85 @@ function decryptToken(encryptedData: string): string {
   return decrypted;
 }
 
+export async function mergeExerciseDuplicates(): Promise<void> {
+  const merges = [
+    { keepId: '20aaf410-9173-41ba-8911-4f9a712d0326', removeId: '3fd90db9-ec63-48d9-b3df-21ccfe24764b', name: 'RDL Barbell' },
+  ];
+
+  for (const merge of merges) {
+    try {
+      let existing: any[] | null = null;
+      try {
+        existing = await neonClient`SELECT id FROM exercises WHERE id = ${merge.removeId}`;
+      } catch (e: any) {
+        if (e?.message?.includes("Cannot read properties of null")) {
+          continue;
+        }
+        throw e;
+      }
+      if (!existing || existing.length === 0) continue;
+
+      console.log(`Merging duplicate exercise "${merge.name}": ${merge.removeId} -> ${merge.keepId}`);
+
+      const updateTable = async (tableName: string) => {
+        let rows: any[] = [];
+        try {
+          if (tableName === 'completed_workouts') {
+            rows = await neonClient`SELECT id, exercises FROM completed_workouts WHERE exercises::text LIKE ${'%' + merge.removeId + '%'}`;
+          } else if (tableName === 'workout_templates') {
+            rows = await neonClient`SELECT id, exercises FROM workout_templates WHERE exercises::text LIKE ${'%' + merge.removeId + '%'}`;
+          } else if (tableName === 'scheduled_workouts') {
+            rows = await neonClient`SELECT id, exercises FROM scheduled_workouts WHERE exercises::text LIKE ${'%' + merge.removeId + '%'}`;
+          } else if (tableName === 'active_workouts') {
+            rows = await neonClient`SELECT id, exercises FROM active_workouts WHERE exercises::text LIKE ${'%' + merge.removeId + '%'}`;
+          } else if (tableName === 'routine_entries') {
+            rows = await neonClient`SELECT id, exercises FROM routine_entries WHERE exercises::text LIKE ${'%' + merge.removeId + '%'}`;
+          }
+        } catch (e: any) {
+          if (e?.message?.includes("Cannot read properties of null")) return;
+          throw e;
+        }
+        if (!rows) return;
+
+        for (const row of rows) {
+          const exercises = row.exercises as any[];
+          if (!exercises) continue;
+          const updated = exercises.map((ex: any) => {
+            if (ex.id === merge.removeId) {
+              return { ...ex, id: merge.keepId };
+            }
+            return ex;
+          });
+          const updatedJson = JSON.stringify(updated);
+          if (tableName === 'completed_workouts') {
+            await neonClient`UPDATE completed_workouts SET exercises = ${updatedJson}::jsonb WHERE id = ${row.id}`;
+          } else if (tableName === 'workout_templates') {
+            await neonClient`UPDATE workout_templates SET exercises = ${updatedJson}::jsonb WHERE id = ${row.id}`;
+          } else if (tableName === 'scheduled_workouts') {
+            await neonClient`UPDATE scheduled_workouts SET exercises = ${updatedJson}::jsonb WHERE id = ${row.id}`;
+          } else if (tableName === 'active_workouts') {
+            await neonClient`UPDATE active_workouts SET exercises = ${updatedJson}::jsonb WHERE id = ${row.id}`;
+          } else if (tableName === 'routine_entries') {
+            await neonClient`UPDATE routine_entries SET exercises = ${updatedJson}::jsonb WHERE id = ${row.id}`;
+          }
+          console.log(`  Updated ${tableName} row ${row.id}`);
+        }
+      };
+
+      await updateTable('completed_workouts');
+      await updateTable('workout_templates');
+      await updateTable('scheduled_workouts');
+      await updateTable('active_workouts');
+      await updateTable('routine_entries');
+
+      await neonClient`DELETE FROM exercises WHERE id = ${merge.removeId}`;
+      console.log(`  Deleted duplicate exercise ${merge.removeId}`);
+    } catch (error: any) {
+      console.error(`Error merging exercise "${merge.name}":`, error?.message);
+    }
+  }
+}
+
 export async function seedBuiltInExercises(): Promise<void> {
   console.log("Checking for built-in exercises to seed...");
   
