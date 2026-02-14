@@ -74,22 +74,19 @@ function decryptToken(encryptedData: string): string {
 }
 
 export async function mergeExerciseDuplicates(): Promise<void> {
+  console.log("Checking for duplicate exercises to merge...");
   const merges = [
     { keepId: '20aaf410-9173-41ba-8911-4f9a712d0326', removeId: '3fd90db9-ec63-48d9-b3df-21ccfe24764b', name: 'RDL Barbell' },
   ];
 
   for (const merge of merges) {
     try {
-      let existing: any[] | null = null;
-      try {
-        existing = await neonClient`SELECT id FROM exercises WHERE id = ${merge.removeId}`;
-      } catch (e: any) {
-        if (e?.message?.includes("Cannot read properties of null")) {
-          continue;
-        }
-        throw e;
+      const countResult = await db.select({ count: drizzleSql<number>`count(*)` }).from(exercises).where(eq(exercises.id, merge.removeId));
+      const duplicateCount = countResult?.[0]?.count ?? 0;
+      if (duplicateCount === 0) {
+        console.log(`  Duplicate "${merge.name}" (${merge.removeId}) not found, already merged.`);
+        continue;
       }
-      if (!existing || existing.length === 0) continue;
 
       console.log(`Merging duplicate exercise "${merge.name}": ${merge.removeId} -> ${merge.keepId}`);
 
@@ -128,12 +125,6 @@ export async function mergeExerciseDuplicates(): Promise<void> {
           console.log(`  Updated scheduled_workouts row ${row.id}`);
         }
 
-        for (const row of await safeQuery(neonClient`SELECT id, exercises FROM active_workouts WHERE exercises @> ${containsFilter}::jsonb`)) {
-          if (!Array.isArray(row.exercises)) continue;
-          await neonClient`UPDATE active_workouts SET exercises = ${JSON.stringify(rewriteExerciseIds(row.exercises))}::jsonb WHERE id = ${row.id}`;
-          console.log(`  Updated active_workouts row ${row.id}`);
-        }
-
         for (const row of await safeQuery(neonClient`SELECT id, exercises FROM routine_entries WHERE exercises @> ${containsFilter}::jsonb`)) {
           if (!Array.isArray(row.exercises)) continue;
           await neonClient`UPDATE routine_entries SET exercises = ${JSON.stringify(rewriteExerciseIds(row.exercises))}::jsonb WHERE id = ${row.id}`;
@@ -151,6 +142,7 @@ export async function mergeExerciseDuplicates(): Promise<void> {
       console.error(`Error merging exercise "${merge.name}":`, error?.message);
     }
   }
+  console.log("Duplicate exercise merge check complete.");
 }
 
 export async function seedBuiltInExercises(): Promise<void> {
