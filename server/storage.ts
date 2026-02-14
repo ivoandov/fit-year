@@ -93,59 +93,60 @@ export async function mergeExerciseDuplicates(): Promise<void> {
 
       console.log(`Merging duplicate exercise "${merge.name}": ${merge.removeId} -> ${merge.keepId}`);
 
-      const updateTable = async (tableName: string) => {
-        let rows: any[] = [];
-        try {
-          if (tableName === 'completed_workouts') {
-            rows = await neonClient`SELECT id, exercises FROM completed_workouts WHERE exercises::text LIKE ${'%' + merge.removeId + '%'}`;
-          } else if (tableName === 'workout_templates') {
-            rows = await neonClient`SELECT id, exercises FROM workout_templates WHERE exercises::text LIKE ${'%' + merge.removeId + '%'}`;
-          } else if (tableName === 'scheduled_workouts') {
-            rows = await neonClient`SELECT id, exercises FROM scheduled_workouts WHERE exercises::text LIKE ${'%' + merge.removeId + '%'}`;
-          } else if (tableName === 'active_workouts') {
-            rows = await neonClient`SELECT id, exercises FROM active_workouts WHERE exercises::text LIKE ${'%' + merge.removeId + '%'}`;
-          } else if (tableName === 'routine_entries') {
-            rows = await neonClient`SELECT id, exercises FROM routine_entries WHERE exercises::text LIKE ${'%' + merge.removeId + '%'}`;
-          }
-        } catch (e: any) {
-          if (e?.message?.includes("Cannot read properties of null")) return;
-          throw e;
-        }
-        if (!rows) return;
+      const containsFilter = JSON.stringify([{ id: merge.removeId }]);
 
-        for (const row of rows) {
-          const exercises = row.exercises as any[];
-          if (!exercises) continue;
-          const updated = exercises.map((ex: any) => {
-            if (ex.id === merge.removeId) {
-              return { ...ex, id: merge.keepId };
-            }
-            return ex;
-          });
-          const updatedJson = JSON.stringify(updated);
-          if (tableName === 'completed_workouts') {
-            await neonClient`UPDATE completed_workouts SET exercises = ${updatedJson}::jsonb WHERE id = ${row.id}`;
-          } else if (tableName === 'workout_templates') {
-            await neonClient`UPDATE workout_templates SET exercises = ${updatedJson}::jsonb WHERE id = ${row.id}`;
-          } else if (tableName === 'scheduled_workouts') {
-            await neonClient`UPDATE scheduled_workouts SET exercises = ${updatedJson}::jsonb WHERE id = ${row.id}`;
-          } else if (tableName === 'active_workouts') {
-            await neonClient`UPDATE active_workouts SET exercises = ${updatedJson}::jsonb WHERE id = ${row.id}`;
-          } else if (tableName === 'routine_entries') {
-            await neonClient`UPDATE routine_entries SET exercises = ${updatedJson}::jsonb WHERE id = ${row.id}`;
-          }
-          console.log(`  Updated ${tableName} row ${row.id}`);
+      const safeQuery = async (query: Promise<any[]>) => {
+        try {
+          const result = await query;
+          return result || [];
+        } catch (e: any) {
+          if (e?.message?.includes("Cannot read properties of null")) return [];
+          throw e;
         }
       };
 
-      await updateTable('completed_workouts');
-      await updateTable('workout_templates');
-      await updateTable('scheduled_workouts');
-      await updateTable('active_workouts');
-      await updateTable('routine_entries');
+      const rewriteExerciseIds = (exercises: any[]) =>
+        exercises.map((ex: any) => ex && ex.id === merge.removeId ? { ...ex, id: merge.keepId } : ex);
 
-      await neonClient`DELETE FROM exercises WHERE id = ${merge.removeId}`;
-      console.log(`  Deleted duplicate exercise ${merge.removeId}`);
+      await neonClient`BEGIN`;
+      try {
+        for (const row of await safeQuery(neonClient`SELECT id, exercises FROM completed_workouts WHERE exercises @> ${containsFilter}::jsonb`)) {
+          if (!Array.isArray(row.exercises)) continue;
+          await neonClient`UPDATE completed_workouts SET exercises = ${JSON.stringify(rewriteExerciseIds(row.exercises))}::jsonb WHERE id = ${row.id}`;
+          console.log(`  Updated completed_workouts row ${row.id}`);
+        }
+
+        for (const row of await safeQuery(neonClient`SELECT id, exercises FROM workout_templates WHERE exercises @> ${containsFilter}::jsonb`)) {
+          if (!Array.isArray(row.exercises)) continue;
+          await neonClient`UPDATE workout_templates SET exercises = ${JSON.stringify(rewriteExerciseIds(row.exercises))}::jsonb WHERE id = ${row.id}`;
+          console.log(`  Updated workout_templates row ${row.id}`);
+        }
+
+        for (const row of await safeQuery(neonClient`SELECT id, exercises FROM scheduled_workouts WHERE exercises @> ${containsFilter}::jsonb`)) {
+          if (!Array.isArray(row.exercises)) continue;
+          await neonClient`UPDATE scheduled_workouts SET exercises = ${JSON.stringify(rewriteExerciseIds(row.exercises))}::jsonb WHERE id = ${row.id}`;
+          console.log(`  Updated scheduled_workouts row ${row.id}`);
+        }
+
+        for (const row of await safeQuery(neonClient`SELECT id, exercises FROM active_workouts WHERE exercises @> ${containsFilter}::jsonb`)) {
+          if (!Array.isArray(row.exercises)) continue;
+          await neonClient`UPDATE active_workouts SET exercises = ${JSON.stringify(rewriteExerciseIds(row.exercises))}::jsonb WHERE id = ${row.id}`;
+          console.log(`  Updated active_workouts row ${row.id}`);
+        }
+
+        for (const row of await safeQuery(neonClient`SELECT id, exercises FROM routine_entries WHERE exercises @> ${containsFilter}::jsonb`)) {
+          if (!Array.isArray(row.exercises)) continue;
+          await neonClient`UPDATE routine_entries SET exercises = ${JSON.stringify(rewriteExerciseIds(row.exercises))}::jsonb WHERE id = ${row.id}`;
+          console.log(`  Updated routine_entries row ${row.id}`);
+        }
+
+        await neonClient`DELETE FROM exercises WHERE id = ${merge.removeId}`;
+        await neonClient`COMMIT`;
+        console.log(`  Deleted duplicate exercise ${merge.removeId}`);
+      } catch (txError) {
+        await neonClient`ROLLBACK`;
+        throw txError;
+      }
     } catch (error: any) {
       console.error(`Error merging exercise "${merge.name}":`, error?.message);
     }
