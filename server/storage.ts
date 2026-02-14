@@ -639,11 +639,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateFutureScheduledWorkoutsByTemplate(templateId: string, name: string, exercises: any): Promise<number> {
-    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const results = await neonClient`
       UPDATE scheduled_workouts 
       SET name = ${name}, exercises = ${JSON.stringify(exercises)}
-      WHERE template_id = ${templateId} AND date > ${now}
+      WHERE template_id = ${templateId} AND date >= ${today}
       RETURNING id
     `;
     return results.length;
