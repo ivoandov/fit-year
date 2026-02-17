@@ -481,7 +481,7 @@ export default function TrackPage() {
                 </>
               ) : (
                 <>
-                  <div className="grid grid-cols-4 gap-2 sm:gap-4 font-semibold text-xs sm:text-sm pb-2 border-b">
+                  <div className="grid gap-2 sm:gap-3 font-semibold text-xs sm:text-sm pb-2 border-b" style={{ gridTemplateColumns: 'auto 1fr 1fr auto' }}>
                     <div>Set</div>
                     <div className="text-center">Weight</div>
                     <div className="text-center">Reps</div>
@@ -494,24 +494,57 @@ export default function TrackPage() {
                     return (
                       <div
                         key={set.setNumber}
-                        className={`grid grid-cols-4 gap-2 sm:gap-4 items-center py-2 rounded-md px-1 sm:px-2 ${
+                        className={`grid gap-2 sm:gap-3 items-center py-2 rounded-md px-1 sm:px-2 ${
                           set.completed ? 'bg-accent' : ''
                         } ${isActive ? 'border-2 border-primary bg-primary/5' : isCurrentSet ? 'border border-muted-foreground/30' : ''}`}
+                        style={{ gridTemplateColumns: 'auto 1fr 1fr auto' }}
                         data-testid={`row-set-${set.setNumber}`}
                       >
                         <div className="font-medium text-sm sm:text-base">{set.setNumber}</div>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          value={set.weight ?? ""}
-                          onChange={(e) => {
-                            const newSets = [...sets];
-                            newSets[index].weight = e.target.value === "" ? null : parseFloat(e.target.value);
-                            setCurrentSets(newSets);
-                          }}
-                          className="text-center text-sm h-9 sm:h-10"
-                          data-testid={`input-weight-${set.setNumber}`}
-                        />
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="px-1.5 text-xs font-semibold shrink-0"
+                            onClick={() => {
+                              const newSets = [...sets];
+                              const current = newSets[index].weight ?? 0;
+                              newSets[index].weight = Math.max(0, current - 5);
+                              setCurrentSets(newSets);
+                            }}
+                            data-testid={`button-weight-minus-${set.setNumber}`}
+                          >
+                            -5
+                          </Button>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={set.weight ?? ""}
+                            onChange={(e) => {
+                              const newSets = [...sets];
+                              newSets[index].weight = e.target.value === "" ? null : parseFloat(e.target.value);
+                              setCurrentSets(newSets);
+                            }}
+                            className="text-center text-sm h-9 sm:h-10 min-w-0"
+                            data-testid={`input-weight-${set.setNumber}`}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="px-1.5 text-xs font-semibold shrink-0"
+                            onClick={() => {
+                              const newSets = [...sets];
+                              const current = newSets[index].weight ?? 0;
+                              newSets[index].weight = current + 5;
+                              setCurrentSets(newSets);
+                            }}
+                            data-testid={`button-weight-plus-${set.setNumber}`}
+                          >
+                            +5
+                          </Button>
+                        </div>
                         <Input
                           type="number"
                           value={set.reps ?? ""}
@@ -531,11 +564,9 @@ export default function TrackPage() {
                               newSets[index].completed = !!checked;
                               setCurrentSets(newSets);
                               if (checked) {
-                                // Start rest timer if setting is enabled
                                 if (restTimerOnManualComplete) {
                                   setTrackingState("resting");
                                 }
-                                // If completing the current set, advance to next
                                 if (index === currentSetIndex && currentSetIndex < sets.length - 1 && !restTimerOnManualComplete) {
                                   setCurrentSetIndex(currentSetIndex + 1);
                                   setTrackingState("not_started");
