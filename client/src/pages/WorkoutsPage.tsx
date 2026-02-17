@@ -363,8 +363,7 @@ export default function WorkoutsPage() {
 
   const handleSaveWorkout = async (data: WorkoutData) => {
     if (editingCompletedWorkout) {
-      // Editing a completed workout - update name and exercises
-      updateCompletedWorkout(editingCompletedWorkout.id, data.name, data.exercises);
+      updateCompletedWorkout(editingCompletedWorkout.id, data.name, data.exercises, data.date);
       
       // If repeat is set, schedule future workouts
       if (data.repeatType && data.repeatType !== "none") {
@@ -597,12 +596,12 @@ export default function WorkoutsPage() {
     setWorkoutToDelete({ id: templateId, name: templateName, isTemplate: true });
   };
 
-  const handleEditCompletedWorkout = (workout: { id: string; name: string; exercises: Exercise[] }) => {
+  const handleEditCompletedWorkout = (workout: { id: string; name: string; exercises: Exercise[]; completedAt?: Date | string }) => {
     setEditingCompletedWorkout(workout);
     setEditingWorkout({
       id: workout.id,
       name: workout.name,
-      date: new Date(),
+      date: workout.completedAt ? new Date(workout.completedAt) : new Date(),
       exercises: workout.exercises,
     });
     setShowEditorDialog(true);
