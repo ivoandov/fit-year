@@ -56,7 +56,7 @@ interface WorkoutContextType {
   completeWorkout: (exerciseSets?: Map<string, ExerciseSetData[]>) => void;
   isWorkoutCompleted: (displayId: string) => boolean;
   restartWorkout: (completedWorkout: CompletedWorkoutRecord) => void;
-  updateCompletedWorkout: (id: string, name: string, exercises?: any[]) => Promise<boolean>;
+  updateCompletedWorkout: (id: string, name: string, exercises?: any[], completedAt?: Date) => Promise<boolean>;
   deleteCompletedWorkout: (id: string) => void;
   updateActiveWorkout: (name: string, exercises: Exercise[]) => void;
   saveTrackingProgress: (progress: TrackingProgress) => void;
@@ -368,20 +368,23 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
   });
 
   const updateCompletedMutation = useMutation({
-    mutationFn: async ({ id, name, exercises }: { id: string; name: string; exercises?: any[] }) => {
-      return apiRequest("PUT", `/api/completed-workouts/${id}`, { name, exercises });
+    mutationFn: async ({ id, name, exercises, completedAt }: { id: string; name: string; exercises?: any[]; completedAt?: string }) => {
+      return apiRequest("PUT", `/api/completed-workouts/${id}`, { name, exercises, completedAt });
     },
     onSuccess: (_, variables) => {
-      // Update cache immediately for instant UI feedback
       queryClient.setQueryData(["/api/completed-workouts"], (oldData: any[] | undefined) => {
         if (!oldData) return oldData;
         return oldData.map(workout => 
           workout.id === variables.id 
-            ? { ...workout, name: variables.name, exercises: variables.exercises || workout.exercises }
+            ? { 
+                ...workout, 
+                name: variables.name, 
+                exercises: variables.exercises || workout.exercises,
+                ...(variables.completedAt ? { completedAt: variables.completedAt } : {}),
+              }
             : workout
         );
       });
-      // Also invalidate to ensure consistency with server
       queryClient.invalidateQueries({ queryKey: ["/api/completed-workouts"] });
     },
   });
@@ -483,9 +486,10 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateCompletedWorkout = async (id: string, name: string, exercises?: any[]): Promise<boolean> => {
+  const updateCompletedWorkout = async (id: string, name: string, exercises?: any[], completedAt?: Date): Promise<boolean> => {
     try {
-      await updateCompletedMutation.mutateAsync({ id, name, exercises });
+      const completedAtStr = completedAt ? completedAt.toISOString() : undefined;
+      await updateCompletedMutation.mutateAsync({ id, name, exercises, completedAt: completedAtStr });
       return true;
     } catch (error) {
       console.error("Failed to update completed workout:", error);

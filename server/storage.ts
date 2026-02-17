@@ -219,7 +219,7 @@ export interface IStorage {
   getCompletedWorkout(id: string): Promise<CompletedWorkout | undefined>;
   getCompletedWorkoutsByTemplateId(templateId: string, userId: string): Promise<CompletedWorkout[]>;
   createCompletedWorkout(workout: InsertCompletedWorkout): Promise<CompletedWorkout>;
-  updateCompletedWorkout(id: string, workout: Partial<InsertCompletedWorkout>): Promise<CompletedWorkout | undefined>;
+  updateCompletedWorkout(id: string, workout: Partial<InsertCompletedWorkout> & { completedAt?: Date | string }): Promise<CompletedWorkout | undefined>;
   updateCompletedWorkoutCalendarEventId(id: string, calendarEventId: string): Promise<void>;
   deleteCompletedWorkout(id: string): Promise<boolean>;
   
@@ -809,16 +809,17 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async updateCompletedWorkout(id: string, workout: Partial<InsertCompletedWorkout>): Promise<CompletedWorkout | undefined> {
+  async updateCompletedWorkout(id: string, workout: Partial<InsertCompletedWorkout> & { completedAt?: Date | string }): Promise<CompletedWorkout | undefined> {
     const existing = await this.getCompletedWorkout(id);
     if (!existing) return undefined;
     
     const name = workout.name !== undefined ? workout.name : existing.name;
     const exercises = workout.exercises !== undefined ? workout.exercises : existing.exercises;
+    const completedAt = workout.completedAt !== undefined ? new Date(workout.completedAt) : existing.completedAt;
     
     await neonClient`
       UPDATE completed_workouts 
-      SET name = ${name}, exercises = ${JSON.stringify(exercises)}
+      SET name = ${name}, exercises = ${JSON.stringify(exercises)}, completed_at = ${completedAt}
       WHERE id = ${id}
     `;
     
@@ -826,6 +827,7 @@ export class DatabaseStorage implements IStorage {
       ...existing,
       name,
       exercises,
+      completedAt,
     };
   }
 

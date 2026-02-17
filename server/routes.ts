@@ -1428,7 +1428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const userId = (req.user as any)?.id;
-      const { name, exercises } = req.body;
+      const { name, exercises, completedAt } = req.body;
       
       const existing = await storage.getCompletedWorkout(id);
       if (!existing) {
@@ -1439,7 +1439,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Access denied" });
       }
       
-      const updated = await storage.updateCompletedWorkout(id, { name, exercises });
+      const updated = await storage.updateCompletedWorkout(id, { name, exercises, completedAt });
+
+      if (completedAt && existing.calendarEventId) {
+        const isConnected = await storage.isCalendarConnected(userId);
+        if (isConnected) {
+          const userSettings = await storage.getUserSettings(userId);
+          const selectedCalendarId = userSettings?.selectedCalendarId || undefined;
+          const newDate = new Date(completedAt);
+          const localDate = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}-${String(newDate.getDate()).padStart(2, '0')}`;
+          updateUserCalendarEvent(userId, existing.calendarEventId, newDate, selectedCalendarId, localDate)
+            .then((success) => {
+              if (success) {
+                console.log(`Updated completed workout calendar event date: ${existing.calendarEventId}`);
+              }
+            })
+            .catch((err) => {
+              console.error("Failed to update completed workout calendar event:", err);
+            });
+        }
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Failed to update completed workout:", error);
