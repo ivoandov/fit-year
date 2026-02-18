@@ -151,8 +151,8 @@ function AuthenticatedApp() {
                     <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-sm text-muted-foreground">Welcome Back!</p>
-                    <p className="text-base font-semibold text-foreground">{userName}</p>
+                    <p className="text-sm text-muted-foreground">Welcome Back,</p>
+                    <p className="text-2xl font-bold text-primary">{userName}.</p>
                   </div>
                 </div>
               ) : (

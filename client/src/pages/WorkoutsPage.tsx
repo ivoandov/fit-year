@@ -700,6 +700,15 @@ export default function WorkoutsPage() {
     (w) => format(w.date, "yyyy-MM-dd") === selectedDateStr
   );
 
+  const getWorkoutImageUrl = (exercises: Exercise[]) => {
+    for (const ex of exercises) {
+      const sourceExercise = allAvailableExercises.find(e => e.id === ex.id);
+      if (sourceExercise?.imageUrl) return sourceExercise.imageUrl;
+      if (ex.imageUrl) return ex.imageUrl;
+    }
+    return null;
+  };
+
   if (isLoading) {
     return (
       <div className="flex-1 overflow-auto h-full">
@@ -753,99 +762,107 @@ export default function WorkoutsPage() {
             <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
               {todayWorkouts.map((workout) => {
                 const isCompleted = isWorkoutCompleted(workout.displayId);
+                const workoutImage = getWorkoutImageUrl(workout.exercises);
                 return (
-                  <Card 
-                    key={workout.displayId}
-                    className="hover-elevate border-0 aspect-square flex flex-col"
-                    data-testid={`card-workout-${workout.displayId}`}
-                  >
-                    <div className="flex items-start justify-between p-4 sm:p-5">
-                      <CardTitle className="text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2">
-                        {workout.name}
-                      </CardTitle>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 shrink-0"
-                            data-testid={`button-workout-menu-${workout.displayId}`}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleEditWorkout(workout.displayId)}
-                            data-testid={`button-edit-workout-${workout.displayId}`}
-                          >
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Edit This Instance
-                          </DropdownMenuItem>
-                          {workout.templateId && (
-                            <DropdownMenuItem
-                              onClick={() => handleEditTemplate(workout.templateId!)}
-                              data-testid={`button-edit-source-${workout.displayId}`}
+                  <div key={workout.displayId} className="aspect-square" data-testid={`card-workout-${workout.displayId}`}>
+                    <Card className="border-0 h-full flex flex-col relative overflow-hidden">
+                      {workoutImage && (
+                        <>
+                          <img src={workoutImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/30" />
+                        </>
+                      )}
+                      <div className="relative flex items-start justify-between p-4 sm:p-5 z-10">
+                        <CardTitle className={`text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2 ${workoutImage ? 'text-white' : ''}`}>
+                          {workout.name}
+                        </CardTitle>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={workoutImage ? 'text-white' : ''}
+                              data-testid={`button-workout-menu-${workout.displayId}`}
                             >
-                              <FileEdit className="h-4 w-4 mr-2" />
-                              Edit Source Workout
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleEditWorkout(workout.displayId)}
+                              data-testid={`button-edit-workout-${workout.displayId}`}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit This Instance
                             </DropdownMenuItem>
+                            {workout.templateId && (
+                              <DropdownMenuItem
+                                onClick={() => handleEditTemplate(workout.templateId!)}
+                                data-testid={`button-edit-source-${workout.displayId}`}
+                              >
+                                <FileEdit className="h-4 w-4 mr-2" />
+                                Edit Source Workout
+                              </DropdownMenuItem>
+                            )}
+                            {workout.routineInstanceId && (
+                              <DropdownMenuItem
+                                onClick={() => handleSkipWorkout(workout.id)}
+                                data-testid={`button-skip-workout-${workout.displayId}`}
+                              >
+                                <SkipForward className="h-4 w-4 mr-2" />
+                                Skip
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
+                              className="text-destructive"
+                              data-testid={`button-delete-workout-${workout.displayId}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {!workoutImage && (
+                        <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
+                          <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" />
+                        </div>
+                      )}
+                      {workoutImage && <div className="flex-1" />}
+                      <div className="relative px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2 z-10">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className={`text-sm sm:text-base ${workoutImage ? 'text-white/70' : 'text-muted-foreground'}`}>
+                            {format(workout.date, "MMM d, yyyy")}
+                          </p>
+                          {isCompleted && (
+                            <Badge variant="outline" className="text-green-500 border-green-500">
+                              <Check className="h-3 w-3 mr-1" />
+                              Done
+                            </Badge>
                           )}
                           {workout.routineInstanceId && (
-                            <DropdownMenuItem
-                              onClick={() => handleSkipWorkout(workout.id)}
-                              data-testid={`button-skip-workout-${workout.displayId}`}
-                            >
-                              <SkipForward className="h-4 w-4 mr-2" />
-                              Skip
-                            </DropdownMenuItem>
+                            <Badge variant="outline" className="text-primary border-primary/50">
+                              {routineInstanceMap.get(workout.routineInstanceId) || "Routine"}
+                            </Badge>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
-                            className="text-destructive"
-                            data-testid={`button-delete-workout-${workout.displayId}`}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
-                      <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" />
-                    </div>
-                    <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm sm:text-base text-muted-foreground">
-                          {format(workout.date, "MMM d, yyyy")}
-                        </p>
-                        {isCompleted && (
-                          <Badge variant="outline" className="text-green-500 border-green-500">
-                            <Check className="h-3 w-3 mr-1" />
-                            Done
-                          </Badge>
-                        )}
-                        {workout.routineInstanceId && (
-                          <Badge variant="outline" className="text-primary border-primary/50">
-                            {routineInstanceMap.get(workout.routineInstanceId) || "Routine"}
-                          </Badge>
-                        )}
-                        {originalWorkoutIds.has(workout.id) && (
-                          <Badge variant="outline" className="text-blue-400 border-blue-400/50" data-testid={`badge-original-${workout.displayId}`}>
-                            Original
-                          </Badge>
-                        )}
+                          {originalWorkoutIds.has(workout.id) && (
+                            <Badge variant="outline" className="text-blue-400 border-blue-400/50" data-testid={`badge-original-${workout.displayId}`}>
+                              Original
+                            </Badge>
+                          )}
+                        </div>
+                        <Button
+                          size="icon"
+                          className="shrink-0 aspect-square"
+                          onClick={() => handleStartWorkout(workout.displayId)}
+                          data-testid={`button-start-workout-${workout.displayId}`}
+                        >
+                          <Play className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button
-                        size="icon"
-                        className="shrink-0 aspect-square"
-                        onClick={() => handleStartWorkout(workout.displayId)}
-                        data-testid={`button-start-workout-${workout.displayId}`}
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </Card>
+                    </Card>
+                  </div>
                 );
               })}
             </div>
@@ -859,104 +876,112 @@ export default function WorkoutsPage() {
               {upcomingWorkouts.map((workout) => {
                 const isCompleted = isWorkoutCompleted(workout.displayId);
                 const isPastDue = !isCompleted && isBefore(startOfDay(workout.date), startOfDay(new Date()));
+                const workoutImage = getWorkoutImageUrl(workout.exercises);
                 return (
-                  <Card 
-                    key={workout.displayId}
-                    className="hover-elevate border-0 aspect-square flex flex-col"
-                    data-testid={`card-workout-${workout.displayId}`}
-                  >
-                    <div className="flex items-start justify-between p-4 sm:p-5">
-                      <CardTitle className="text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2">
-                        {workout.name}
-                      </CardTitle>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 shrink-0"
-                            data-testid={`button-workout-menu-${workout.displayId}`}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleEditWorkout(workout.displayId)}
-                            data-testid={`button-edit-workout-${workout.displayId}`}
-                          >
-                            <Pencil className="h-4 w-4 mr-2" />
-                            Edit This Instance
-                          </DropdownMenuItem>
-                          {workout.templateId && (
-                            <DropdownMenuItem
-                              onClick={() => handleEditTemplate(workout.templateId!)}
-                              data-testid={`button-edit-source-${workout.displayId}`}
+                  <div key={workout.displayId} className="aspect-square" data-testid={`card-workout-${workout.displayId}`}>
+                    <Card className="border-0 h-full flex flex-col relative overflow-hidden">
+                      {workoutImage && (
+                        <>
+                          <img src={workoutImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/30" />
+                        </>
+                      )}
+                      <div className="relative flex items-start justify-between p-4 sm:p-5 z-10">
+                        <CardTitle className={`text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2 ${workoutImage ? 'text-white' : ''}`}>
+                          {workout.name}
+                        </CardTitle>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={workoutImage ? 'text-white' : ''}
+                              data-testid={`button-workout-menu-${workout.displayId}`}
                             >
-                              <FileEdit className="h-4 w-4 mr-2" />
-                              Edit Source Workout
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleEditWorkout(workout.displayId)}
+                              data-testid={`button-edit-workout-${workout.displayId}`}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit This Instance
                             </DropdownMenuItem>
+                            {workout.templateId && (
+                              <DropdownMenuItem
+                                onClick={() => handleEditTemplate(workout.templateId!)}
+                                data-testid={`button-edit-source-${workout.displayId}`}
+                              >
+                                <FileEdit className="h-4 w-4 mr-2" />
+                                Edit Source Workout
+                              </DropdownMenuItem>
+                            )}
+                            {workout.routineInstanceId && (
+                              <DropdownMenuItem
+                                onClick={() => handleSkipWorkout(workout.id)}
+                                data-testid={`button-skip-workout-${workout.displayId}`}
+                              >
+                                <SkipForward className="h-4 w-4 mr-2" />
+                                Skip
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
+                              className="text-destructive"
+                              data-testid={`button-delete-workout-${workout.displayId}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {!workoutImage && (
+                        <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
+                          <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" />
+                        </div>
+                      )}
+                      {workoutImage && <div className="flex-1" />}
+                      <div className="relative px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2 z-10">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className={`text-sm sm:text-base ${workoutImage ? 'text-white/70' : 'text-muted-foreground'}`}>
+                            {format(workout.date, "MMM d, yyyy")}
+                          </p>
+                          {isPastDue && (
+                            <Badge variant="outline" className="text-red-500 border-red-500 bg-red-950/30">
+                              Past Due
+                            </Badge>
+                          )}
+                          {isCompleted && (
+                            <Badge variant="outline" className="text-green-500 border-green-500">
+                              <Check className="h-3 w-3 mr-1" />
+                              Done
+                            </Badge>
                           )}
                           {workout.routineInstanceId && (
-                            <DropdownMenuItem
-                              onClick={() => handleSkipWorkout(workout.id)}
-                              data-testid={`button-skip-workout-${workout.displayId}`}
-                            >
-                              <SkipForward className="h-4 w-4 mr-2" />
-                              Skip
-                            </DropdownMenuItem>
+                            <Badge variant="outline" className="text-primary border-primary/50">
+                              {routineInstanceMap.get(workout.routineInstanceId) || "Routine"}
+                            </Badge>
                           )}
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteWorkout(workout.displayId, workout.name)}
-                            className="text-destructive"
-                            data-testid={`button-delete-workout-${workout.displayId}`}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
-                      <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" />
-                    </div>
-                    <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm sm:text-base text-muted-foreground">
-                          {format(workout.date, "MMM d, yyyy")}
-                        </p>
-                        {isPastDue && (
-                          <Badge variant="outline" className="text-red-500 border-red-500 bg-red-950/30">
-                            Past Due
-                          </Badge>
-                        )}
-                        {isCompleted && (
-                          <Badge variant="outline" className="text-green-500 border-green-500">
-                            <Check className="h-3 w-3 mr-1" />
-                            Done
-                          </Badge>
-                        )}
-                        {workout.routineInstanceId && (
-                          <Badge variant="outline" className="text-primary border-primary/50">
-                            {routineInstanceMap.get(workout.routineInstanceId) || "Routine"}
-                          </Badge>
-                        )}
-                        {originalWorkoutIds.has(workout.id) && (
-                          <Badge variant="outline" className="text-blue-400 border-blue-400/50" data-testid={`badge-original-${workout.displayId}`}>
-                            Original
-                          </Badge>
-                        )}
+                          {originalWorkoutIds.has(workout.id) && (
+                            <Badge variant="outline" className="text-blue-400 border-blue-400/50" data-testid={`badge-original-${workout.displayId}`}>
+                              Original
+                            </Badge>
+                          )}
+                        </div>
+                        <Button
+                          size="icon"
+                          className="shrink-0 aspect-square"
+                          onClick={() => handleStartWorkout(workout.displayId)}
+                          data-testid={`button-start-workout-${workout.displayId}`}
+                        >
+                          <Play className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button
-                        size="icon"
-                        className="shrink-0 aspect-square"
-                        onClick={() => handleStartWorkout(workout.displayId)}
-                        data-testid={`button-start-workout-${workout.displayId}`}
-                      >
-                        <Play className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </Card>
+                    </Card>
+                  </div>
                 );
               })}
             </div>
@@ -986,76 +1011,73 @@ export default function WorkoutsPage() {
                 Your completed sessions
               </p>
             </div>
-            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-3 sm:gap-4">
               {completedWorkouts.slice(0, 6).map((workout, index) => (
                 <Card 
                   key={`${workout.displayId}-${index}`}
-                  className="hover-elevate border-0 aspect-square flex flex-col"
+                  className="hover-elevate border-0"
                   data-testid={`card-recent-workout-${index}`}
                 >
-                  <div className="flex items-start justify-between p-4 sm:p-5">
-                    <CardTitle className="text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2">
-                      {workout.name}
-                    </CardTitle>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 shrink-0"
-                          data-testid={`button-recent-workout-menu-${index}`}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleScheduleAgain(workout)}
-                          data-testid={`button-schedule-again-${index}`}
-                        >
-                          <CalendarIcon className="h-4 w-4 mr-2" />
-                          Schedule Again
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleEditCompletedWorkout(workout)}
-                          data-testid={`button-edit-recent-workout-${index}`}
-                        >
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteCompletedWorkout(workout.id, workout.name)}
-                          className="text-destructive"
-                          data-testid={`button-delete-recent-workout-${index}`}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
-                      <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" />
-                    </div>
-                  <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-1 text-sm sm:text-base text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        <span>{format(workout.completedAt, "PP")}</span>
+                  <div className="flex items-center justify-between p-4 sm:p-5 gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                        <Dumbbell className="h-5 w-5 text-primary" />
                       </div>
-                      <Badge variant="outline" className="text-green-500 border-green-500">
-                        <Check className="h-3 w-3 mr-1" />
-                        Done
-                      </Badge>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-base truncate">{workout.name}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm text-muted-foreground">{format(workout.completedAt, "PP")}</span>
+                          <Badge variant="outline" className="text-green-500 border-green-500 no-default-hover-elevate no-default-active-elevate">
+                            <Check className="h-3 w-3 mr-1" />
+                            Done
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                    <Button
-                      size="icon"
-                      className="shrink-0 aspect-square"
-                      onClick={() => handleRestartWorkout(workout)}
-                      data-testid={`button-restart-workout-${index}`}
-                    >
-                      <Play className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        size="icon"
+                        onClick={() => handleRestartWorkout(workout)}
+                        data-testid={`button-restart-workout-${index}`}
+                      >
+                        <Play className="h-4 w-4" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            data-testid={`button-recent-workout-menu-${index}`}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleScheduleAgain(workout)}
+                            data-testid={`button-schedule-again-${index}`}
+                          >
+                            <CalendarIcon className="h-4 w-4 mr-2" />
+                            Schedule Again
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleEditCompletedWorkout(workout)}
+                            data-testid={`button-edit-recent-workout-${index}`}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleDeleteCompletedWorkout(workout.id, workout.name)}
+                            className="text-destructive"
+                            data-testid={`button-delete-recent-workout-${index}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -1074,14 +1096,21 @@ export default function WorkoutsPage() {
           </div>
           {workoutTemplates.length > 0 ? (
             <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-3">
-              {workoutTemplates.map((template) => (
+              {workoutTemplates.map((template) => {
+                const templateImage = getWorkoutImageUrl(template.exercises);
+                return (
+                <div key={template.id} className="aspect-square" data-testid={`card-library-workout-${template.id}`}>
                 <Card 
-                  key={template.id}
-                  className="hover-elevate border-0 aspect-square flex flex-col"
-                  data-testid={`card-library-workout-${template.id}`}
+                  className="border-0 h-full flex flex-col relative overflow-hidden"
                 >
-                  <div className="flex items-start justify-between p-4 sm:p-5">
-                    <CardTitle className="text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2">
+                  {templateImage && (
+                    <>
+                      <img src={templateImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/30" />
+                    </>
+                  )}
+                  <div className="relative flex items-start justify-between p-4 sm:p-5 z-10">
+                    <CardTitle className={`text-lg sm:text-xl md:text-[1.75rem] font-semibold flex-1 break-words line-clamp-2 ${templateImage ? 'text-white' : ''}`}>
                       {template.name}
                     </CardTitle>
                     <DropdownMenu>
@@ -1089,7 +1118,7 @@ export default function WorkoutsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 shrink-0"
+                          className={templateImage ? 'text-white' : ''}
                           data-testid={`button-library-workout-menu-${template.id}`}
                         >
                           <MoreVertical className="h-4 w-4" />
@@ -1114,16 +1143,19 @@ export default function WorkoutsPage() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
+                  {!templateImage && (
+                    <div className="px-4 sm:px-5 flex-1 flex items-center justify-center">
                       <Dumbbell className="h-12 w-12 sm:h-14 sm:w-14 text-primary opacity-60" />
                     </div>
-                  <div className="px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2">
+                  )}
+                  {templateImage && <div className="flex-1" />}
+                  <div className={`relative px-4 sm:px-5 pb-4 sm:pb-5 flex items-center justify-between gap-2 z-10`}>
                     <div className="flex flex-col gap-0.5">
-                      <p className="text-sm sm:text-base text-muted-foreground">
+                      <p className={`text-sm sm:text-base ${templateImage ? 'text-white/70' : 'text-muted-foreground'}`}>
                         {template.exercises.length} exercises
                       </p>
                       {getTemplateCompletionCount(template.id) > 0 && (
-                        <p className="text-xs text-muted-foreground/70">
+                        <p className={`text-xs ${templateImage ? 'text-white/50' : 'text-muted-foreground/70'}`}>
                           Completed {getTemplateCompletionCount(template.id)} time{getTemplateCompletionCount(template.id) !== 1 ? 's' : ''}
                         </p>
                       )}
@@ -1144,7 +1176,9 @@ export default function WorkoutsPage() {
                     </Button>
                   </div>
                 </Card>
-              ))}
+                </div>
+                );
+              })}
             </div>
           ) : (
             <Card className="p-6 sm:p-8 border-0">
