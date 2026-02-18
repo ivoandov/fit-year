@@ -38,6 +38,7 @@ import { type Exercise } from "@/data/exercises";
 import { useWorkout } from "@/context/WorkoutContext";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { setWorkoutPreview } from "@/pages/WorkoutPreviewPage";
 
 interface ScheduledWorkout {
   id: string;
@@ -350,14 +351,14 @@ export default function WorkoutsPage() {
   const handleStartWorkout = (workoutId: string) => {
     const workout = scheduledWorkouts.find(w => w.id === workoutId);
     if (workout) {
-      startWorkout({
+      setWorkoutPreview({
         id: workout.id,
         displayId: workoutId,
         scheduledWorkoutId: workout.id,
         name: workout.name,
         exercises: workout.exercises,
       });
-      setLocation("/track");
+      setLocation("/workout-preview");
     }
   };
 
@@ -559,21 +560,25 @@ export default function WorkoutsPage() {
   };
 
   const handleRestartWorkout = (completedWorkout: typeof completedWorkouts[0]) => {
-    restartWorkout(completedWorkout);
-    setLocation("/track");
+    setWorkoutPreview({
+      id: completedWorkout.id,
+      displayId: `${completedWorkout.id}-restart-${Date.now()}`,
+      name: completedWorkout.name,
+      exercises: completedWorkout.exercises as Exercise[],
+    });
+    setLocation("/workout-preview");
   };
 
   const handleStartFromTemplate = (templateId: string) => {
     const template = workoutTemplates.find(t => t.id === templateId);
     if (template) {
-      // Start workout directly from template (no scheduling needed)
-      startWorkout({
+      setWorkoutPreview({
         id: templateId,
         displayId: `template-${templateId}-${Date.now()}`,
         name: template.name,
         exercises: template.exercises,
       });
-      setLocation("/track");
+      setLocation("/workout-preview");
     }
   };
 

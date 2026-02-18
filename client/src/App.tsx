@@ -21,6 +21,7 @@ import TrackPage from "@/pages/TrackPage";
 import HistoryPage from "@/pages/HistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
 import RoutinesPage from "@/pages/RoutinesPage";
+import WorkoutPreviewPage from "@/pages/WorkoutPreviewPage";
 import LandingPage from "@/pages/LandingPage";
 
 function useAppDiagnostics() {
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/workouts" component={WorkoutsPage} />
       <Route path="/routines" component={RoutinesPage} />
       <Route path="/exercises" component={ExercisesPage} />
+      <Route path="/workout-preview" component={WorkoutPreviewPage} />
       <Route path="/track" component={TrackPage} />
       <Route path="/history" component={HistoryPage} />
       <Route path="/settings" component={SettingsPage} />
@@ -134,33 +136,37 @@ function AuthenticatedApp() {
     .map(n => n?.[0])
     .join('') || user?.email?.[0]?.toUpperCase() || '?';
 
+  const isFullscreenPage = location === "/workout-preview";
+
   return (
     <SettingsProvider>
       <WorkoutProvider>
         <div className="flex flex-col h-screen w-full">
-          <header className="flex items-center justify-between px-4 py-3 bg-background">
-            {isHomePage ? (
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={user?.profileImageUrl || undefined} alt={userName} />
-                  <AvatarFallback>{initials}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="text-sm text-muted-foreground">Welcome Back!</p>
-                  <p className="text-base font-semibold text-foreground">{userName}</p>
+          {!isFullscreenPage && (
+            <header className="flex items-center justify-between px-4 py-3 bg-background">
+              {isHomePage ? (
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={user?.profileImageUrl || undefined} alt={userName} />
+                    <AvatarFallback>{initials}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Welcome Back!</p>
+                    <p className="text-base font-semibold text-foreground">{userName}</p>
+                  </div>
                 </div>
+              ) : (
+                <h1 className="text-lg font-semibold text-foreground">{getPageTitle()}</h1>
+              )}
+              <div className="flex items-center gap-2">
+                <UserMenu />
               </div>
-            ) : (
-              <h1 className="text-lg font-semibold text-foreground">{getPageTitle()}</h1>
-            )}
-            <div className="flex items-center gap-2">
-              <UserMenu />
-            </div>
-          </header>
-          <main className="flex-1 overflow-auto pb-20">
+            </header>
+          )}
+          <main className={`flex-1 overflow-auto ${isFullscreenPage ? '' : 'pb-20'}`}>
             <Router />
           </main>
-          <BottomNav />
+          {!isFullscreenPage && <BottomNav />}
         </div>
       </WorkoutProvider>
     </SettingsProvider>
