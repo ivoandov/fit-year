@@ -784,7 +784,7 @@ export default function WorkoutsPage() {
                     {!heroImage && (
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/70 to-black/50" />
                     )}
-                    <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                    <div className="absolute top-3 right-3 z-20 flex items-center gap-2">
                       {heroPastDue && (
                         <Badge variant="outline" className="text-red-500 border-red-500 bg-red-950/50">
                           Past Due
@@ -850,7 +850,6 @@ export default function WorkoutsPage() {
                       </DropdownMenu>
                     </div>
                     <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 py-8" style={{ minHeight: '320px' }}>
-                      <Dumbbell className="h-12 w-12 text-primary mb-3" />
                       <h3 className="text-2xl sm:text-3xl font-bold text-white mb-1">
                         {heroWorkout.name}
                       </h3>
