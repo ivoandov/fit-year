@@ -169,6 +169,11 @@ export async function setupAuth(app: Express) {
     const callbackURL = getCallbackURL(req);
     
     console.log("[Auth] Login initiated with callback URL:", callbackURL);
+    console.log("[Auth] Request host:", req.get('host'));
+    console.log("[Auth] X-Forwarded-Host:", req.headers['x-forwarded-host']);
+    console.log("[Auth] X-Forwarded-Proto:", req.headers['x-forwarded-proto']);
+    console.log("[Auth] REPLIT_DEV_DOMAIN:", process.env.REPLIT_DEV_DOMAIN);
+    console.log("[Auth] Client ID (first 10 chars):", clientID?.substring(0, 10));
     
     passport.authenticate("google", {
       scope: ["profile", "email"],
@@ -181,7 +186,14 @@ export async function setupAuth(app: Express) {
     const callbackURL = getCallbackURL(req);
     
     console.log("[Auth] Callback received with URL:", callbackURL);
-    console.log("[Auth] Callback query params:", req.query);
+    console.log("[Auth] Callback query params:", JSON.stringify(req.query));
+    console.log("[Auth] Callback full URL:", req.originalUrl);
+    
+    if (req.query.error) {
+      console.error("[Auth] Google returned error:", req.query.error);
+      console.error("[Auth] Error description:", req.query.error_description);
+      return res.redirect("/");
+    }
     
     passport.authenticate("google", {
       failureRedirect: "/",
