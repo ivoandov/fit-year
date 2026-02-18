@@ -473,9 +473,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(exercise);
       
-      // Generate image in background after responding
       if (!exercise.imageUrl) {
-        generateExerciseImage(exercise.id, exercise.name, exercise.muscleGroups as string[]).catch(err => {
+        generateExerciseImage(exercise.id, exercise.name, exercise.muscleGroups as string[], userId).catch(err => {
           console.error("Background image generation failed:", err);
         });
       }
@@ -544,11 +543,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
-  // Background function to generate exercise image and save to object storage
-  async function generateExerciseImage(exerciseId: string, exerciseName: string, muscleGroups: string[]) {
+  const userGenderToggle = new Map<string, boolean>();
+
+  function getNextGender(userId: string): string {
+    const useMale = userGenderToggle.get(userId) ?? true;
+    userGenderToggle.set(userId, !useMale);
+    return useMale ? "male" : "female";
+  }
+
+  async function generateExerciseImage(exerciseId: string, exerciseName: string, muscleGroups: string[], userId?: string) {
     try {
       const muscleText = muscleGroups.length > 0 ? muscleGroups.join(", ") : "full body";
-      const prompt = `Professional fitness photography of an athletic person demonstrating the "${exerciseName}" exercise, targeting ${muscleText}. Shot in a modern gym or fitness studio setting with warm lighting. The person should be wearing athletic workout clothes. High quality, realistic photo style similar to stock fitness photography. Show proper exercise form and technique. Natural poses, professional composition.`;
+      const gender = getNextGender(userId || "system");
+      const prompt = `Professional fitness photography of an athletic ${gender} person demonstrating the "${exerciseName}" exercise, targeting ${muscleText}. Shot in a modern gym or fitness studio setting with warm lighting. The person should be wearing athletic workout clothes. High quality, realistic photo style similar to stock fitness photography. Show proper exercise form and technique. Natural poses, professional composition.`;
       
       console.log(`Generating image for exercise: ${exerciseName}`);
       
@@ -654,7 +661,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await generateExerciseImage(
             exercise.id, 
             exercise.name, 
-            exercise.muscleGroups as string[]
+            exercise.muscleGroups as string[],
+            undefined
           );
         }
       }
@@ -783,7 +791,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ message: "Image regeneration started" });
       
-      generateExerciseImage(exercise.id, exercise.name, exercise.muscleGroups as string[]).catch(err => {
+      generateExerciseImage(exercise.id, exercise.name, exercise.muscleGroups as string[], userId).catch(err => {
         console.error("Image regeneration failed:", err);
       });
     } catch (error) {
