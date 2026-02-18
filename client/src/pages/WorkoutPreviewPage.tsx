@@ -93,7 +93,7 @@ export default function WorkoutPreviewPage() {
 
         <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
           <h1
-            className="text-3xl sm:text-4xl font-bold text-white leading-tight"
+            className="text-4xl sm:text-5xl font-bold text-primary leading-tight"
             data-testid="text-preview-workout-name"
           >
             {workoutData.name}
