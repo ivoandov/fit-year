@@ -950,6 +950,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/scheduled-workouts", isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any)?.id;
+      
+      // Auto-reschedule orphaned routine workouts
+      // Check if any active routine has remaining workouts but no scheduled entries
+      try {
+        const activeInstances = await storage.getActiveRoutineInstances(userId);
+        if (activeInstances.length > 0) {
+          const allScheduled = await storage.getScheduledWorkouts(userId);
+          
+          for (const instance of activeInstances) {
+            const remaining = instance.totalWorkouts - (instance.completedWorkouts || 0) - (instance.skippedWorkouts || 0);
+            if (remaining <= 0) continue;
+            
+            const routineScheduled = allScheduled.filter(w => w.routineInstanceId === instance.id);
+            if (routineScheduled.length > 0) continue;
+            
+            console.log(`[Auto-Reschedule] Routine "${instance.routineName}" has ${remaining} remaining workouts but no scheduled entries. Rescheduling...`);
+            
+            const entries = await storage.getRoutineEntries(instance.routineId);
+            if (!entries || entries.length === 0) continue;
+            
+            // Determine which entries still need to be scheduled
+            // Routine progresses sequentially, so the last N entries (where N = remaining) are outstanding
+            const sortedEntries = entries
+              .filter(e => e.workoutName)
+              .sort((a, b) => a.dayIndex - b.dayIndex);
+            
+            const processed = (instance.completedWorkouts || 0) + (instance.skippedWorkouts || 0);
+            const entriesToSchedule = sortedEntries.slice(processed, processed + remaining);
+            
+            if (entriesToSchedule.length === 0) continue;
+            
+            // Schedule them starting from today, respecting original cadence spacing
+            const today = new Date();
+            let dayOffset = 0;
+            for (let i = 0; i < entriesToSchedule.length; i++) {
+              const entry = entriesToSchedule[i];
+              // Use spacing between routine day indices for cadence
+              if (i > 0) {
+                const gap = entriesToSchedule[i].dayIndex - entriesToSchedule[i - 1].dayIndex;
+                dayOffset += Math.max(gap, 1);
+              }
+              const workoutDate = new Date(today);
+              workoutDate.setDate(today.getDate() + dayOffset);
+              const localDate = `${workoutDate.getFullYear()}-${String(workoutDate.getMonth() + 1).padStart(2, '0')}-${String(workoutDate.getDate()).padStart(2, '0')}`;
+              const noonDate = new Date(localDate + 'T12:00:00Z');
+              
+              // Check no existing workout on that date to avoid conflicts
+              const dateStr = noonDate.toISOString().split('T')[0];
+              const hasConflict = allScheduled.some(w => {
+                const existingDate = new Date(w.date).toISOString().split('T')[0];
+                return existingDate === dateStr;
+              });
+              if (hasConflict) {
+                dayOffset++;
+                const adjustedDate = new Date(today);
+                adjustedDate.setDate(today.getDate() + dayOffset);
+                const adjLocalDate = `${adjustedDate.getFullYear()}-${String(adjustedDate.getMonth() + 1).padStart(2, '0')}-${String(adjustedDate.getDate()).padStart(2, '0')}`;
+                const adjNoonDate = new Date(adjLocalDate + 'T12:00:00Z');
+                
+                await storage.createScheduledWorkoutWithRoutine({
+                  userId,
+                  name: entry.workoutName || `Day ${entry.dayIndex}`,
+                  date: adjNoonDate,
+                  exercises: entry.exercises || [],
+                  templateId: entry.workoutTemplateId || null,
+                  routineInstanceId: instance.id,
+                  routineDayIndex: entry.dayIndex,
+                });
+                console.log(`[Auto-Reschedule] Created "${entry.workoutName}" for ${adjLocalDate} (shifted to avoid conflict)`);
+              } else {
+                await storage.createScheduledWorkoutWithRoutine({
+                  userId,
+                  name: entry.workoutName || `Day ${entry.dayIndex}`,
+                  date: noonDate,
+                  exercises: entry.exercises || [],
+                  templateId: entry.workoutTemplateId || null,
+                  routineInstanceId: instance.id,
+                  routineDayIndex: entry.dayIndex,
+                });
+                console.log(`[Auto-Reschedule] Created "${entry.workoutName}" for ${localDate}`);
+              }
+            }
+          }
+        }
+      } catch (rescheduleError) {
+        console.error("[Auto-Reschedule] Error during auto-reschedule:", rescheduleError);
+      }
+      
       const workouts = await storage.getScheduledWorkouts(userId);
       res.json(workouts);
     } catch (error) {
