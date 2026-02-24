@@ -206,6 +206,31 @@ export default function TrackPage() {
     }
   }, [currentExerciseIndex, enrichedWorkoutExercises, hasLoadedSavedProgress]);
 
+  useEffect(() => {
+    if (!hasLoadedSavedProgress || completedWorkouts.length === 0 || enrichedWorkoutExercises.length === 0) return;
+    if (trackingProgress) return;
+    setExerciseSets(prev => {
+      let changed = false;
+      const newMap = new Map(prev);
+      for (const ex of enrichedWorkoutExercises as any[]) {
+        if (!ex?.instanceId) continue;
+        const sets = newMap.get(ex.instanceId);
+        if (!sets || sets.length === 0) continue;
+        const firstSet = sets[0];
+        if (firstSet.completed) continue;
+        if (firstSet.weight != null || firstSet.reps != null || firstSet.distance != null || firstSet.time != null) continue;
+        const lastValues = getLastRecordedValues(ex.id);
+        if (lastValues) {
+          const updatedSets = [...sets];
+          updatedSets[0] = { ...firstSet, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time };
+          newMap.set(ex.instanceId, updatedSets);
+          changed = true;
+        }
+      }
+      return changed ? newMap : prev;
+    });
+  }, [completedWorkouts, enrichedWorkoutExercises, hasLoadedSavedProgress]);
+
   if (!activeWorkout) {
     return (
       <div className="flex-1 overflow-auto">
