@@ -481,11 +481,11 @@ export default function TrackPage() {
                 </>
               ) : (
                 <>
-                  <div className="flex items-center font-semibold text-xs sm:text-sm pb-2 border-b">
-                    <div className="w-8 shrink-0">Set</div>
-                    <div className="flex-1 text-center">Weight</div>
-                    <div className="w-20 sm:w-24 shrink-0 text-center">Reps</div>
-                    <div className="w-10 shrink-0 text-center">Done</div>
+                  <div className="grid grid-cols-[2rem_1fr_4.5rem_2.5rem] sm:grid-cols-[2.5rem_1fr_6rem_2.5rem] gap-x-2 sm:gap-x-3 items-center font-semibold text-xs sm:text-sm pb-2 border-b">
+                    <div>Set</div>
+                    <div className="text-center">Weight</div>
+                    <div className="text-center">Reps</div>
+                    <div className="text-center">Done</div>
                   </div>
                   {sets.map((set, index) => {
                     const isCurrentSet = index === currentSetIndex && !set.completed;
@@ -494,13 +494,13 @@ export default function TrackPage() {
                     return (
                       <div
                         key={set.setNumber}
-                        className={`flex items-center gap-3 py-2.5 rounded-md px-1.5 sm:px-2 ${
+                        className={`grid grid-cols-[2rem_1fr_4.5rem_2.5rem] sm:grid-cols-[2.5rem_1fr_6rem_2.5rem] gap-x-2 sm:gap-x-3 items-center py-2 rounded-md px-1 sm:px-2 ${
                           set.completed ? 'bg-accent' : ''
                         } ${isActive ? 'border-2 border-primary bg-primary/5' : isCurrentSet ? 'border border-muted-foreground/30' : ''}`}
                         data-testid={`row-set-${set.setNumber}`}
                       >
-                        <div className="w-8 shrink-0 font-medium text-sm sm:text-base">{set.setNumber}</div>
-                        <div className="flex-1 flex items-center gap-1.5 justify-center">
+                        <div className="font-medium text-sm sm:text-base">{set.setNumber}</div>
+                        <div className="flex items-center gap-1 sm:gap-1.5 justify-center min-w-0">
                           <Button
                             type="button"
                             variant="outline"
@@ -525,7 +525,7 @@ export default function TrackPage() {
                               newSets[index].weight = e.target.value === "" ? null : parseFloat(e.target.value);
                               setCurrentSets(newSets);
                             }}
-                            className="text-center text-sm h-9 sm:h-10 w-20 sm:w-24 min-w-0"
+                            className="text-center text-sm h-9 sm:h-10 flex-1 min-w-0"
                             data-testid={`input-weight-${set.setNumber}`}
                           />
                           <Button
@@ -552,10 +552,10 @@ export default function TrackPage() {
                             newSets[index].reps = e.target.value === "" ? null : parseInt(e.target.value);
                             setCurrentSets(newSets);
                           }}
-                          className="text-center text-sm h-9 sm:h-10 w-20 sm:w-24 shrink-0"
+                          className="text-center text-sm h-9 sm:h-10"
                           data-testid={`input-reps-${set.setNumber}`}
                         />
-                        <div className="w-10 shrink-0 flex justify-center">
+                        <div className="flex justify-center">
                           <Checkbox
                             checked={set.completed}
                             onCheckedChange={(checked) => {
