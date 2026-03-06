@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pause, Play, SkipForward } from "lucide-react";
+
+const TIMER_STORAGE_KEY = "rest_timer_end_time";
+const TIMER_PAUSED_KEY = "rest_timer_paused_remaining";
 
 interface RestTimerProps {
   isOpen: boolean;
@@ -11,51 +14,170 @@ interface RestTimerProps {
   nextExerciseName?: string;
 }
 
-export function RestTimer({ 
-  isOpen, 
-  onClose, 
+function requestNotificationPermission() {
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+}
+
+function sendTimerCompleteNotification(exerciseName: string) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    new Notification("Rest Complete", {
+      body: `Time to start your next ${exerciseName} set!`,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: "rest-timer",
+      renotify: true,
+    } as any);
+  }
+}
+
+export function RestTimer({
+  isOpen,
+  onClose,
   initialSeconds = 90,
   exerciseName = "Rest",
-  nextExerciseName
+  nextExerciseName,
 }: RestTimerProps) {
   const [seconds, setSeconds] = useState(initialSeconds);
   const [isPaused, setIsPaused] = useState(false);
+  const endTimeRef = useRef<number | null>(null);
+  const hasCompletedRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const clearTimer = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const computeRemaining = useCallback((): number => {
+    if (!endTimeRef.current) return 0;
+    return Math.max(0, Math.ceil((endTimeRef.current - Date.now()) / 1000));
+  }, []);
+
+  const tick = useCallback(() => {
+    const remaining = computeRemaining();
+    setSeconds(remaining);
+    if (remaining <= 0) {
+      clearTimer();
+      localStorage.removeItem(TIMER_STORAGE_KEY);
+      localStorage.removeItem(TIMER_PAUSED_KEY);
+      if (!hasCompletedRef.current) {
+        hasCompletedRef.current = true;
+        if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+        sendTimerCompleteNotification(exerciseName);
+      }
+    }
+  }, [computeRemaining, clearTimer, exerciseName]);
+
+  const startCounting = useCallback((remainingSecs: number) => {
+    clearTimer();
+    hasCompletedRef.current = false;
+    endTimeRef.current = Date.now() + remainingSecs * 1000;
+    localStorage.setItem(TIMER_STORAGE_KEY, String(endTimeRef.current));
+    localStorage.removeItem(TIMER_PAUSED_KEY);
+    intervalRef.current = setInterval(tick, 500);
+    tick();
+  }, [clearTimer, tick]);
+
+  // On open: initialize timer
   useEffect(() => {
     if (!isOpen) {
+      clearTimer();
+      endTimeRef.current = null;
+      hasCompletedRef.current = false;
+      localStorage.removeItem(TIMER_STORAGE_KEY);
+      localStorage.removeItem(TIMER_PAUSED_KEY);
       setSeconds(initialSeconds);
       setIsPaused(false);
       return;
     }
 
-    if (isPaused || seconds === 0) return;
+    requestNotificationPermission();
 
-    const interval = setInterval(() => {
-      setSeconds((prev) => {
-        if (prev <= 1) {
-          if ('vibrate' in navigator) {
-            navigator.vibrate(200);
-          }
-          return 0;
+    // Check if there's a saved end time (e.g. page was refreshed mid-timer)
+    const savedEnd = localStorage.getItem(TIMER_STORAGE_KEY);
+    const savedPausedRemaining = localStorage.getItem(TIMER_PAUSED_KEY);
+
+    if (savedPausedRemaining) {
+      const rem = parseInt(savedPausedRemaining, 10);
+      setSeconds(rem);
+      setIsPaused(true);
+      endTimeRef.current = null;
+    } else if (savedEnd) {
+      const end = parseInt(savedEnd, 10);
+      const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+      if (remaining > 0) {
+        endTimeRef.current = end;
+        setSeconds(remaining);
+        setIsPaused(false);
+        intervalRef.current = setInterval(tick, 500);
+        tick();
+      } else {
+        // Timer already elapsed while away
+        localStorage.removeItem(TIMER_STORAGE_KEY);
+        setSeconds(0);
+        if (!hasCompletedRef.current) {
+          hasCompletedRef.current = true;
+          if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+          sendTimerCompleteNotification(exerciseName);
         }
-        return prev - 1;
-      });
-    }, 1000);
+      }
+    } else {
+      startCounting(initialSeconds);
+    }
 
-    return () => clearInterval(interval);
-  }, [isOpen, isPaused, seconds, initialSeconds]);
+    return () => {
+      clearTimer();
+    };
+  }, [isOpen]);
+
+  // Handle visibility change: when user returns to the tab, resync the display
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && !isPaused) {
+        clearTimer();
+        const remaining = computeRemaining();
+        setSeconds(remaining);
+        if (remaining > 0) {
+          intervalRef.current = setInterval(tick, 500);
+        } else if (!hasCompletedRef.current) {
+          hasCompletedRef.current = true;
+          if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+          sendTimerCompleteNotification(exerciseName);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [isOpen, isPaused, computeRemaining, clearTimer, tick, exerciseName]);
+
+  const handlePauseResume = () => {
+    if (isPaused) {
+      startCounting(seconds);
+      setIsPaused(false);
+    } else {
+      clearTimer();
+      endTimeRef.current = null;
+      localStorage.removeItem(TIMER_STORAGE_KEY);
+      localStorage.setItem(TIMER_PAUSED_KEY, String(seconds));
+      setIsPaused(true);
+    }
+  };
 
   const progress = ((initialSeconds - seconds) / initialSeconds) * 100;
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
-  
   const circumference = 2 * Math.PI * 120;
   const strokeDashoffset = circumference * (1 - progress / 100);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
-        className="sm:max-w-md border-0 bg-background/95 backdrop-blur-sm p-0" 
+      <DialogContent
+        className="sm:max-w-md border-0 bg-background/95 backdrop-blur-sm p-0"
         data-testid="dialog-rest-timer"
       >
         <div className="flex flex-col items-center px-6 pt-8 pb-6">
@@ -65,16 +187,8 @@ export function RestTimer({
 
           <div className="relative w-64 h-64 flex items-center justify-center mb-8">
             <div className="absolute inset-0 rounded-full bg-[#1a1a1a] border-4 border-[#2a2a2a]" />
-            
             <svg className="absolute inset-0 w-full h-full -rotate-90">
-              <circle
-                cx="128"
-                cy="128"
-                r="120"
-                stroke="#2a2a2a"
-                strokeWidth="6"
-                fill="none"
-              />
+              <circle cx="128" cy="128" r="120" stroke="#2a2a2a" strokeWidth="6" fill="none" />
               <circle
                 cx="128"
                 cy="128"
@@ -85,16 +199,15 @@ export function RestTimer({
                 strokeLinecap="round"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
-                className="transition-all duration-1000 ease-linear"
+                className="transition-all duration-500 ease-linear"
               />
             </svg>
-            
             <div className="relative z-10 flex flex-col items-center">
               <div className="text-6xl font-bold tracking-tight" data-testid="text-countdown">
-                {minutes.toString().padStart(2, '0')}:{remainingSeconds.toString().padStart(2, '0')}
+                {minutes.toString().padStart(2, "0")}:{remainingSeconds.toString().padStart(2, "0")}
               </div>
               <div className="text-muted-foreground text-sm mt-1">
-                Minutes
+                {seconds === 0 ? "Rest complete!" : "Minutes"}
               </div>
             </div>
           </div>
@@ -103,7 +216,7 @@ export function RestTimer({
             <Button
               variant="outline"
               className="flex-1 h-12"
-              onClick={() => setIsPaused(!isPaused)}
+              onClick={handlePauseResume}
               data-testid="button-pause-timer"
             >
               {isPaused ? (
