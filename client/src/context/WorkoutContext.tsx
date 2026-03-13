@@ -503,29 +503,36 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
 
   const updateActiveWorkout = (name: string, exercises: Exercise[]) => {
     if (activeWorkout) {
-      // Preserve instanceIds for existing exercises, create new ones for added exercises
+      // Build a pool of old instanceIds keyed by exercise id (in order), so we
+      // can hand them out to matching exercises that somehow lost their instanceId.
+      const oldInstanceIdPool = new Map<string, string[]>();
+      for (const ex of activeWorkout.exercises) {
+        const iid = (ex as any).instanceId;
+        if (!iid) continue;
+        if (!oldInstanceIdPool.has(ex.id)) oldInstanceIdPool.set(ex.id, []);
+        oldInstanceIdPool.get(ex.id)!.push(iid);
+      }
+      const poolConsumed = new Map<string, number>();
+
       const updatedExercises = exercises.map((ex, index) => {
-        // Check if this exercise already has an instanceId (from existing workout)
-        const existingExercise = activeWorkout.exercises.find(
-          (existing) => (existing as any).instanceId && 
-            (existing.id === ex.id || index < activeWorkout.exercises.length)
-        );
-        
-        // Try to match by position first (for swapped exercises that keep their slot)
-        const exerciseAtPosition = activeWorkout.exercises[index];
-        const instanceId = (exerciseAtPosition as any)?.instanceId || 
-          (existingExercise as any)?.instanceId || 
-          `${activeWorkout.displayId}-${index}-${Date.now()}`;
-        
-        return {
-          ...ex,
-          instanceId,
-          sets: 3,
-          defaultWeight: 135,
-          defaultReps: 10,
-        };
+        // The editor passes exercises straight from selectedExercises, which was
+        // seeded from activeWorkout.exercises, so each already carries its instanceId.
+        // Honour that first – this is the correct fix for the deletion-shift bug.
+        const existingInstanceId = (ex as any).instanceId as string | undefined;
+        if (existingInstanceId) {
+          return { ...ex, instanceId: existingInstanceId, sets: 3, defaultWeight: 135, defaultReps: 10 };
+        }
+
+        // Fallback: match by exercise id in insertion order (handles newly added exercises
+        // that were looked up from the library and therefore lack an instanceId).
+        const pool = oldInstanceIdPool.get(ex.id) || [];
+        const consumed = poolConsumed.get(ex.id) || 0;
+        const instanceId = pool[consumed] ?? `${activeWorkout.displayId}-${ex.id}-${index}-${Date.now()}`;
+        poolConsumed.set(ex.id, consumed + 1);
+
+        return { ...ex, instanceId, sets: 3, defaultWeight: 135, defaultReps: 10 };
       });
-      
+
       setActiveWorkout({
         ...activeWorkout,
         name,
