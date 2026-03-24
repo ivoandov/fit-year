@@ -1,17 +1,25 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { WorkoutHistoryCard } from "@/components/WorkoutHistoryCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, Calendar, Flame, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TrendingUp, Calendar, Flame, Activity, Plus, Target } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { startOfWeek, startOfMonth, isAfter, isBefore, isEqual, endOfDay } from "date-fns";
 import { useWorkout } from "@/context/WorkoutContext";
 import { useSettings } from "@/components/SettingsProvider";
 import { useExerciseDetails } from "@/hooks/useExerciseDetails";
+import { GoalDialog } from "@/components/GoalDialog";
+import type { ExerciseGoal } from "@shared/schema";
 
 export default function HistoryPage() {
   const { completedWorkouts } = useWorkout();
   const { weekStart: weekStartDay, muscleGroups } = useSettings();
   const { enrichExercise } = useExerciseDetails();
+  const [goalDialogOpen, setGoalDialogOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<ExerciseGoal | null>(null);
+
+  const { data: goals = [] } = useQuery<ExerciseGoal[]>({ queryKey: ["/api/exercise-goals"] });
 
   const historyData = useMemo(() => completedWorkouts.map((workout, index) => {
     let workoutVolume = 0;
@@ -21,7 +29,6 @@ export default function HistoryPage() {
       const enrichedEx = enrichExercise({ ...ex, id: ex.id || "" });
       const sets = ex.setsData || [];
       sets.forEach((set: any) => {
-        // Count sets that have data (weight/reps or distance/time) or are marked completed
         const hasData = (set.weight != null && set.reps) || (set.distance && set.time);
         if (hasData || set.completed) {
           if (set.weight != null && set.reps) {
@@ -59,7 +66,6 @@ export default function HistoryPage() {
   const calendarWeekStart = startOfWeek(now, { weekStartsOn });
   const monthStart = startOfMonth(now);
   
-  // Last 7 days (rolling window) for muscle group stats
   const last7DaysStart = new Date(now);
   last7DaysStart.setDate(last7DaysStart.getDate() - 6);
   last7DaysStart.setHours(0, 0, 0, 0);
@@ -77,7 +83,6 @@ export default function HistoryPage() {
   ).length;
 
   const totalWorkouts = historyData.length;
-
   const totalVolume = historyData.reduce((sum, w) => sum + w.totalVolume, 0);
   const totalSetsCompleted = historyData.reduce((sum, w) => sum + w.totalSets, 0);
 
@@ -87,7 +92,6 @@ export default function HistoryPage() {
     historyData.forEach((workout) => {
       if (isWithinRange(workout.date, last7DaysStart, todayEnd)) {
         workout.exercises?.forEach((exercise) => {
-          // Count sets that have data or are marked completed
           const setCount = exercise.sets?.filter((s: any) => 
             (s.weight != null && s.reps) || (s.distance && s.time) || s.completed
           ).length || 0;
@@ -98,15 +102,31 @@ export default function HistoryPage() {
       }
     });
 
-    // Return all muscle groups from settings, plus any additional ones found in workouts
     const allMuscleGroups = new Set([...muscleGroups, ...Object.keys(setsByMuscle)]);
-    
     return Array.from(allMuscleGroups).map((muscle) => ({
       muscleGroup: muscle,
       sets: setsByMuscle[muscle] || 0,
       maxSets: 20,
     }));
   };
+
+  // Calculate rolling 7-day reps per exercise for goals
+  const goalProgress = useMemo(() => {
+    const repsByExercise: Record<string, number> = {};
+    completedWorkouts.forEach(workout => {
+      const date = workout.completedAt instanceof Date ? workout.completedAt : new Date(workout.completedAt as any);
+      if (!isWithinRange(date, last7DaysStart, todayEnd)) return;
+      workout.exercises.forEach((ex: any) => {
+        const setsData: any[] = ex.setsData || [];
+        setsData.forEach(set => {
+          if (!set.completed) return;
+          const reps = set.reps ?? 0;
+          repsByExercise[ex.id] = (repsByExercise[ex.id] || 0) + reps;
+        });
+      });
+    });
+    return repsByExercise;
+  }, [completedWorkouts, last7DaysStart, todayEnd]);
 
   const weeklySetsByMuscleGroup = calculateWeeklySetsByMuscle();
 
@@ -146,6 +166,67 @@ export default function HistoryPage() {
             </Card>
           ))}
         </div>
+
+        {/* Weekly Goals */}
+        <Card>
+          <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <Target className="h-4 w-4 text-primary" />
+                  Weekly Goals (last 7 days)
+                </CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  Track rep targets across multiple sessions
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => { setEditingGoal(null); setGoalDialogOpen(true); }}
+                data-testid="button-add-goal"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Goal
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6 pt-0">
+            {goals.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No goals yet. Add one to start tracking multi-session progress.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {goals.map(goal => {
+                  const done = goalProgress[goal.exerciseId] ?? 0;
+                  const pct = Math.min(100, (done / goal.targetReps) * 100);
+                  const isComplete = done >= goal.targetReps;
+                  return (
+                    <button
+                      key={goal.id}
+                      className="w-full text-left space-y-1.5 hover-elevate rounded-md p-1 -m-1"
+                      onClick={() => { setEditingGoal(goal); setGoalDialogOpen(true); }}
+                      data-testid={`row-goal-${goal.id}`}
+                    >
+                      <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
+                        <span className="font-medium truncate">{goal.exerciseName}</span>
+                        <span className={`shrink-0 tabular-nums ${isComplete ? "text-primary font-semibold" : "text-muted-foreground"}`}>
+                          {done} / {goal.targetReps} reps
+                        </span>
+                      </div>
+                      <Progress
+                        value={pct}
+                        className={isComplete ? "[&>div]:bg-primary" : ""}
+                        data-testid={`progress-goal-${goal.id}`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="p-4 sm:p-6">
@@ -194,6 +275,12 @@ export default function HistoryPage() {
           </div>
         )}
       </div>
+
+      <GoalDialog
+        isOpen={goalDialogOpen}
+        onClose={() => { setGoalDialogOpen(false); setEditingGoal(null); }}
+        editGoal={editingGoal}
+      />
     </div>
   );
 }

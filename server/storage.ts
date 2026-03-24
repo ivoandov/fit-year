@@ -13,6 +13,7 @@ import {
   routineEntries,
   routineInstances,
   googleCalendarTokens,
+  exerciseGoals,
   type Exercise,
   type WorkoutTemplate,
   type ScheduledWorkout,
@@ -23,6 +24,7 @@ import {
   type RoutineEntry,
   type RoutineInstance,
   type GoogleCalendarTokens,
+  type ExerciseGoal,
   type InsertExercise,
   type InsertWorkoutTemplate,
   type InsertScheduledWorkout,
@@ -33,6 +35,7 @@ import {
   type InsertRoutineEntry,
   type InsertRoutineInstance,
   type InsertGoogleCalendarTokens,
+  type InsertExerciseGoal,
 } from "@shared/schema";
 import * as crypto from "crypto";
 import { builtInExercises } from "./data/builtInExercises";
@@ -261,6 +264,11 @@ export interface IStorage {
   updateGoogleCalendarAccessToken(userId: string, accessToken: string, expiresAt: Date): Promise<void>;
   deleteGoogleCalendarTokens(userId: string): Promise<boolean>;
   isCalendarConnected(userId: string): Promise<boolean>;
+
+  getExerciseGoals(userId: string): Promise<ExerciseGoal[]>;
+  createExerciseGoal(goal: InsertExerciseGoal): Promise<ExerciseGoal>;
+  updateExerciseGoal(id: string, userId: string, updates: Partial<Pick<ExerciseGoal, "exerciseName" | "targetReps">>): Promise<ExerciseGoal | undefined>;
+  deleteExerciseGoal(id: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1557,6 +1565,55 @@ export class DatabaseStorage implements IStorage {
       }
       throw error;
     }
+  }
+
+  async getExerciseGoals(userId: string): Promise<ExerciseGoal[]> {
+    const results = await neonClient`
+      SELECT id, user_id as "userId", exercise_id as "exerciseId",
+             exercise_name as "exerciseName", target_reps as "targetReps", period
+      FROM exercise_goals
+      WHERE user_id = ${userId}
+      ORDER BY exercise_name ASC
+    `;
+    return (results as any[]).map(r => ({
+      id: r.id,
+      userId: r.userId,
+      exerciseId: r.exerciseId,
+      exerciseName: r.exerciseName,
+      targetReps: r.targetReps,
+      period: r.period,
+    }));
+  }
+
+  async createExerciseGoal(goal: InsertExerciseGoal): Promise<ExerciseGoal> {
+    const id = crypto.randomUUID();
+    await neonClient`
+      INSERT INTO exercise_goals (id, user_id, exercise_id, exercise_name, target_reps, period)
+      VALUES (${id}, ${goal.userId}, ${goal.exerciseId}, ${goal.exerciseName}, ${goal.targetReps}, ${goal.period ?? "week"})
+    `;
+    return { id, ...goal, period: goal.period ?? "week" };
+  }
+
+  async updateExerciseGoal(id: string, userId: string, updates: Partial<Pick<ExerciseGoal, "exerciseName" | "targetReps">>): Promise<ExerciseGoal | undefined> {
+    const results = await neonClient`
+      UPDATE exercise_goals
+      SET
+        exercise_name = COALESCE(${updates.exerciseName ?? null}, exercise_name),
+        target_reps   = COALESCE(${updates.targetReps ?? null}, target_reps)
+      WHERE id = ${id} AND user_id = ${userId}
+      RETURNING id, user_id as "userId", exercise_id as "exerciseId",
+                exercise_name as "exerciseName", target_reps as "targetReps", period
+    `;
+    if (!results || results.length === 0) return undefined;
+    const r = results[0] as any;
+    return { id: r.id, userId: r.userId, exerciseId: r.exerciseId, exerciseName: r.exerciseName, targetReps: r.targetReps, period: r.period };
+  }
+
+  async deleteExerciseGoal(id: string, userId: string): Promise<boolean> {
+    const result = await neonClient`
+      DELETE FROM exercise_goals WHERE id = ${id} AND user_id = ${userId}
+    `;
+    return (result as any)?.count > 0;
   }
 }
 

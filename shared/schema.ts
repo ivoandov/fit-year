@@ -116,6 +116,15 @@ export const routineInstances = pgTable("routine_instances", {
   completedAt: timestamp("completed_at"),
 });
 
+export const exerciseGoals = pgTable("exercise_goals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  exerciseId: varchar("exercise_id").notNull(),
+  exerciseName: text("exercise_name").notNull(),
+  targetReps: integer("target_reps").notNull(),
+  period: text("period").notNull().default("week"),
+});
+
 export const googleCalendarTokens = pgTable("google_calendar_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique(),
@@ -134,6 +143,7 @@ export const insertActiveWorkoutSchema = createInsertSchema(activeWorkouts).omit
 export const insertRoutineSchema = createInsertSchema(routines).omit({ id: true, createdAt: true });
 export const insertRoutineEntrySchema = createInsertSchema(routineEntries).omit({ id: true });
 export const insertRoutineInstanceSchema = createInsertSchema(routineInstances).omit({ id: true, createdAt: true, completedAt: true });
+export const insertExerciseGoalSchema = createInsertSchema(exerciseGoals).omit({ id: true });
 export const insertGoogleCalendarTokensSchema = createInsertSchema(googleCalendarTokens).omit({ id: true, connectedAt: true });
 
 export type Exercise = typeof exercises.$inferSelect;
@@ -145,8 +155,10 @@ export type ActiveWorkout = typeof activeWorkouts.$inferSelect;
 export type Routine = typeof routines.$inferSelect;
 export type RoutineEntry = typeof routineEntries.$inferSelect;
 export type RoutineInstance = typeof routineInstances.$inferSelect;
+export type ExerciseGoal = typeof exerciseGoals.$inferSelect;
 export type GoogleCalendarTokens = typeof googleCalendarTokens.$inferSelect;
 export type InsertExercise = z.infer<typeof insertExerciseSchema>;
+export type InsertExerciseGoal = z.infer<typeof insertExerciseGoalSchema>;
 export type InsertWorkoutTemplate = z.infer<typeof insertWorkoutTemplateSchema>;
 export type InsertScheduledWorkout = z.infer<typeof insertScheduledWorkoutSchema>;
 export type InsertCompletedWorkout = z.infer<typeof insertCompletedWorkoutSchema>;

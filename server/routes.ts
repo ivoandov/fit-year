@@ -2513,6 +2513,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register image generation routes
   registerImageRoutes(app);
 
+  // Exercise Goals
+  app.get("/api/exercise-goals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const goals = await storage.getExerciseGoals(userId);
+      res.json(goals);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch exercise goals" });
+    }
+  });
+
+  app.post("/api/exercise-goals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const { exerciseId, exerciseName, targetReps, period } = req.body;
+      if (!exerciseId || !exerciseName || !targetReps) {
+        return res.status(400).json({ error: "exerciseId, exerciseName and targetReps are required" });
+      }
+      const goal = await storage.createExerciseGoal({ userId, exerciseId, exerciseName, targetReps: Number(targetReps), period: period ?? "week" });
+      res.status(201).json(goal);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create exercise goal" });
+    }
+  });
+
+  app.put("/api/exercise-goals/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const { id } = req.params;
+      const { exerciseName, targetReps } = req.body;
+      const updated = await storage.updateExerciseGoal(id, userId, { exerciseName, targetReps: targetReps !== undefined ? Number(targetReps) : undefined });
+      if (!updated) return res.status(404).json({ error: "Goal not found" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update exercise goal" });
+    }
+  });
+
+  app.delete("/api/exercise-goals/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any)?.id;
+      const { id } = req.params;
+      await storage.deleteExerciseGoal(id, userId);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete exercise goal" });
+    }
+  });
+
   // Register object storage routes
   registerObjectStorageRoutes(app);
 
