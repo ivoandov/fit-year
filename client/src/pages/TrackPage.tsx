@@ -263,12 +263,27 @@ export default function TrackPage() {
   const allSetsCompleted = sets.every(s => s.completed);
   const isLastExercise = currentExerciseIndex === enrichedWorkoutExercises.length - 1;
 
+  // Copy weight+reps from a completed set into the next uncompleted set (if still empty)
+  const propagateToNextSet = (setsArr: SetData[], completedIndex: number): SetData[] => {
+    const next = setsArr[completedIndex + 1];
+    if (!next) return setsArr;
+    const current = setsArr[completedIndex];
+    const updated = [...setsArr];
+    updated[completedIndex + 1] = {
+      ...next,
+      weight: next.weight ?? current.weight,
+      reps: next.reps ?? current.reps,
+    };
+    return updated;
+  };
+
   const handlePrimaryAction = () => {
     if (trackingState === "not_started") {
       setTrackingState("in_set");
     } else if (trackingState === "in_set") {
-      const newSets = [...sets];
+      let newSets = [...sets];
       newSets[currentSetIndex].completed = true;
+      newSets = propagateToNextSet(newSets, currentSetIndex);
       setCurrentSets(newSets);
       
       if (currentSetIndex < sets.length - 1) {
@@ -592,8 +607,11 @@ export default function TrackPage() {
                           <Checkbox
                             checked={set.completed}
                             onCheckedChange={(checked) => {
-                              const newSets = [...sets];
+                              let newSets = [...sets];
                               newSets[index].completed = !!checked;
+                              if (checked) {
+                                newSets = propagateToNextSet(newSets, index);
+                              }
                               setCurrentSets(newSets);
                               if (checked) {
                                 if (restTimerOnManualComplete) {
