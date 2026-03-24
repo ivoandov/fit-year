@@ -123,6 +123,7 @@ export const exerciseGoals = pgTable("exercise_goals", {
   exerciseName: text("exercise_name").notNull(),
   targetReps: integer("target_reps").notNull(),
   period: text("period").notNull().default("week"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
 export const googleCalendarTokens = pgTable("google_calendar_tokens", {
@@ -143,7 +144,7 @@ export const insertActiveWorkoutSchema = createInsertSchema(activeWorkouts).omit
 export const insertRoutineSchema = createInsertSchema(routines).omit({ id: true, createdAt: true });
 export const insertRoutineEntrySchema = createInsertSchema(routineEntries).omit({ id: true });
 export const insertRoutineInstanceSchema = createInsertSchema(routineInstances).omit({ id: true, createdAt: true, completedAt: true });
-export const insertExerciseGoalSchema = createInsertSchema(exerciseGoals).omit({ id: true });
+export const insertExerciseGoalSchema = createInsertSchema(exerciseGoals).omit({ id: true, createdAt: true });
 export const insertGoogleCalendarTokensSchema = createInsertSchema(googleCalendarTokens).omit({ id: true, connectedAt: true });
 
 export type Exercise = typeof exercises.$inferSelect;

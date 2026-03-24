@@ -1570,7 +1570,8 @@ export class DatabaseStorage implements IStorage {
   async getExerciseGoals(userId: string): Promise<ExerciseGoal[]> {
     const results = await neonClient`
       SELECT id, user_id as "userId", exercise_id as "exerciseId",
-             exercise_name as "exerciseName", target_reps as "targetReps", period
+             exercise_name as "exerciseName", target_reps as "targetReps", period,
+             created_at as "createdAt"
       FROM exercise_goals
       WHERE user_id = ${userId}
       ORDER BY exercise_name ASC
@@ -1582,16 +1583,18 @@ export class DatabaseStorage implements IStorage {
       exerciseName: r.exerciseName,
       targetReps: r.targetReps,
       period: r.period,
+      createdAt: new Date(r.createdAt),
     }));
   }
 
   async createExerciseGoal(goal: InsertExerciseGoal): Promise<ExerciseGoal> {
     const id = crypto.randomUUID();
+    const now = new Date();
     await neonClient`
-      INSERT INTO exercise_goals (id, user_id, exercise_id, exercise_name, target_reps, period)
-      VALUES (${id}, ${goal.userId}, ${goal.exerciseId}, ${goal.exerciseName}, ${goal.targetReps}, ${goal.period ?? "week"})
+      INSERT INTO exercise_goals (id, user_id, exercise_id, exercise_name, target_reps, period, created_at)
+      VALUES (${id}, ${goal.userId}, ${goal.exerciseId}, ${goal.exerciseName}, ${goal.targetReps}, ${goal.period ?? "week"}, ${now.toISOString()}::timestamp)
     `;
-    return { id, ...goal, period: goal.period ?? "week" };
+    return { id, ...goal, period: goal.period ?? "week", createdAt: now };
   }
 
   async updateExerciseGoal(id: string, userId: string, updates: Partial<Pick<ExerciseGoal, "exerciseName" | "targetReps">>): Promise<ExerciseGoal | undefined> {
@@ -1602,11 +1605,12 @@ export class DatabaseStorage implements IStorage {
         target_reps   = COALESCE(${updates.targetReps ?? null}, target_reps)
       WHERE id = ${id} AND user_id = ${userId}
       RETURNING id, user_id as "userId", exercise_id as "exerciseId",
-                exercise_name as "exerciseName", target_reps as "targetReps", period
+                exercise_name as "exerciseName", target_reps as "targetReps", period,
+                created_at as "createdAt"
     `;
     if (!results || results.length === 0) return undefined;
     const r = results[0] as any;
-    return { id: r.id, userId: r.userId, exerciseId: r.exerciseId, exerciseName: r.exerciseName, targetReps: r.targetReps, period: r.period };
+    return { id: r.id, userId: r.userId, exerciseId: r.exerciseId, exerciseName: r.exerciseName, targetReps: r.targetReps, period: r.period, createdAt: new Date(r.createdAt) };
   }
 
   async deleteExerciseGoal(id: string, userId: string): Promise<boolean> {

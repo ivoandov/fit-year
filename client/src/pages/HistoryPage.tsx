@@ -110,7 +110,7 @@ export default function HistoryPage() {
     }));
   };
 
-  // Calculate rolling 7-day reps per exercise for goals
+  // Calculate rolling 7-day reps per exercise for goals (weekly progress)
   const goalProgress = useMemo(() => {
     const repsByExercise: Record<string, number> = {};
     completedWorkouts.forEach(workout => {
@@ -120,13 +120,34 @@ export default function HistoryPage() {
         const setsData: any[] = ex.setsData || [];
         setsData.forEach(set => {
           if (!set.completed) return;
-          const reps = set.reps ?? 0;
-          repsByExercise[ex.id] = (repsByExercise[ex.id] || 0) + reps;
+          repsByExercise[ex.id] = (repsByExercise[ex.id] || 0) + (set.reps ?? 0);
         });
       });
     });
     return repsByExercise;
   }, [completedWorkouts, last7DaysStart, todayEnd]);
+
+  // Calculate all-time reps per exercise since each goal's createdAt
+  const goalAllTimeProgress = useMemo(() => {
+    const repsByGoalId: Record<string, number> = {};
+    goals.forEach(goal => {
+      const goalStart = goal.createdAt instanceof Date ? goal.createdAt : new Date(goal.createdAt as any);
+      let total = 0;
+      completedWorkouts.forEach(workout => {
+        const date = workout.completedAt instanceof Date ? workout.completedAt : new Date(workout.completedAt as any);
+        if (date < goalStart) return;
+        workout.exercises.forEach((ex: any) => {
+          if (ex.id !== goal.exerciseId) return;
+          (ex.setsData || []).forEach((set: any) => {
+            if (!set.completed) return;
+            total += set.reps ?? 0;
+          });
+        });
+      });
+      repsByGoalId[goal.id] = total;
+    });
+    return repsByGoalId;
+  }, [completedWorkouts, goals]);
 
   const weeklySetsByMuscleGroup = calculateWeeklySetsByMuscle();
 
@@ -200,8 +221,11 @@ export default function HistoryPage() {
               <div className="space-y-4">
                 {goals.map(goal => {
                   const done = goalProgress[goal.exerciseId] ?? 0;
+                  const allTime = goalAllTimeProgress[goal.id] ?? 0;
                   const pct = Math.min(100, (done / goal.targetReps) * 100);
                   const isComplete = done >= goal.targetReps;
+                  const goalStart = goal.createdAt instanceof Date ? goal.createdAt : new Date(goal.createdAt as any);
+                  const startLabel = goalStart.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
                   return (
                     <button
                       key={goal.id}
@@ -212,7 +236,7 @@ export default function HistoryPage() {
                       <div className="flex items-center justify-between text-xs sm:text-sm gap-2">
                         <span className="font-medium truncate">{goal.exerciseName}</span>
                         <span className={`shrink-0 tabular-nums ${isComplete ? "text-primary font-semibold" : "text-muted-foreground"}`}>
-                          {done} / {goal.targetReps} reps
+                          {done} / {goal.targetReps} this week
                         </span>
                       </div>
                       <Progress
@@ -220,6 +244,9 @@ export default function HistoryPage() {
                         className={isComplete ? "[&>div]:bg-primary" : ""}
                         data-testid={`progress-goal-${goal.id}`}
                       />
+                      <p className="text-xs text-muted-foreground" data-testid={`text-goal-alltime-${goal.id}`}>
+                        {allTime.toLocaleString()} total since {startLabel}
+                      </p>
                     </button>
                   );
                 })}
