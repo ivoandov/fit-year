@@ -619,9 +619,14 @@ export default function TrackPage() {
                               +{weightIncrement}
                             </Button>
                           </div>
-                          {showKgConversion && weightUnit === 'lbs' && set.weight != null && (
+                          {showKgConversion && set.weight != null && weightUnit === 'lbs' && (
                             <p className="text-xs text-muted-foreground text-center tabular-nums" data-testid={`text-kg-conversion-${set.setNumber}`}>
                               {(set.weight / 2.20462).toFixed(1)} kg
+                            </p>
+                          )}
+                          {showKgConversion && set.weight != null && weightUnit === 'kg' && (
+                            <p className="text-xs text-muted-foreground text-center tabular-nums" data-testid={`text-lbs-conversion-${set.setNumber}`}>
+                              {(set.weight * 2.20462).toFixed(0)} lbs
                             </p>
                           )}
                         </div>

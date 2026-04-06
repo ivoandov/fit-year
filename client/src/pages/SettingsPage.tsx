@@ -594,9 +594,9 @@ export default function SettingsPage() {
               data-testid="option-show-kg-conversion"
             >
               <div className="flex-1">
-                <p className="font-medium text-sm">Show kg conversion</p>
+                <p className="font-medium text-sm">Show unit conversion</p>
                 <p className="text-xs text-muted-foreground">
-                  Display the kg equivalent next to lbs weight inputs
+                  Show the equivalent weight in the other unit below each input (lbs ↔ kg)
                 </p>
               </div>
               <Switch
