@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Pause, Play, SkipForward } from "lucide-react";
+import { Pause, Play, SkipForward, Minimize2, Maximize2 } from "lucide-react";
 
 const TIMER_STORAGE_KEY = "rest_timer_end_time";
 const TIMER_PAUSED_KEY = "rest_timer_paused_remaining";
@@ -41,6 +41,7 @@ export function RestTimer({
 }: RestTimerProps) {
   const [seconds, setSeconds] = useState(initialSeconds);
   const [isPaused, setIsPaused] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const endTimeRef = useRef<number | null>(null);
   const hasCompletedRef = useRef(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -92,12 +93,12 @@ export function RestTimer({
       localStorage.removeItem(TIMER_PAUSED_KEY);
       setSeconds(initialSeconds);
       setIsPaused(false);
+      setIsMinimized(false);
       return;
     }
 
     requestNotificationPermission();
 
-    // Check if there's a saved end time (e.g. page was refreshed mid-timer)
     const savedEnd = localStorage.getItem(TIMER_STORAGE_KEY);
     const savedPausedRemaining = localStorage.getItem(TIMER_PAUSED_KEY);
 
@@ -116,7 +117,6 @@ export function RestTimer({
         intervalRef.current = setInterval(tick, 500);
         tick();
       } else {
-        // Timer already elapsed while away
         localStorage.removeItem(TIMER_STORAGE_KEY);
         setSeconds(0);
         if (!hasCompletedRef.current) {
@@ -171,19 +171,100 @@ export function RestTimer({
   const progress = ((initialSeconds - seconds) / initialSeconds) * 100;
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
+  const timeString = `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+
+  // Floating minimized pill
+  if (isOpen && isMinimized) {
+    const pillCircumference = 2 * Math.PI * 16;
+    const pillOffset = pillCircumference * (1 - progress / 100);
+
+    return (
+      <div
+        className="fixed bottom-20 right-4 z-[9999] flex items-center gap-2 bg-background border border-border rounded-full shadow-lg px-3 py-2 cursor-pointer hover-elevate"
+        onClick={() => setIsMinimized(false)}
+        data-testid="pill-rest-timer-minimized"
+      >
+        {/* Mini circular progress */}
+        <div className="relative w-9 h-9 flex items-center justify-center flex-shrink-0">
+          <svg className="absolute inset-0 w-full h-full -rotate-90">
+            <circle cx="18" cy="18" r="16" stroke="hsl(var(--muted))" strokeWidth="2.5" fill="none" />
+            <circle
+              cx="18"
+              cy="18"
+              r="16"
+              stroke="hsl(var(--primary))"
+              strokeWidth="2.5"
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={pillCircumference}
+              strokeDashoffset={pillOffset}
+              className="transition-all duration-500 ease-linear"
+            />
+          </svg>
+          <span className="relative z-10 text-[10px] font-bold leading-none">
+            {seconds === 0 ? "✓" : minutes > 0 ? `${minutes}m` : `${remainingSeconds}s`}
+          </span>
+        </div>
+
+        {/* Time display */}
+        <span className="text-sm font-semibold tabular-nums" data-testid="text-pill-countdown">
+          {seconds === 0 ? "Done!" : timeString}
+        </span>
+
+        {/* Pause/Play button — stop propagation so it doesn't expand */}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7 flex-shrink-0"
+          onClick={(e) => { e.stopPropagation(); handlePauseResume(); }}
+          data-testid="button-pill-pause-resume"
+        >
+          {isPaused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
+        </Button>
+
+        {/* Skip / close button */}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7 flex-shrink-0"
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          data-testid="button-pill-skip"
+        >
+          <SkipForward className="h-3.5 w-3.5" />
+        </Button>
+
+        {/* Expand icon */}
+        <Maximize2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+      </div>
+    );
+  }
+
+  // Full dialog
   const circumference = 2 * Math.PI * 120;
   const strokeDashoffset = circumference * (1 - progress / 100);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
         className="sm:max-w-md border-0 bg-background/95 backdrop-blur-sm p-0"
         data-testid="dialog-rest-timer"
       >
-        <div className="flex flex-col items-center px-6 pt-8 pb-6">
-          <h2 className="text-xl font-semibold text-center mb-8" data-testid="text-exercise-name">
-            {exerciseName}
-          </h2>
+        <div className="flex flex-col items-center px-6 pt-6 pb-6">
+          {/* Header row with title + minimize */}
+          <div className="flex items-center justify-between w-full mb-6">
+            <h2 className="text-xl font-semibold" data-testid="text-exercise-name">
+              {exerciseName}
+            </h2>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setIsMinimized(true)}
+              data-testid="button-minimize-timer"
+              title="Minimize timer"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </Button>
+          </div>
 
           <div className="relative w-64 h-64 flex items-center justify-center mb-8">
             <div className="absolute inset-0 rounded-full bg-[#1a1a1a] border-4 border-[#2a2a2a]" />
@@ -204,7 +285,7 @@ export function RestTimer({
             </svg>
             <div className="relative z-10 flex flex-col items-center">
               <div className="text-6xl font-bold tracking-tight" data-testid="text-countdown">
-                {minutes.toString().padStart(2, "0")}:{remainingSeconds.toString().padStart(2, "0")}
+                {timeString}
               </div>
               <div className="text-muted-foreground text-sm mt-1">
                 {seconds === 0 ? "Rest complete!" : "Minutes"}
