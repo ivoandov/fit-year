@@ -8,6 +8,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { SettingsProvider } from "@/components/SettingsProvider";
 import { BottomNav } from "@/components/BottomNav";
 import { WorkoutProvider } from "@/context/WorkoutContext";
+import { TimerProvider } from "@/context/TimerContext";
+import { FloatingTimerPill } from "@/components/FloatingTimerPill";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -141,6 +143,7 @@ function AuthenticatedApp() {
   return (
     <SettingsProvider>
       <WorkoutProvider>
+        <TimerProvider>
         <div className="flex flex-col h-screen w-full">
           {!isFullscreenPage && (
             <header className="flex items-center justify-between px-4 py-3 bg-background">
@@ -167,7 +170,9 @@ function AuthenticatedApp() {
             <Router />
           </main>
           {!isFullscreenPage && <BottomNav />}
+          <FloatingTimerPill />
         </div>
+        </TimerProvider>
       </WorkoutProvider>
     </SettingsProvider>
   );

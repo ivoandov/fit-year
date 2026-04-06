@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RestTimer } from "@/components/RestTimer";
+import { useTimer } from "@/context/TimerContext";
 import { WorkoutEditorDialog, WorkoutData } from "@/components/WorkoutEditorDialog";
 import { ChevronRight, ChevronLeft, Check, Plus, Pencil, Play } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -118,14 +119,15 @@ export default function TrackPage() {
     }
   }, [activeWorkout, exerciseSets, currentExerciseIndex, currentSetIndex, restTimerDuration, hasLoadedSavedProgress, saveTrackingProgress]);
 
-  // Flush progress when navigating away from the page
+  // Flush progress when navigating away from the page; also minimize timer so pill persists
   useEffect(() => {
     return () => {
-      // On unmount, flush progress immediately to ensure it's saved
       if (activeWorkout) {
         console.log("[TrackPage] Unmounting - flushing progress");
         flushProgress();
       }
+      // Auto-minimize so the pill stays visible on other tabs
+      setTimerMinimized(true);
     };
   }, [activeWorkout, flushProgress]);
 
@@ -255,6 +257,33 @@ export default function TrackPage() {
     });
   }, [completedWorkouts, enrichedWorkoutExercises, hasLoadedSavedProgress, userSettingsData]);
 
+  const { openTimer, isOpen: timerIsOpen, setIsMinimized: setTimerMinimized } = useTimer();
+  const handleRestTimerCloseRef = useRef<() => void>(() => {});
+
+  // Open the timer in TimerContext whenever we enter resting state
+  useEffect(() => {
+    if (trackingState === "resting") {
+      restCloseProcessed.current = false;
+      const exAtIndex = enrichedWorkoutExercises[currentExerciseIndex] as any;
+      const nextEx = enrichedWorkoutExercises[currentExerciseIndex + 1] as any;
+      openTimer({
+        initialSeconds: restTimerDuration,
+        exerciseName: exAtIndex?.name ?? "Rest",
+        nextExerciseName: nextEx?.name,
+        onClose: () => handleRestTimerCloseRef.current(),
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackingState]);
+
+  // When navigating back to TrackPage while timer is still running, restore resting state
+  useEffect(() => {
+    if (timerIsOpen && hasLoadedSavedProgress && trackingState !== "resting") {
+      setTrackingState("resting");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timerIsOpen, hasLoadedSavedProgress]);
+
   if (!activeWorkout) {
     return (
       <div className="flex-1 overflow-auto">
@@ -348,12 +377,6 @@ export default function TrackPage() {
     setTrackingState("not_started");
   };
 
-  useEffect(() => {
-    if (trackingState === "resting") {
-      restCloseProcessed.current = false;
-    }
-  }, [trackingState]);
-
   const handleRestTimerClose = () => {
     if (restCloseProcessed.current) return;
     restCloseProcessed.current = true;
@@ -362,6 +385,8 @@ export default function TrackPage() {
       setCurrentSetIndex(currentSetIndex + 1);
     }
   };
+  // Keep ref always pointing to the latest closure so TimerContext's onClose stays current
+  handleRestTimerCloseRef.current = handleRestTimerClose;
 
   const handleNextExercise = () => {
     if (currentExerciseIndex < enrichedWorkoutExercises.length - 1) {
@@ -747,13 +772,7 @@ export default function TrackPage() {
           }))}
         />
 
-        <RestTimer
-          isOpen={trackingState === "resting"}
-          onClose={handleRestTimerClose}
-          initialSeconds={restTimerDuration}
-          exerciseName={currentExercise?.name}
-          nextExerciseName={currentExerciseIndex < enrichedWorkoutExercises.length - 1 ? enrichedWorkoutExercises[currentExerciseIndex + 1]?.name : undefined}
-        />
+        <RestTimer />
       </div>
     </div>
   );
