@@ -31,7 +31,7 @@ interface UserSettings {
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const { weekStart, setWeekStart, muscleGroups, addMuscleGroup, removeMuscleGroup, reorderMuscleGroups, setMuscleGroups, restTimerOnManualComplete, setRestTimerOnManualComplete } = useSettings();
+  const { weekStart, setWeekStart, muscleGroups, addMuscleGroup, removeMuscleGroup, reorderMuscleGroups, setMuscleGroups, restTimerOnManualComplete, setRestTimerOnManualComplete, showKgConversion, setShowKgConversion } = useSettings();
   const [newMuscleGroup, setNewMuscleGroup] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const { toast } = useToast();
@@ -584,6 +584,26 @@ export default function SettingsPage() {
                   );
                 })}
               </div>
+            </div>
+
+            <div
+              className={`flex items-center justify-between gap-3 p-3 rounded-md border cursor-pointer hover-elevate ${
+                showKgConversion ? 'border-primary bg-primary/5' : ''
+              }`}
+              onClick={() => setShowKgConversion(!showKgConversion)}
+              data-testid="option-show-kg-conversion"
+            >
+              <div className="flex-1">
+                <p className="font-medium text-sm">Show kg conversion</p>
+                <p className="text-xs text-muted-foreground">
+                  Display the kg equivalent next to lbs weight inputs
+                </p>
+              </div>
+              <Switch
+                checked={showKgConversion}
+                onCheckedChange={setShowKgConversion}
+                data-testid="switch-show-kg-conversion"
+              />
             </div>
           </CardContent>
         </Card>

@@ -20,6 +20,8 @@ type SettingsProviderState = {
   reorderMuscleGroups: (fromIndex: number, toIndex: number) => void;
   restTimerOnManualComplete: boolean;
   setRestTimerOnManualComplete: (enabled: boolean) => void;
+  showKgConversion: boolean;
+  setShowKgConversion: (enabled: boolean) => void;
   isCustomMuscleGroup: (group: string) => boolean;
 };
 
@@ -135,6 +137,16 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
     localStorage.setItem("restTimerOnManualComplete", enabled.toString());
   };
 
+  const [showKgConversion, setShowKgConversionState] = useState<boolean>(() => {
+    const stored = localStorage.getItem("showKgConversion");
+    return stored === "true";
+  });
+
+  const setShowKgConversion = (enabled: boolean) => {
+    setShowKgConversionState(enabled);
+    localStorage.setItem("showKgConversion", enabled.toString());
+  };
+
   return (
     <SettingsProviderContext.Provider
       value={{
@@ -148,6 +160,8 @@ export function SettingsProvider({ children }: SettingsProviderProps) {
         reorderMuscleGroups,
         restTimerOnManualComplete,
         setRestTimerOnManualComplete,
+        showKgConversion,
+        setShowKgConversion,
         isCustomMuscleGroup,
       }}
     >

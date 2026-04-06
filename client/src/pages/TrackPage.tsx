@@ -48,7 +48,7 @@ export default function TrackPage() {
     clearTrackingProgress,
     flushProgress,
   } = useWorkout();
-  const { restTimerOnManualComplete } = useSettings();
+  const { restTimerOnManualComplete, showKgConversion } = useSettings();
   
   const { data: userSettingsData } = useQuery<{ weightUnit?: string }>({ queryKey: ['/api/user-settings'] });
   const weightUnit = (userSettingsData?.weightUnit ?? 'lbs') as 'lbs' | 'kg';
@@ -574,49 +574,56 @@ export default function TrackPage() {
                         data-testid={`row-set-${set.setNumber}`}
                       >
                         <div className="font-medium text-sm sm:text-base">{set.setNumber}</div>
-                        <div className="flex items-center gap-1 sm:gap-1.5 justify-center min-w-0">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="px-1.5 text-xs font-semibold shrink-0"
-                            onClick={() => {
-                              const newSets = [...sets];
-                              const current = newSets[index].weight ?? 0;
-                              newSets[index].weight = Math.max(0, Math.round((current - weightIncrement) * 10) / 10);
-                              setCurrentSets(newSets);
-                            }}
-                            data-testid={`button-weight-minus-${set.setNumber}`}
-                          >
-                            -{weightIncrement}
-                          </Button>
-                          <Input
-                            type="number"
-                            step={weightUnit === 'kg' ? '0.5' : '1'}
-                            value={set.weight ?? ""}
-                            onChange={(e) => {
-                              const newSets = [...sets];
-                              newSets[index].weight = e.target.value === "" ? null : parseFloat(e.target.value);
-                              setCurrentSets(newSets);
-                            }}
-                            className="text-center text-sm h-9 sm:h-10 flex-1 min-w-0"
-                            data-testid={`input-weight-${set.setNumber}`}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="px-1.5 text-xs font-semibold shrink-0"
-                            onClick={() => {
-                              const newSets = [...sets];
-                              const current = newSets[index].weight ?? 0;
-                              newSets[index].weight = Math.round((current + weightIncrement) * 10) / 10;
-                              setCurrentSets(newSets);
-                            }}
-                            data-testid={`button-weight-plus-${set.setNumber}`}
-                          >
-                            +{weightIncrement}
-                          </Button>
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <div className="flex items-center gap-1 sm:gap-1.5 justify-center">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="px-1.5 text-xs font-semibold shrink-0"
+                              onClick={() => {
+                                const newSets = [...sets];
+                                const current = newSets[index].weight ?? 0;
+                                newSets[index].weight = Math.max(0, Math.round((current - weightIncrement) * 10) / 10);
+                                setCurrentSets(newSets);
+                              }}
+                              data-testid={`button-weight-minus-${set.setNumber}`}
+                            >
+                              -{weightIncrement}
+                            </Button>
+                            <Input
+                              type="number"
+                              step={weightUnit === 'kg' ? '0.5' : '1'}
+                              value={set.weight ?? ""}
+                              onChange={(e) => {
+                                const newSets = [...sets];
+                                newSets[index].weight = e.target.value === "" ? null : parseFloat(e.target.value);
+                                setCurrentSets(newSets);
+                              }}
+                              className="text-center text-sm h-9 sm:h-10 flex-1 min-w-0"
+                              data-testid={`input-weight-${set.setNumber}`}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="px-1.5 text-xs font-semibold shrink-0"
+                              onClick={() => {
+                                const newSets = [...sets];
+                                const current = newSets[index].weight ?? 0;
+                                newSets[index].weight = Math.round((current + weightIncrement) * 10) / 10;
+                                setCurrentSets(newSets);
+                              }}
+                              data-testid={`button-weight-plus-${set.setNumber}`}
+                            >
+                              +{weightIncrement}
+                            </Button>
+                          </div>
+                          {showKgConversion && weightUnit === 'lbs' && set.weight != null && (
+                            <p className="text-xs text-muted-foreground text-center tabular-nums" data-testid={`text-kg-conversion-${set.setNumber}`}>
+                              {(set.weight / 2.20462).toFixed(1)} kg
+                            </p>
+                          )}
                         </div>
                         <Input
                           type="number"
