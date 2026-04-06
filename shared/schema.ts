@@ -71,6 +71,7 @@ export const userSettings = pgTable("user_settings", {
   userId: varchar("user_id").notNull().unique(),
   selectedCalendarId: varchar("selected_calendar_id"),
   selectedCalendarName: text("selected_calendar_name"),
+  weightUnit: text("weight_unit").default("lbs"),
 });
 
 export const activeWorkouts = pgTable("active_workouts", {

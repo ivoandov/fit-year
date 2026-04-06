@@ -857,7 +857,8 @@ export class DatabaseStorage implements IStorage {
           id,
           user_id as "userId",
           selected_calendar_id as "selectedCalendarId",
-          selected_calendar_name as "selectedCalendarName"
+          selected_calendar_name as "selectedCalendarName",
+          COALESCE(weight_unit, 'lbs') as "weightUnit"
         FROM user_settings 
         WHERE user_id = ${userId}
       `;
@@ -875,33 +876,37 @@ export class DatabaseStorage implements IStorage {
     
     const calendarId = settings.selectedCalendarId !== undefined ? settings.selectedCalendarId : (existing?.selectedCalendarId ?? null);
     const calendarName = settings.selectedCalendarName !== undefined ? settings.selectedCalendarName : (existing?.selectedCalendarName ?? null);
+    const weightUnit = (settings as any).weightUnit !== undefined ? (settings as any).weightUnit : (existing?.weightUnit ?? 'lbs');
     
     if (existing) {
       const results = await neonClient`
         UPDATE user_settings 
         SET 
           selected_calendar_id = ${calendarId},
-          selected_calendar_name = ${calendarName}
+          selected_calendar_name = ${calendarName},
+          weight_unit = ${weightUnit}
         WHERE user_id = ${userId}
         RETURNING 
           id,
           user_id as "userId",
           selected_calendar_id as "selectedCalendarId",
-          selected_calendar_name as "selectedCalendarName"
+          selected_calendar_name as "selectedCalendarName",
+          COALESCE(weight_unit, 'lbs') as "weightUnit"
       `;
       return results[0] as UserSettings;
     } else {
       const id = crypto.randomUUID();
       await neonClient`
-        INSERT INTO user_settings (id, user_id, selected_calendar_id, selected_calendar_name)
-        VALUES (${id}, ${userId}, ${calendarId}, ${calendarName})
+        INSERT INTO user_settings (id, user_id, selected_calendar_id, selected_calendar_name, weight_unit)
+        VALUES (${id}, ${userId}, ${calendarId}, ${calendarName}, ${weightUnit})
       `;
       return {
         id,
         userId,
         selectedCalendarId: calendarId,
         selectedCalendarName: calendarName,
-      };
+        weightUnit,
+      } as UserSettings;
     }
   }
 

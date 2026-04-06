@@ -1690,7 +1690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const settings = await storage.getUserSettings(userId);
-      res.json(settings || { userId, selectedCalendarId: null, selectedCalendarName: null });
+      res.json(settings || { userId, selectedCalendarId: null, selectedCalendarName: null, weightUnit: 'lbs' });
     } catch (error) {
       console.error("Failed to get user settings:", error);
       res.status(500).json({ error: "Failed to get user settings" });
@@ -1704,12 +1704,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: "Unauthorized" });
       }
       
-      const { selectedCalendarId, selectedCalendarName } = req.body;
+      const { selectedCalendarId, selectedCalendarName, weightUnit } = req.body;
       
       const settings = await storage.upsertUserSettings(userId, {
         selectedCalendarId,
         selectedCalendarName,
-      });
+        ...(weightUnit !== undefined ? { weightUnit } : {}),
+      } as any);
       
       res.json(settings);
     } catch (error) {

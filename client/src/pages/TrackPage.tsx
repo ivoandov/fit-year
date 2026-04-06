@@ -50,6 +50,21 @@ export default function TrackPage() {
   } = useWorkout();
   const { restTimerOnManualComplete } = useSettings();
   
+  const { data: userSettingsData } = useQuery<{ weightUnit?: string }>({ queryKey: ['/api/user-settings'] });
+  const weightUnit = (userSettingsData?.weightUnit ?? 'lbs') as 'lbs' | 'kg';
+
+  // Conversion helpers — DB always stores lbs; display in user's chosen unit
+  const fromLbs = (lbs: number | null): number | null => {
+    if (lbs == null) return null;
+    return weightUnit === 'kg' ? Math.round((lbs / 2.20462) * 10) / 10 : lbs;
+  };
+  const toLbs = (val: number | null): number | null => {
+    if (val == null) return null;
+    return weightUnit === 'kg' ? Math.round(val * 2.20462 * 10) / 10 : val;
+  };
+  // Increment for +/- buttons: 5 lbs or 2.5 kg
+  const weightIncrement = weightUnit === 'kg' ? 2.5 : 5;
+
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
   const [trackingState, setTrackingState] = useState<TrackingState>("not_started");
   const [currentSetIndex, setCurrentSetIndex] = useState(0);
@@ -160,13 +175,14 @@ export default function TrackPage() {
     const isDistanceTime = exerciseType === "distance_time";
     
     if (lastValues) {
+      const displayWeight = fromLbs(lastValues.weight);
       if (isDistanceTime) {
         return [
-          { setNumber: 1, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
+          { setNumber: 1, weight: displayWeight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
         ];
       }
       return [
-        { setNumber: 1, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
+        { setNumber: 1, weight: displayWeight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time, completed: false },
         { setNumber: 2, weight: null, reps: null, distance: null, time: null, completed: false },
         { setNumber: 3, weight: null, reps: null, distance: null, time: null, completed: false },
       ];
@@ -215,7 +231,7 @@ export default function TrackPage() {
   }, [currentExerciseIndex, enrichedWorkoutExercises, hasLoadedSavedProgress]);
 
   useEffect(() => {
-    if (!hasLoadedSavedProgress || completedWorkouts.length === 0 || enrichedWorkoutExercises.length === 0) return;
+    if (!hasLoadedSavedProgress || !userSettingsData || completedWorkouts.length === 0 || enrichedWorkoutExercises.length === 0) return;
     if (trackingProgress) return;
     setExerciseSets(prev => {
       let changed = false;
@@ -230,14 +246,14 @@ export default function TrackPage() {
         const lastValues = getLastRecordedValues(ex.id);
         if (lastValues) {
           const updatedSets = [...sets];
-          updatedSets[0] = { ...firstSet, weight: lastValues.weight, reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time };
+          updatedSets[0] = { ...firstSet, weight: fromLbs(lastValues.weight), reps: lastValues.reps, distance: lastValues.distance, time: lastValues.time };
           newMap.set(ex.instanceId, updatedSets);
           changed = true;
         }
       }
       return changed ? newMap : prev;
     });
-  }, [completedWorkouts, enrichedWorkoutExercises, hasLoadedSavedProgress]);
+  }, [completedWorkouts, enrichedWorkoutExercises, hasLoadedSavedProgress, userSettingsData]);
 
   if (!activeWorkout) {
     return (
@@ -294,10 +310,20 @@ export default function TrackPage() {
     }
   };
 
+  // Convert all weights in the exerciseSets map from display unit back to lbs before saving
+  const toLbsMap = (map: Map<string, SetData[]>): Map<string, SetData[]> => {
+    if (weightUnit === 'lbs') return map;
+    const converted = new Map<string, SetData[]>();
+    map.forEach((sets, key) => {
+      converted.set(key, sets.map(s => ({ ...s, weight: toLbs(s.weight) })));
+    });
+    return converted;
+  };
+
   const handleFinishExercise = () => {
     if (isLastExercise) {
       // Don't clear progress before save - the save handles cleanup on success
-      completeWorkout(exerciseSets);
+      completeWorkout(toLbsMap(exerciseSets));
       setLocation("/");
     } else {
       setCurrentExerciseIndex(currentExerciseIndex + 1);
@@ -355,7 +381,7 @@ export default function TrackPage() {
 
   const handleEndWorkout = () => {
     // Don't clear progress before save - the save handles cleanup on success
-    endWorkout(exerciseSets);
+    endWorkout(toLbsMap(exerciseSets));
     setLocation("/");
   };
 
@@ -531,7 +557,7 @@ export default function TrackPage() {
                 <>
                   <div className="grid grid-cols-[2rem_1fr_4.5rem_2.5rem] sm:grid-cols-[2.5rem_1fr_6rem_2.5rem] gap-x-2 sm:gap-x-3 items-center font-semibold text-xs sm:text-sm pb-2 border-b">
                     <div>Set</div>
-                    <div className="text-center">Weight</div>
+                    <div className="text-center">Weight ({weightUnit})</div>
                     <div className="text-center">Reps</div>
                     <div className="text-center">Done</div>
                   </div>
@@ -557,16 +583,16 @@ export default function TrackPage() {
                             onClick={() => {
                               const newSets = [...sets];
                               const current = newSets[index].weight ?? 0;
-                              newSets[index].weight = Math.max(0, current - 5);
+                              newSets[index].weight = Math.max(0, Math.round((current - weightIncrement) * 10) / 10);
                               setCurrentSets(newSets);
                             }}
                             data-testid={`button-weight-minus-${set.setNumber}`}
                           >
-                            -5
+                            -{weightIncrement}
                           </Button>
                           <Input
                             type="number"
-                            step="0.1"
+                            step={weightUnit === 'kg' ? '0.5' : '1'}
                             value={set.weight ?? ""}
                             onChange={(e) => {
                               const newSets = [...sets];
@@ -584,12 +610,12 @@ export default function TrackPage() {
                             onClick={() => {
                               const newSets = [...sets];
                               const current = newSets[index].weight ?? 0;
-                              newSets[index].weight = current + 5;
+                              newSets[index].weight = Math.round((current + weightIncrement) * 10) / 10;
                               setCurrentSets(newSets);
                             }}
                             data-testid={`button-weight-plus-${set.setNumber}`}
                           >
-                            +5
+                            +{weightIncrement}
                           </Button>
                         </div>
                         <Input

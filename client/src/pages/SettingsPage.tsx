@@ -26,6 +26,7 @@ interface UserSettings {
   userId: string;
   selectedCalendarId: string | null;
   selectedCalendarName: string | null;
+  weightUnit: string | null;
 }
 
 export default function SettingsPage() {
@@ -166,6 +167,16 @@ export default function SettingsPage() {
   const handleSyncCalendar = () => {
     syncCalendarMutation.mutate();
   };
+
+  // Mutation to update weight unit preference
+  const updateWeightUnitMutation = useMutation({
+    mutationFn: async (unit: 'lbs' | 'kg') => {
+      return apiRequest('PATCH', '/api/user-settings', { weightUnit: unit });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user-settings'] });
+    },
+  });
 
   // Mutation to update calendar selection
   const updateCalendarMutation = useMutation({
@@ -528,7 +539,7 @@ export default function SettingsPage() {
               Customize how workout tracking behaves
             </CardDescription>
           </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 space-y-3">
             <div
               className={`flex items-center justify-between gap-3 p-3 rounded-md border cursor-pointer hover-elevate ${
                 restTimerOnManualComplete ? 'border-primary bg-primary/5' : ''
@@ -550,6 +561,29 @@ export default function SettingsPage() {
                 onCheckedChange={setRestTimerOnManualComplete}
                 data-testid="switch-rest-timer-manual"
               />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 p-3 rounded-md border" data-testid="option-weight-unit">
+              <div>
+                <p className="font-medium text-sm">Weight unit</p>
+                <p className="text-xs text-muted-foreground">Used when entering set weights during tracking</p>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                {(['lbs', 'kg'] as const).map(unit => {
+                  const active = (userSettings?.weightUnit ?? 'lbs') === unit;
+                  return (
+                    <Button
+                      key={unit}
+                      size="sm"
+                      variant={active ? "default" : "outline"}
+                      onClick={() => updateWeightUnitMutation.mutate(unit)}
+                      data-testid={`button-weight-unit-${unit}`}
+                    >
+                      {unit}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>
