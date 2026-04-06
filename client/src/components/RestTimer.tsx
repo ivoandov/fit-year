@@ -250,21 +250,10 @@ export function RestTimer({
         data-testid="dialog-rest-timer"
       >
         <div className="flex flex-col items-center px-6 pt-6 pb-6">
-          {/* Header row with title + minimize */}
-          <div className="flex items-center justify-between w-full mb-6">
-            <h2 className="text-xl font-semibold" data-testid="text-exercise-name">
-              {exerciseName}
-            </h2>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setIsMinimized(true)}
-              data-testid="button-minimize-timer"
-              title="Minimize timer"
-            >
-              <Minimize2 className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Header */}
+          <h2 className="text-xl font-semibold w-full mb-6" data-testid="text-exercise-name">
+            {exerciseName}
+          </h2>
 
           <div className="relative w-64 h-64 flex items-center justify-center mb-8">
             <div className="absolute inset-0 rounded-full bg-[#1a1a1a] border-4 border-[#2a2a2a]" />
@@ -321,6 +310,16 @@ export function RestTimer({
               Next Set
             </Button>
           </div>
+
+          <Button
+            variant="ghost"
+            className="mt-3 w-full text-muted-foreground"
+            onClick={() => setIsMinimized(true)}
+            data-testid="button-minimize-timer"
+          >
+            <Minimize2 className="h-4 w-4 mr-2" />
+            Minimize Timer
+          </Button>
 
           {nextExerciseName && (
             <div className="mt-6 w-full p-4 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a]">
