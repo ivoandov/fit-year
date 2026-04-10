@@ -127,31 +127,38 @@ export default function SettingsPage() {
     failed: number;
   } | null>(null);
 
-  // Sync scheduled workouts to calendar mutation
-  const syncCalendarMutation = useMutation({
+  type SyncResult = { created: number; alreadySynced: number; failed: number; workouts: { name: string; date: string; status: string; eventId?: string }[] };
+
+  const onSyncSuccess = (data: SyncResult, label: string) => {
+    setSyncResults(data);
+    const parts: string[] = [];
+    if (data.created > 0) parts.push(`${data.created} added`);
+    if (data.alreadySynced > 0) parts.push(`${data.alreadySynced} already synced`);
+    if (data.failed > 0) parts.push(`${data.failed} failed`);
+    toast({ title: `${label} sync complete`, description: parts.length > 0 ? parts.join(', ') : 'Nothing new to sync' });
+  };
+
+  const syncUpcomingMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/calendar/sync-scheduled-workouts');
-      return response.json();
+      return response.json() as Promise<SyncResult>;
     },
-    onSuccess: (data: { created: number; alreadySynced: number; failed: number; workouts: { name: string; date: string; status: string; eventId?: string }[] }) => {
-      setSyncResults(data);
-      const parts: string[] = [];
-      if (data.created > 0) parts.push(`${data.created} created`);
-      if (data.alreadySynced > 0) parts.push(`${data.alreadySynced} already synced`);
-      if (data.failed > 0) parts.push(`${data.failed} failed`);
-      const description = parts.length > 0 ? parts.join(', ') : 'No workouts to sync';
-      toast({
-        title: "Calendar sync complete",
-        description,
-      });
-    },
+    onSuccess: (data) => onSyncSuccess(data, 'Upcoming workouts'),
     onError: (error: any) => {
       setSyncResults(null);
-      toast({
-        title: "Failed to sync calendar",
-        description: error?.message || "Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Failed to sync calendar", description: error?.message || "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const syncPastMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/calendar/sync-completed-workouts');
+      return response.json() as Promise<SyncResult>;
+    },
+    onSuccess: (data) => onSyncSuccess(data, 'Past workouts'),
+    onError: (error: any) => {
+      setSyncResults(null);
+      toast({ title: "Failed to sync past workouts", description: error?.message || "Please try again.", variant: "destructive" });
     },
   });
 
@@ -162,10 +169,6 @@ export default function SettingsPage() {
 
   const handleDisconnectCalendar = () => {
     disconnectCalendarMutation.mutate();
-  };
-
-  const handleSyncCalendar = () => {
-    syncCalendarMutation.mutate();
   };
 
   // Mutation to update weight unit preference
@@ -447,13 +450,13 @@ export default function SettingsPage() {
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"
-                    onClick={handleSyncCalendar}
-                    disabled={syncCalendarMutation.isPending}
+                    onClick={() => syncPastMutation.mutate()}
+                    disabled={syncPastMutation.isPending || syncUpcomingMutation.isPending}
                     className="flex-1"
-                    data-testid="button-sync-calendar"
+                    data-testid="button-sync-past-workouts"
                   >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${syncCalendarMutation.isPending ? 'animate-spin' : ''}`} />
-                    {syncCalendarMutation.isPending ? "Syncing..." : "Sync All Workouts"}
+                    <RefreshCw className={`h-4 w-4 mr-2 ${syncPastMutation.isPending ? 'animate-spin' : ''}`} />
+                    {syncPastMutation.isPending ? "Syncing..." : "Sync Past Workouts"}
                   </Button>
                   <Button
                     variant="outline"
