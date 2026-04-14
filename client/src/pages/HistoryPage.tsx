@@ -131,7 +131,10 @@ export default function HistoryPage() {
   const goalAllTimeProgress = useMemo(() => {
     const repsByGoalId: Record<string, number> = {};
     goals.forEach(goal => {
-      const goalStart = goal.createdAt instanceof Date ? goal.createdAt : new Date(goal.createdAt as any);
+      // Floor to start of day so workouts done earlier the same day as goal creation count
+      const rawStart = goal.createdAt instanceof Date ? goal.createdAt : new Date(goal.createdAt as any);
+      const goalStart = new Date(rawStart);
+      goalStart.setHours(0, 0, 0, 0);
       let total = 0;
       completedWorkouts.forEach(workout => {
         const date = workout.completedAt instanceof Date ? workout.completedAt : new Date(workout.completedAt as any);
