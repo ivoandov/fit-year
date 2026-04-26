@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitYear — UI/UX Recommendations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="new-screens.jsx"></script>
+<script type="text/babel" src="settings-screen.jsx"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: #0a0a09;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  font-family: 'DM Sans', sans-serif;
+  padding: 32px 24px 60px;
+  gap: 18px;
+  overflow: auto;
+}
+.page-label {
+  color: rgba(229,255,0,0.5);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+}
+.page-title {
+  color: rgba(255,255,255,0.85);
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+}
+.page-sub {
+  color: rgba(255,255,255,0.35);
+  font-size: 12px;
+  font-weight: 400;
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+  max-width: 340px;
+}
+/* scrollbar hide */
+::-webkit-scrollbar { width: 0; height: 0; }
+/* hide number spin buttons so text truly centers */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+</head>
+<body>
+<p class="page-label">FitYear · Design Review</p>
+<p class="page-title">UI/UX Recommendations</p>
+<p class="page-sub">Toggle improvements on/off using the Tweaks panel. Tap the bottom nav to explore each screen.</p>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── Tokens ────────────────────────────────────────────────────────────────
+const BG      = '#0F0F0E';
+const CARD    = '#1E1E1C';
+const CARD2   = '#2A2A28';
+const BORDER  = '#2E2E2C';
+const BORDER2 = '#3A3A38';
+const PRI     = '#E5FF00';
+const PRI_FG  = '#0F0F0E';
+const TEXT    = '#F2F2F2';
+const MUTED   = '#6E6E6C';
+const MUTED2  = '#4A4A48';
+const GREEN   = '#5DB87A';
+const RED     = '#D95555';
+const ACCENT  = '#1C2200'; // yellow tint bg
+
+// ─── SVG Icons ─────────────────────────────────────────────────────────────
+const Icon = ({ d, size = 20, color = TEXT, fill = 'none', sw = 1.8 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={color}
+    strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+
+const Icons = {
+  home:      'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 22V12h6v10',
+  dumbbell:  'M6.5 6.5h11M6.5 17.5h11M3 9.5h2a1 1 0 011 1v3a1 1 0 01-1 1H3M21 9.5h-2a1 1 0 00-1 1v3a1 1 0 001 1h2',
+  lifter:    'M2 12h3M19 12h3M5 9h2v6H5zM17 9h2v6h-2zM7 11h10v2H7z',
+  clipboard: 'M9 2h6a1 1 0 011 1v1H8V3a1 1 0 011-1zM5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zM12 11h4M12 15h4M8 11h.01M8 15h.01',
+  barchart:  'M12 20V10M18 20V4M6 20v-4',
+  plus:      'M12 5v14M5 12h14',
+  check:     'M20 6L9 17l-5-5',
+  chevL:     'M15 18l-6-6 6-6',
+  chevR:     'M9 18l6-6-6-6',
+  search:    'M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z',
+  more:      'M12 5h.01M12 12h.01M12 19h.01',
+  play:      'M5 3l14 9-14 9V3z',
+  flame:     'M12 2c0 0-5 4.5-5 9a5 5 0 0010 0c0-2-1-4-2-5.5C15 7 14 9 12 9c0-1.5 1-4 0-7z',
+  trend:     'M22 7l-9 9-4-4-6 6M16 7h6v6',
+  skip:      'M5 4l10 8-10 8V4zM19 4v16',
+  pencil:    'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z',
+  x:         'M18 6L6 18M6 6l12 12',
+  timer:     'M12 22a9 9 0 100-18 9 9 0 000 18zM12 6v6l4 2',
+  star:      'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  link2:     'M15 7h3a5 5 0 010 10h-3m-6 0H6A5 5 0 016 7h3M8 12h8',
+};
+
+const Ic = ({ name, size = 20, color = TEXT, fill = 'none', sw = 1.8 }) =>
+  <Icon d={Icons[name]} size={size} color={color} fill={fill} sw={sw} />;
+
+// Dumbbell icon needs special treatment
+const DumbbellSvg = ({ size = 20, color = TEXT }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6.5 6.5h11M6.5 17.5h11"/>
+    <rect x="3" y="8.5" width="3" height="7" rx="1" fill="none" stroke={color} strokeWidth="1.8"/>
+    <rect x="18" y="8.5" width="3" height="7" rx="1" fill="none" stroke={color} strokeWidth="1.8"/>
+    <path d="M6.5 10.5v3M17.5 10.5v3"/>
+  </svg>
+);
+
+// ─── Bottom Nav ─────────────────────────────────────────────────────────────
+function BottomNav({ active, onNav, navLabels, elevatedTrack }) {
+  const items = [
+    { id: 'home',      label: 'Home',      icon: 'home' },
+    { id: 'exercises', label: 'Exercises', icon: 'lifter' },
+    { id: 'track',     label: 'Track',     icon: null }, // special
+    { id: 'routines',  label: 'Routines',  icon: 'clipboard' },
+    { id: 'history',   label: 'History',   icon: 'barchart' },
+  ];
+
+  return (
+    <div style={{
+      position: 'absolute', bottom: 0, left: 0, right: 0,
+      background: BG,
+      borderTop: `1px solid ${BORDER}`,
+      paddingBottom: 26,
+      zIndex: 100,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', height: 60, padding: '0 8px' }}>
+        {items.map(({ id, label, icon }) => {
+          const isActive = active === id;
+          const isTrack = id === 'track';
+
+          if (isTrack && elevatedTrack) {
+            return (
+              <button key={id} onClick={() => onNav(id)} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: 3,
+                background: PRI, border: 'none', borderRadius: 28,
+                width: 54, height: 54,
+                cursor: 'pointer',
+                transform: 'translateY(-14px)',
+                boxShadow: `0 0 0 3px ${BG}, 0 0 20px ${PRI}55`,
+                transition: 'all 0.2s ease',
+              }}>
+                <DumbbellSvg size={20} color={PRI_FG} />
+                {navLabels && <span style={{ fontSize: 8, fontWeight: 800, color: PRI_FG, letterSpacing: 0.4 }}>{label}</span>}
+              </button>
+            );
+          }
+
+          if (isTrack && !elevatedTrack) {
+            return (
+              <button key={id} onClick={() => onNav(id)} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: navLabels ? 3 : 0,
+                background: isActive ? PRI : 'transparent',
+                border: 'none', borderRadius: 14,
+                width: 52, height: navLabels ? 50 : 44,
+                cursor: 'pointer',
+              }}>
+                <DumbbellSvg size={20} color={isActive ? PRI_FG : MUTED} />
+                {navLabels && <span style={{ fontSize: 10, fontWeight: 600, color: isActive ? PRI_FG : MUTED }}>{label}</span>}
+              </button>
+            );
+          }
+
+          return (
+            <button key={id} onClick={() => onNav(id)} style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: navLabels ? 2 : 0,
+              background: 'transparent',
+              border: 'none', borderRadius: 14,
+              width: 52, height: navLabels ? 50 : 44,
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+              position: 'relative',
+            }}>
+              <Ic name={icon} size={20} color={isActive ? PRI : MUTED} sw={isActive ? 2.2 : 1.8} />
+              {navLabels && <span style={{ fontSize: 10, fontWeight: 600, color: isActive ? PRI : MUTED }}>{label}</span>}
+              {isActive && <div style={{ position: 'absolute', bottom: navLabels ? 1 : 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: 2, background: PRI }} />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Pill badge ─────────────────────────────────────────────────────────────
+const Pill = ({ children, color = MUTED, bg = CARD2, border = BORDER }) => (
+  <span style={{
+    fontSize: 10, fontWeight: 600, color,
+    background: bg, border: `1px solid ${border}`,
+    borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap',
+  }}>{children}</span>
+);
+
+// ─── HOME SCREEN ────────────────────────────────────────────────────────────
+function HomeScreen({ personalizedHeader, streakStrip, emptyState, userGoals, onOpenAIBuilder, onOpenSettings }) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  /* DEV: greeting = time-of-day string (already computed here). Username + avatar from auth session / user profile API. */
+  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', background: BG, paddingBottom: 100 }}>
+
+      {/* ── Header ── */}
+      <div style={{ padding: '78px 16px 0' }}>
+        {personalizedHeader ? (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <p style={{ fontSize: 12, color: MUTED, fontWeight: 500, marginBottom: 3 }}>{dateStr}</p>
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: -0.5 }}>
+                {greeting}, Alex 👋
+              </h1>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button onClick={onOpenSettings} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={MUTED} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+                </svg>
+              </button>
+              <div style={{
+                width: 36, height: 36, borderRadius: 18,
+              background: `linear-gradient(135deg, ${PRI} 0%, #a8cc00 100%)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, fontWeight: 800, color: PRI_FG,
+            }}>A</div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: -0.5 }}>Scheduled Workouts</h1>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <Ic name="plus" size={16} color={TEXT} />
+                </button>
+              </div>
+            </div>
+            <p style={{ fontSize: 12, color: MUTED, marginTop: 4 }}>Plan and manage your training schedule</p>
+          </div>
+        )}
+
+        {/* ── Goals strip (shown when user set goals during onboarding) ── */}
+        {userGoals && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <div style={{ flex: 1, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '10px 12px' }}>
+              <p style={{ fontSize: 10, color: MUTED, fontWeight: 600, marginBottom: 4 }}>Weekly target</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <p style={{ fontSize: 18, fontWeight: 900, color: TEXT }}>3</p>
+                <p style={{ fontSize: 11, color: MUTED }}>/ {userGoals.daysPerWeek} days</p>
+              </div>
+              <div style={{ height: 3, background: BORDER2, borderRadius: 2, marginTop: 6 }}>
+                <div style={{ height: '100%', width: `${(3/userGoals.daysPerWeek)*100}%`, background: PRI, borderRadius: 2 }} />
+              </div>
+            </div>
+            <div style={{ flex: 1, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '10px 12px' }}>
+              <p style={{ fontSize: 10, color: MUTED, fontWeight: 600, marginBottom: 4 }}>Program</p>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <p style={{ fontSize: 18, fontWeight: 900, color: TEXT }}>Day 14</p>
+              </div>
+              <div style={{ height: 3, background: BORDER2, borderRadius: 2, marginTop: 6 }}>
+                <div style={{ height: '100%', width: `${(14/userGoals.programLength)*100}%`, background: PRI, borderRadius: 2 }} />
+              </div>
+              <p style={{ fontSize: 9, color: MUTED, marginTop: 3 }}>of {userGoals.programLength} days</p>
+            </div>
+          </div>
+        )}
+        {/* ── Streak Strip ── */}
+        {streakStrip && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 14, overflowX: 'auto', paddingBottom: 2 }}>
+            {[
+              /* DEV: streak = count consecutive calendar days with ≥1 completedWorkout. Query completedWorkouts ordered by date desc, walk back while dates are consecutive. Consider 24hr grace window for late-night/early-morning edge cases. */
+              { emoji: '🔥', val: '12', sub: 'day streak' },
+              /* DEV: "3/5 this week" = completedWorkouts filtered to current week / scheduledWorkouts this week. Fall back to completedWorkouts count if no schedule. */
+              { emoji: '📅', val: '3/5', sub: 'this week' },
+              /* DEV: monthly goal % = completedWorkouts this month / user-set monthly target (add to user settings), OR routineInstance.completedWorkouts / routineInstance.totalWorkouts if active routine exists. */
+              { emoji: '🏆', val: '87%', sub: 'monthly goal' },
+            ].map(({ emoji, val, sub }) => (
+              <div key={sub} style={{
+                background: CARD, border: `1px solid ${BORDER}`,
+                borderRadius: 12, padding: '8px 13px',
+                display: 'flex', alignItems: 'center', gap: 8,
+                flexShrink: 0,
+              }}>
+                <span style={{ fontSize: 18 }}>{emoji}</span>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: TEXT, lineHeight: 1.1 }}>{val}</p>
+                  <p style={{ fontSize: 10, color: MUTED, fontWeight: 500 }}>{sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {emptyState ? (
+        /* ── Empty / New User State ── */
+        <div style={{ padding: '24px 16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{
+            width: 88, height: 88, borderRadius: 28,
+            background: CARD, border: `1.5px dashed ${BORDER2}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+          }}>
+            <DumbbellSvg size={36} color={MUTED2} />
+          </div>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: TEXT, textAlign: 'center', marginBottom: 8, letterSpacing: -0.3 }}>No workouts scheduled</h2>
+          <p style={{ fontSize: 13, color: MUTED, textAlign: 'center', lineHeight: 1.5, marginBottom: 24, maxWidth: 240 }}>
+            Schedule your first workout or start a training program to get going.
+          </p>
+          <button style={{
+            width: '100%', background: PRI, color: PRI_FG, border: 'none',
+            borderRadius: 14, padding: '14px 0', fontSize: 15, fontWeight: 800,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10,
+          }}>
+            <Ic name="plus" size={16} color={PRI_FG} sw={2.5} /> Schedule a Workout
+          </button>
+          <button style={{
+            width: '100%', background: 'none', color: TEXT, border: `1px solid ${BORDER}`,
+            borderRadius: 14, padding: '13px 0', fontSize: 15, fontWeight: 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 28,
+          }}>
+            <Ic name="clipboard" size={16} color={TEXT} /> Browse Routines
+          </button>
+          <div style={{ width: '100%', borderTop: `1px solid ${BORDER}`, paddingTop: 20 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12, textAlign: 'center' }}>Your stats will appear here</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[{ label: 'Streak' }, { label: 'This Week' }, { label: 'Monthly Goal' }].map(s => (
+                <div key={s.label} style={{ flex: 1, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: MUTED2, marginBottom: 3 }}>—</p>
+                  <p style={{ fontSize: 9, color: MUTED2, fontWeight: 500 }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+        {/* ── Today's Workout Hero ── */}
+      <div style={{ padding: '18px 16px 0' }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Today</p>
+        <div style={{
+          borderRadius: 18, overflow: 'hidden', position: 'relative',
+          height: 200,
+          background: `linear-gradient(145deg, #1e2e00 0%, #1a2200 50%, #141a00 100%)`,
+          border: `1px solid ${PRI}25`,
+        }}>
+          {/* grid texture */}
+          <div style={{
+            position: 'absolute', inset: 0, opacity: 0.06,
+            backgroundImage: 'linear-gradient(rgba(229,255,0,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(229,255,0,.5) 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }} />
+          {/* glow */}
+          <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: 60, background: `${PRI}15`, filter: 'blur(30px)' }} />
+
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex',
+            flexDirection: 'column', justifyContent: 'space-between',
+            padding: '18px 20px',
+          }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ background: `${PRI}22`, border: `1px solid ${PRI}50`, color: PRI, fontSize: 10, fontWeight: 800, padding: '3px 10px', borderRadius: 20, letterSpacing: 0.5 }}>TODAY</span>
+                {/* DEV: "~45 min" = rough estimate: (totalSets × 45s avg) + (totalSets × restTimerDefault). exercises count from scheduledWorkout.exercises.length. Workout name + exercises from scheduledWorkouts WHERE date = today. */}
+                <span style={{ fontSize: 12, color: `${TEXT}70` }}>~45 min · 6 exercises</span>
+              </div>
+              <h2 style={{ fontSize: 24, fontWeight: 800, color: TEXT, letterSpacing: -0.5, marginBottom: 4 }}>Push Day A</h2>
+              <p style={{ fontSize: 12, color: `${TEXT}60` }}>Bench Press · Shoulder Press · Triceps +3</p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button style={{
+                flex: 1, background: PRI, color: PRI_FG, border: 'none',
+                borderRadius: 12, padding: '11px 0', fontSize: 14, fontWeight: 800,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              }}>
+                <Ic name="play" size={13} color={PRI_FG} fill={PRI_FG} sw={0} /> Start Workout
+              </button>
+              <button style={{
+                background: `${TEXT}10`, border: `1px solid ${TEXT}20`, borderRadius: 12,
+                width: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+              }}>
+                <Ic name="more" size={18} color={`${TEXT}80`} sw={2.5} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Upcoming ── */}
+      <div style={{ padding: '18px 16px 0' }}>
+        <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Upcoming</p>
+        {[
+          { name: 'Leg Day', when: 'Tomorrow', exCount: 5, color: '#1a1600' },
+          { name: 'Pull Day B', when: 'Wed, Apr 28', exCount: 5, color: '#001622' },
+        ].map(w => (
+          <div key={w.name} style={{
+            background: CARD, border: `1px solid ${BORDER}`,
+            borderRadius: 14, padding: '13px 14px',
+            display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8,
+          }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: 10, background: CARD2,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: `1px solid ${BORDER}`,
+            }}>
+              <DumbbellSvg size={18} color={MUTED} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: TEXT, marginBottom: 2 }}>{w.name}</p>
+              <p style={{ fontSize: 12, color: MUTED }}>{w.when} · {w.exCount} exercises</p>
+            </div>
+            <button style={{
+              background: `${PRI}15`, border: `1px solid ${PRI}30`, borderRadius: 10,
+              width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            }}>
+              <Ic name="play" size={12} color={PRI} fill={PRI} sw={0} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* ── My Library ── */}
+      <div style={{ padding: '18px 0 0' }}>
+        <div style={{ padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase' }}>My Library</p>
+          <button style={{ background: 'none', border: 'none', color: PRI, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>See all →</button>
+        </div>
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', padding: '0 16px 4px' }}>
+          {[
+            { name: 'Push Day A', count: 6, reps: 8 },
+            { name: 'Pull Day B', count: 5, reps: 6 },
+            { name: 'Leg Day',    count: 5, reps: 5 },
+          ].map(t => (
+            <div key={t.name} style={{
+              flexShrink: 0, width: 110, height: 95,
+              background: CARD, border: `1px solid ${BORDER}`,
+              borderRadius: 14, padding: '12px',
+              display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer',
+            }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: TEXT, lineHeight: 1.25 }}>{t.name}</p>
+              <div>
+                <p style={{ fontSize: 11, color: MUTED, marginBottom: 2 }}>{t.count} exercises</p>
+                <p style={{ fontSize: 10, color: PRI, fontWeight: 700 }}>✓ {t.reps}× done</p>
+              </div>
+            </div>
+          ))}
+          <div style={{
+            flexShrink: 0, width: 110, height: 95,
+            border: `1.5px dashed ${BORDER2}`, borderRadius: 14,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: 5, cursor: 'pointer',
+          }}>
+            <Ic name="plus" size={18} color={MUTED} />
+            <span style={{ fontSize: 11, color: MUTED, fontWeight: 600 }}>New</span>
+          </div>
+        </div>
+      </div>
+      </>
+      )}
+    </div>
+  );
+}
+
+// ─── TRACK SCREEN ──────────────────────────────────────────────────────────
+function TrackScreen({ activeSetGlow, integratedTimer, onWorkoutComplete, onEndWorkout }) {
+  const [currentExIdx, setCurrentExIdx] = React.useState(1);
+  const [inSet, setInSet] = React.useState(false);
+  /* DEV: initial set data from getLastRecordedValues(exerciseId) — already implemented in real TrackPage.tsx.
+     First set prefilled with best historical weight+reps; subsequent sets start null until propagated on completion. */
+  const [sets, setSets] = React.useState([
+    { w: 66.1, r: 20, done: true  },
+    { w: 66.1, r: 20, done: false },
+    { w: null,  r: null, done: false },
+  ]);
+  const [currentSet, setCurrentSet] = React.useState(1);
+  const [restSecs, setRestSecs] = React.useState(88);
+  const [restTotal] = React.useState(90);
+  const [showTimerOverlay, setShowTimerOverlay] = React.useState(false);
+  const [timerMinimized, setTimerMinimized] = React.useState(false);
+  const [timerPaused, setTimerPaused] = React.useState(false);
+  const timerRef = React.useRef(null);
+
+  const exercises = ['Shoulder Warm-up', 'Cable Fly', 'Incline DB Press', 'Bench Press', 'Shoulder Press', 'Tricep Pushdown', 'Face Pulls', 'Lateral Raises'];
+
+  const startRest = () => {
+    clearInterval(timerRef.current);
+    setRestSecs(restTotal);
+    setTimerPaused(false);
+    setShowTimerOverlay(true);
+    setTimerMinimized(false);
+    timerRef.current = setInterval(() => {
+      setRestSecs(s => {
+        if (s <= 1) { clearInterval(timerRef.current); setShowTimerOverlay(false); setTimerMinimized(false); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
+  const togglePause = () => {
+    if (timerPaused) {
+      timerRef.current = setInterval(() => {
+        setRestSecs(s => {
+          if (s <= 1) { clearInterval(timerRef.current); setShowTimerOverlay(false); setTimerMinimized(false); return 0; }
+          return s - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    setTimerPaused(p => !p);
+  };
+
+  const skipTimer = () => {
+    clearInterval(timerRef.current);
+    setShowTimerOverlay(false);
+    setTimerMinimized(false);
+    setRestSecs(0);
+  };
+
+  const [prNotif, setPrNotif] = React.useState(null);
+  const [prSetIndex, setPrSetIndex] = React.useState(null); // which set index currently holds the PR
+
+  const markDone = (i) => {
+    const ns = [...sets];
+    ns[i].done = true;
+    // PR detection — compare against hardcoded previous best (real app: compare vs getLastRecordedValues)
+    // DEV: query historical MAX(weight) and MAX(weight*reps) for this exerciseId before workout starts.
+    // Store as prevBestWeight + prevBestVolume. On each set completion, compare and show notif if beaten.
+    const prevBestWeight = 64.0; // kg — previous best for this exercise
+    const prevBestVolume = 64.0 * 18; // previous best volume (weight × reps)
+    const thisWeight = ns[i].w || 0;
+    const thisVolume = (ns[i].w || 0) * (ns[i].r || 0);
+    if (thisWeight > prevBestWeight) {
+      setPrNotif({ type: 'weight', val: `${thisWeight} kg — new weight PR! 🏆` });
+      setPrSetIndex(i);
+      setTimeout(() => setPrNotif(null), 3500);
+    } else if (thisVolume > prevBestVolume) {
+      setPrNotif({ type: 'volume', val: `${thisWeight} kg × ${ns[i].r} reps — new volume PR! ⭐` });
+      setPrSetIndex(i);
+      setTimeout(() => setPrNotif(null), 3500);
+    }
+    if (i + 1 < ns.length && ns[i+1].w == null) ns[i+1].w = ns[i].w;
+    setSets(ns);
+    setInSet(false);
+    if (i < ns.length - 1) {
+      setCurrentSet(i + 1);
+      startRest();
+    }
+  };
+
+  const allDone = sets.every(s => s.done);
+  const isLastExercise = currentExIdx === exercises.length - 1;
+  const fmtTime = (s) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+  const R = 110, CIRC = 2 * Math.PI * R;
+  const dash = CIRC * (restSecs / restTotal);
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative', background: BG }}>
+
+      {/* PR Notification Toast */}
+      {prNotif && (
+        <div style={{
+          position: 'absolute', top: 80, left: 16, right: 16, zIndex: 60,
+          background: `linear-gradient(135deg, #1a2200 0%, #0d1500 100%)`,
+          border: `1px solid ${PRI}60`,
+          borderRadius: 16, padding: '12px 16px',
+          display: 'flex', alignItems: 'center', gap: 10,
+          boxShadow: `0 4px 24px ${PRI}30`,
+          animation: 'slideDown 0.3s ease',
+        }}>
+          <span style={{ fontSize: 22 }}>{prNotif.type === 'weight' ? '🏆' : '⭐'}</span>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 800, color: PRI, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 2 }}>
+              Personal Best!
+            </p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{prNotif.val}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Timer Overlay */}
+      {showTimerOverlay && !timerMinimized && (
+        <div style={{ position: 'absolute', inset: 0, background: BG, zIndex: 50, display: 'flex', flexDirection: 'column', padding: '16px 20px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingTop: 62 }}>
+            <div>
+              <p style={{ fontSize: 11, color: MUTED, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Track</p>
+              <p style={{ fontSize: 14, fontWeight: 800, color: TEXT, marginTop: 2 }}>Chest &amp; Triceps</p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setTimerMinimized(true)}
+                style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <span style={{ fontSize: 18, fontWeight: 700, color: MUTED, lineHeight: 1, marginTop: 2 }}>_</span>
+              </button>
+              <button onClick={() => { clearInterval(timerRef.current); setShowTimerOverlay(false); setTimerMinimized(false); }}
+                style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <Ic name="x" size={14} color={MUTED} sw={2} />
+              </button>
+            </div>
+          </div>
+          <p style={{ fontSize: 22, fontWeight: 800, color: TEXT, marginTop: 24, marginBottom: 32, letterSpacing: -0.4 }}>{exercises[currentExIdx]}</p>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+            <div style={{ position: 'relative', width: 250, height: 250 }}>
+              <svg width="250" height="250" style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx="125" cy="125" r={R} fill="none" stroke={CARD2} strokeWidth="8" />
+                <circle cx="125" cy="125" r={R} fill="none" stroke={CARD2} strokeWidth="8"
+                  strokeDasharray={`${dash} ${CIRC - dash}`} strokeLinecap="round"
+                  style={{ transition: 'stroke-dasharray 0.9s linear' }} />
+              </svg>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <p style={{ fontSize: 48, fontWeight: 800, color: TEXT, fontVariantNumeric: 'tabular-nums', letterSpacing: -2 }}>{fmtTime(restSecs)}</p>
+                <p style={{ fontSize: 13, color: MUTED, marginTop: 4 }}>Minutes</p>
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+            <button onClick={togglePause} style={{ flex: 1, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '14px 0', fontSize: 15, fontWeight: 700, color: TEXT, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {timerPaused ? 'Resume' : 'Pause'}
+            </button>
+            <button onClick={() => { skipTimer(); setInSet(true); }} style={{ flex: 1, background: PRI, border: 'none', borderRadius: 14, padding: '14px 0', fontSize: 15, fontWeight: 800, color: PRI_FG, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <Ic name="skip" size={14} color={PRI_FG} /> Next Set
+            </button>
+          </div>
+          <button onClick={() => setTimerMinimized(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 20 }}>
+            <span style={{ fontSize: 13, color: MUTED, fontWeight: 600 }}>Minimize Timer</span>
+          </button>
+          {currentExIdx < exercises.length - 1 && (
+            <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '14px 16px' }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 5 }}>Up Next</p>
+              <p style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>{exercises[currentExIdx + 1]}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Floating Pill */}
+      {timerMinimized && (
+        <div style={{ position: 'absolute', bottom: 88, left: 12, right: 12, zIndex: 40, background: CARD2, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ background: PRI, borderRadius: 10, minWidth: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: PRI_FG }}>{restSecs}s</div>
+          <span style={{ fontSize: 16, fontWeight: 800, color: TEXT, fontVariantNumeric: 'tabular-nums', flex: 1 }}>{fmtTime(restSecs)}</span>
+          <button onClick={togglePause} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', color: MUTED, fontSize: 13, fontWeight: 600 }}>{timerPaused ? '▶' : '⏸'}</button>
+          <button onClick={skipTimer} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px' }}><Ic name="skip" size={18} color={MUTED} /></button>
+          <button onClick={() => { setTimerMinimized(false); setShowTimerOverlay(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px' }}><Ic name="chevR" size={16} color={MUTED} /></button>
+        </div>
+      )}
+
+      {/* Main content */}
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingBottom: timerMinimized ? 180 : 130 }}>
+        <div style={{ padding: '72px 14px 10px', borderBottom: `1px solid ${BORDER}` }}>
+          <p style={{ fontSize: 11, color: MUTED, fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Track</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 800, color: TEXT, letterSpacing: -0.4 }}>Chest &amp; Triceps</h1>
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><Ic name="more" size={20} color={MUTED} sw={2.5} /></button>
+          </div>
+          <p style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>Exercise {currentExIdx + 1} of {exercises.length}</p>
+          <div style={{ height: 4, background: BORDER, borderRadius: 2, marginTop: 10 }}>
+            <div style={{ height: '100%', width: `${((currentExIdx + 1) / exercises.length) * 100}%`, background: PRI, borderRadius: 2, transition: 'width 0.4s ease' }} />
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 14px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={() => setCurrentExIdx(Math.max(0, currentExIdx - 1))} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <Ic name="chevL" size={17} color={currentExIdx === 0 ? MUTED2 : MUTED} />
+          </button>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: TEXT, letterSpacing: -0.4, marginBottom: 5 }}>{exercises[currentExIdx]}</h2>
+            <p style={{ fontSize: 12, color: MUTED }}>Chest</p>
+          </div>
+          <button onClick={() => setCurrentExIdx(Math.min(exercises.length - 1, currentExIdx + 1))} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <Ic name="chevR" size={17} color={currentExIdx === exercises.length - 1 ? MUTED2 : MUTED} />
+          </button>
+        </div>
+
+        <div style={{ padding: '14px 14px 0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '24px 1fr 72px 34px', gap: '0 8px', padding: '0 10px 8px', borderBottom: `1px solid ${BORDER}` }}>
+            {['Set', 'Weight (kg)', 'Reps', 'Done'].map((h, i) => (
+              <p key={h} style={{ fontSize: 10, fontWeight: 700, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.07em', textAlign: i === 0 ? 'left' : 'center' }}>{h}</p>
+            ))}
+          </div>
+          {sets.map((set, i) => {
+            const isActive = i === currentSet && !set.done;
+            const highlighted = isActive && activeSetGlow;
+            const isPR = i === prSetIndex && set.done;
+            return (
+              <div key={i} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 72px 34px', gap: '0 8px', padding: '10px 10px', borderRadius: 12, marginTop: 6, alignItems: 'center',
+                background: isPR ? `${PRI}10` : set.done ? `${GREEN}12` : highlighted ? `${PRI}08` : CARD,
+                border: `2px ${isPR ? 'solid' : highlighted ? 'dashed' : 'solid'} ${isPR ? PRI : set.done ? GREEN + '40' : highlighted ? PRI : 'transparent'}`,
+                opacity: !set.done && !isActive ? 0.45 : 1, transition: 'all 0.2s' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: isPR ? PRI : set.done ? GREEN : isActive ? PRI : MUTED }}>
+                  {i + 1}{isPR && <span style={{ fontSize: 9, fontWeight: 800, color: PRI, background: `${PRI}20`, border: `1px solid ${PRI}50`, borderRadius: 4, padding: '1px 4px', marginLeft: 4, letterSpacing: '0.05em' }}>PR</span>}
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <button onClick={() => { const ns=[...sets]; ns[i].w = Math.max(0,((ns[i].w||0)-2.5)); setSets(ns); }} style={{ background: CARD2, border: `1px solid ${BORDER}`, borderRadius: 6, width: 32, height: 30, cursor: 'pointer', fontSize: 10, fontWeight: 700, color: MUTED }}>-2.5</button>
+                    <input type="number" value={set.w ?? ''} onChange={e => { const ns=[...sets]; ns[i].w = e.target.value ? +e.target.value : null; setSets(ns); }} style={{ width: 46, textAlign: 'center', background: isActive ? CARD2 : 'transparent', border: isActive ? `1px solid ${BORDER}` : 'none', borderRadius: 7, color: set.done ? `${TEXT}70` : TEXT, fontSize: 14, fontWeight: 700, padding: '3px 2px', outline: 'none', fontFamily: 'DM Sans' }} />
+                    <button onClick={() => { const ns=[...sets]; ns[i].w = ((ns[i].w||0)+2.5); setSets(ns); }} style={{ background: CARD2, border: `1px solid ${BORDER}`, borderRadius: 6, width: 32, height: 30, cursor: 'pointer', fontSize: 10, fontWeight: 700, color: MUTED }}>+2.5</button>
+                  </div>
+                  {set.w != null && <p style={{ fontSize: 9, color: MUTED }}>{(set.w * 2.20462).toFixed(0)} lbs</p>}
+                </div>
+                {isActive
+                  ? <input type="number" value={set.r ?? ''} onChange={e => { const ns=[...sets]; ns[i].r = e.target.value ? +e.target.value : null; setSets(ns); }} style={{ width: '100%', textAlign: 'center', background: CARD2, border: `1px solid ${BORDER}`, borderRadius: 7, color: TEXT, fontSize: 14, fontWeight: 700, padding: '6px 2px', outline: 'none', fontFamily: 'DM Sans' }} />
+                  : <span style={{ fontSize: 14, fontWeight: 700, color: set.done ? `${TEXT}60` : MUTED, textAlign: 'center', display: 'block' }}>{set.r ?? '—'}</span>
+                }
+                <button onClick={() => { if (!set.done && i === currentSet) markDone(i); }} style={{ width: 30, height: 30, borderRadius: 8, margin: '0 auto', background: set.done ? (isPR ? PRI : GREEN) : 'transparent', border: `2px solid ${set.done ? (isPR ? PRI : GREEN) : highlighted ? PRI : MUTED2}`, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: set.done ? 'default' : 'pointer', transition: 'all 0.15s', fontSize: 13 }}>
+                  {isPR ? '🏆' : set.done ? <Ic name="check" size={13} color={PRI_FG} sw={2.5} /> : null}
+                </button>
+              </div>
+            );
+          })}
+          <button style={{ width: '100%', background: 'none', border: `1.5px dashed ${BORDER2}`, borderRadius: 12, padding: '9px', color: MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 8 }}>
+            <Ic name="plus" size={13} color={MUTED} /> Add Set
+          </button>
+        </div>
+
+        <div style={{ padding: '12px 14px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: MUTED }}>Rest:</p>
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '5px 10px' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>90</span>
+          </div>
+          <p style={{ fontSize: 13, color: MUTED }}>sec</p>
+          <button onClick={startRest} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <Ic name="play" size={16} color={MUTED} />
+          </button>
+        </div>
+
+        <div style={{ padding: '12px 14px 0' }}>
+          <button onClick={() => {
+            if (allDone) {
+              if (isLastExercise) { onWorkoutComplete && onWorkoutComplete(); }
+              else { setCurrentExIdx(idx => idx + 1); setSets([{w:null,r:null,done:false},{w:null,r:null,done:false},{w:null,r:null,done:false}]); setCurrentSet(0); setInSet(false); }
+            } else if (inSet) { markDone(currentSet); } else { setInSet(true); }
+          }} style={{ width: '100%', background: PRI, color: PRI_FG, border: 'none', borderRadius: 14, padding: '15px 0', fontSize: 15, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: `0 4px 20px ${PRI}40` }}>
+            {allDone ? (isLastExercise ? 'Finish Workout 🎉' : 'Next Exercise →') : inSet ? <><Ic name="check" size={14} color={PRI_FG} sw={2.5} /> End Set</> : `Start Set ${currentSet + 1}`}
+          </button>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button style={{ flex: 1, background: 'none', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '11px', fontSize: 12, fontWeight: 600, color: MUTED, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              <Ic name="pencil" size={13} color={MUTED} /> Edit Workout
+            </button>
+            <button onClick={onEndWorkout} style={{ flex: 1, background: 'none', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '11px', fontSize: 12, fontWeight: 600, color: MUTED, cursor: 'pointer' }}>End Workout</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── EXERCISES SCREEN ───────────────────────────────────────────────────────
+function ExercisesScreen() {
+  const [filter, setFilter] = useState('All');
+  const [search, setSearch] = useState('');
+
+  const filters = [
+    /* DEV: filter counts = GROUP BY muscleGroup from /api/exercises response. Compute client-side after fetch. */
+    { label: 'All', count: 42 },
+    { label: 'Chest', count: 8 },
+    { label: 'Back', count: 9 },
+    { label: 'Legs', count: 10 },
+    { label: 'Shoulders', count: 7 },
+    { label: 'Arms', count: 8 },
+  ];
+  const exercises = [
+    /* DEV: PR for each exercise = MAX(weight) with corresponding reps from completedWorkouts.exerciseSets.
+     Query once on page load, cache in React Query with key ['/api/exercises/prs']. */
+    { name: 'Bench Press',      muscle: 'Chest · Shoulders · Triceps', pr: '185 lbs × 5' },
+    { name: 'Incline DB Press', muscle: 'Chest · Shoulders',           pr: '70 lbs × 8'  },
+    { name: 'Cable Fly',        muscle: 'Chest',                       pr: '35 lbs × 12' },
+    { name: 'Shoulder Press',   muscle: 'Shoulders · Triceps',         pr: '115 lbs × 6' },
+    { name: 'Tricep Pushdown',  muscle: 'Triceps',                     pr: '55 lbs × 15' },
+  ];
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', background: BG, paddingBottom: 100 }}>
+      <div style={{ padding: '78px 14px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: -0.4 }}>Exercises</h1>
+        <button style={{ background: PRI, border: 'none', borderRadius: 10, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <Ic name="plus" size={16} color={PRI_FG} sw={2.2} />
+        </button>
+      </div>
+
+      {/* Search */}
+      <div style={{ padding: '0 14px 12px' }}>
+        <div style={{ position: 'relative' }}>
+          <div style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)' }}>
+            <Ic name="search" size={15} color={MUTED} />
+          </div>
+          <input type="text" placeholder="Search exercises…" value={search} onChange={e => setSearch(e.target.value)}
+            style={{ width: '100%', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '9px 12px 9px 33px', color: TEXT, fontSize: 13, outline: 'none', fontFamily: 'DM Sans' }} />
+        </div>
+      </div>
+
+      {/* Filter chips with counts */}
+      <div style={{ display: 'flex', gap: 7, overflowX: 'auto', padding: '0 14px 14px' }}>
+        {filters.map(f => (
+          <button key={f.label} onClick={() => setFilter(f.label)} style={{
+            flexShrink: 0,
+            background: filter === f.label ? PRI : CARD,
+            border: `1px solid ${filter === f.label ? PRI : BORDER}`,
+            borderRadius: 20, padding: '6px 12px 6px 12px',
+            fontSize: 12, fontWeight: 700,
+            color: filter === f.label ? PRI_FG : MUTED,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap',
+          }}>
+            {f.label}
+            <span style={{
+              background: filter === f.label ? `${PRI_FG}20` : CARD2,
+              borderRadius: 10, padding: '0 5px',
+              fontSize: 9, fontWeight: 800,
+              color: filter === f.label ? PRI_FG : MUTED2,
+            }}>{f.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Exercise list */}
+      <div style={{ padding: '0 14px' }}>
+        {exercises.filter(e => filter === 'All' || e.muscle.includes(filter)).map(ex => (
+          <div key={ex.name} style={{
+            background: CARD, border: `1px solid ${BORDER}`,
+            borderRadius: 14, padding: '12px 14px', marginBottom: 8,
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            {/* image placeholder */}
+            <div style={{
+              width: 48, height: 48, borderRadius: 11, background: CARD2,
+              flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: `1px solid ${BORDER}`, fontSize: 22,
+            }}>💪</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: TEXT, marginBottom: 3 }}>{ex.name}</p>
+              <p style={{ fontSize: 11, color: MUTED, marginBottom: 6 }}>{ex.muscle}</p>
+              <span style={{ fontSize: 10, fontWeight: 700, color: PRI, background: `${PRI}15`, borderRadius: 6, padding: '2px 7px' }}>
+                PR {ex.pr}
+              </span>
+            </div>
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+              <Ic name="more" size={18} color={MUTED} sw={2.5} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── HISTORY SCREEN ─────────────────────────────────────────────────────────
+function HistoryScreen() {
+  const [expandedWorkout, setExpandedWorkout] = useState(null);
+
+  const stats = [
+    { label: 'Total Workouts', val: '39', icon: 'clipboard' },
+    { label: 'This Week',      val: '1',  icon: 'flame'     },
+    { label: 'This Month',     val: '7',  icon: 'trend'     },
+    { label: 'Total Sets',     val: '777',icon: 'barchart'  },
+  ];
+
+  const goals = [
+    { name: 'Pull-ups',  done: 0,   target: 40,  since: 'Apr 10, 2026', cumul: 87  },
+    { name: 'Pushups',   done: 0,   target: 200, since: 'Apr 14, 2026', cumul: 220 },
+  ];
+
+  const muscles = [
+    { name: 'Chest',     sets: 11, target: 20 },
+    { name: 'Triceps',   sets: 9,  target: 20 },
+    { name: 'Back',      sets: 0,  target: 20 },
+    { name: 'Biceps',    sets: 3,  target: 20 },
+    { name: 'Shoulders', sets: 10, target: 20 },
+    { name: 'Legs',      sets: 0,  target: 20 },
+    { name: 'Abs/Core',  sets: 0,  target: 20 },
+    { name: 'Cardio',    sets: 0,  target: 20 },
+    { name: 'Forearms',  sets: 0,  target: 20 },
+  ];
+
+  const recent = [
+    { name: 'Chest & Triceps', date: 'Apr 24, 2026', sets: 28, vol: '12,529.1' },
+    { name: 'Back Shoulders',  date: 'Apr 22, 2026', sets: 22, vol: '9,840.0'  },
+    { name: 'Push Day A',      date: 'Apr 20, 2026', sets: 19, vol: '11,100.0' },
+  ];
+
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', background: BG, paddingBottom: 100 }}>
+
+      {/* ── Header ── */}
+      <div style={{ padding: '78px 14px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+        <div>
+          <p style={{ fontSize: 11, color: MUTED, fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>History</p>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: -0.5, marginTop: 2 }}>Workout History</h1>
+          <p style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>Track your progress and review past sessions</p>
+        </div>
+        <button style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+          <Ic name="more" size={20} color={MUTED} sw={2.5} />
+        </button>
+      </div>
+
+      {/* ── 2×2 Stats Grid ── */}
+      <div style={{ padding: '14px 14px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {stats.map(s => (
+          <div key={s.label} style={{
+            background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '13px 14px',
+            display: 'flex', flexDirection: 'column', gap: 4,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <p style={{ fontSize: 11, color: MUTED, fontWeight: 500 }}>{s.label}</p>
+              <Ic name={s.icon} size={14} color={MUTED} sw={1.6} />
+            </div>
+            <p style={{ fontSize: 26, fontWeight: 800, color: TEXT, letterSpacing: -0.5, lineHeight: 1.1 }}>{s.val}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Weekly Goals ── */}
+      <div style={{ padding: '14px 14px 0' }}>
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🎯</span>
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 800, color: TEXT }}>Weekly Goals <span style={{ fontSize: 11, fontWeight: 500, color: MUTED }}>(last 7 days)</span></p>
+                <p style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>Track rep targets across multiple sessions</p>
+              </div>
+            </div>
+            <button style={{
+              background: CARD2, border: `1px solid ${BORDER}`, borderRadius: 9,
+              padding: '5px 10px', fontSize: 11, fontWeight: 700, color: PRI,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              <Ic name="plus" size={11} color={PRI} sw={2.5} /> Add Goal
+            </button>
+          </div>
+
+          {goals.map((g, i) => {
+            const pct = Math.min(100, (g.done / g.target) * 100);
+            return (
+              <div key={g.name} style={{ marginTop: 14, paddingTop: i > 0 ? 14 : 0, borderTop: i > 0 ? `1px solid ${BORDER}` : 'none' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{g.name}</p>
+                  <p style={{ fontSize: 11, color: MUTED }}>{g.done} / {g.target} this week</p>
+                </div>
+                <div style={{ height: 5, background: BORDER2, borderRadius: 3, marginBottom: 5 }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: pct > 0 ? PRI : BORDER2, borderRadius: 3, transition: 'width 0.4s ease' }} />
+                </div>
+                <p style={{ fontSize: 10, color: MUTED }}>{g.cumul} total since {g.since}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Weekly Sets by Muscle Group ── */}
+      <div style={{ padding: '14px 14px 0' }}>
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '14px' }}>
+          <p style={{ fontSize: 14, fontWeight: 800, color: TEXT, marginBottom: 2 }}>
+            Weekly Sets by Muscle Group <span style={{ fontSize: 11, fontWeight: 500, color: MUTED }}>(last 7 days)</span>
+          </p>
+          <p style={{ fontSize: 11, color: MUTED, marginBottom: 14 }}>Track your training volume across different muscle groups</p>
+
+          {muscles.map((m, i) => {
+            const pct = Math.min(100, (m.sets / m.target) * 100);
+            const isActive = m.sets > 0;
+            return (
+              <div key={m.name} style={{ marginBottom: i < muscles.length - 1 ? 12 : 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <p style={{ fontSize: 12, fontWeight: isActive ? 700 : 500, color: isActive ? TEXT : MUTED }}>{m.name}</p>
+                  <p style={{ fontSize: 11, color: isActive ? MUTED : MUTED2 }}>{m.sets}/{m.target}</p>
+                </div>
+                <div style={{ height: 5, background: BORDER2, borderRadius: 3 }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${pct}%`,
+                    background: pct >= 100 ? GREEN : pct > 0 ? PRI : 'transparent',
+                    borderRadius: 3,
+                    transition: 'width 0.4s ease',
+                    boxShadow: pct > 0 ? `0 0 8px ${PRI}50` : 'none',
+                  }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Recent Workouts ── */}
+      <div style={{ padding: '18px 14px 0' }}>
+        <p style={{ fontSize: 13, fontWeight: 800, color: TEXT, marginBottom: 12 }}>Recent Workouts</p>
+        {recent.map((w, i) => {
+          const isOpen = expandedWorkout === i;
+          return (
+            <div key={i} style={{
+              background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14,
+              marginBottom: 8, overflow: 'hidden',
+            }}>
+              <button onClick={() => setExpandedWorkout(isOpen ? null : i)} style={{
+                width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                padding: '13px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>{w.name}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                    <span style={{ fontSize: 11, color: MUTED, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Ic name="clipboard" size={11} color={MUTED} /> {w.date}
+                    </span>
+                    <span style={{ fontSize: 11, color: MUTED, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <DumbbellSvg size={11} color={MUTED} /> {w.sets} sets
+                    </span>
+                    <span style={{ fontSize: 11, color: MUTED, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Ic name="trend" size={11} color={MUTED} /> {w.vol} lbs
+                    </span>
+                  </div>
+                </div>
+                <Ic name={isOpen ? 'chevL' : 'chevR'} size={16} color={MUTED} />
+              </button>
+              {isOpen && (
+                <div style={{ padding: '0 14px 14px', borderTop: `1px solid ${BORDER}` }}>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <button style={{ flex: 1, background: `${PRI}15`, border: `1px solid ${PRI}30`, borderRadius: 10, padding: '9px', fontSize: 12, fontWeight: 700, color: PRI, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                      <Ic name="play" size={11} color={PRI} fill={PRI} sw={0} /> Repeat
+                    </button>
+                    <button style={{ flex: 1, background: CARD2, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '9px', fontSize: 12, fontWeight: 600, color: MUTED, cursor: 'pointer' }}>
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── ROUTINES SCREEN ────────────────────────────────────────────────────────
+function RoutinesScreen({ onOpenAIBuilder }) {
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', background: BG, paddingBottom: 100 }}>
+      <div style={{ padding: '16px 14px 0' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: -0.4, paddingTop: 62 }}>Routines</h1>
+          <button style={{ background: PRI, border: 'none', borderRadius: 10, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+            <Ic name="plus" size={16} color={PRI_FG} sw={2.2} />
+          </button>
+        </div>
+
+        {/* AI Builder CTA */}
+        <button onClick={onOpenAIBuilder} style={{
+          width: '100%', background: `${PRI}10`, border: `1px solid ${PRI}30`,
+          borderRadius: 16, padding: '16px', marginBottom: 18, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+        }}>
+          <div style={{ width: 44, height: 44, borderRadius: 13, background: `${PRI}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🤖</div>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 800, color: PRI, marginBottom: 3 }}>Build with Fit Bot</p>
+            <p style={{ fontSize: 12, color: MUTED }}>Pick a focus — Fit Bot generates your full program</p>
+          </div>
+          <Ic name="chevR" size={16} color={PRI} />
+        </button>
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 11 }}>Active</p>
+        {[
+          { name: 'PPL 6-Day Split', days: 42, done: 29, pct: 68, color: PRI },
+        ].map(r => (
+          <div key={r.name} style={{ background: ACCENT, border: `1px solid ${PRI}30`, borderRadius: 16, padding: '16px', marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div>
+                <p style={{ fontSize: 15, fontWeight: 800, color: TEXT }}>{r.name}</p>
+                <p style={{ fontSize: 12, color: MUTED, marginTop: 3 }}>{r.days}-day program · Day {r.done}</p>
+              </div>
+              <span style={{ fontSize: 22, fontWeight: 900, color: PRI }}>{r.pct}%</span>
+            </div>
+            <div style={{ height: 5, background: `${PRI}25`, borderRadius: 3 }}>
+              <div style={{ height: '100%', width: `${r.pct}%`, background: PRI, borderRadius: 3 }} />
+            </div>
+            <p style={{ fontSize: 11, color: MUTED, marginTop: 8 }}>{r.days - r.done} days remaining</p>
+          </div>
+        ))}
+
+        <p style={{ fontSize: 10, fontWeight: 700, color: MUTED, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 11, marginTop: 18 }}>Library</p>
+        {[
+          { name: 'Upper/Lower 4×/Week', days: 28, completions: 2 },
+          { name: 'Starting Strength',   days: 90, completions: 1 },
+          { name: 'PHUL',                days: 56, completions: 0 },
+        ].map(r => (
+          <div key={r.name} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '14px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: TEXT }}>{r.name}</p>
+              <p style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>{r.days}-day · ✓ {r.completions}× completed</p>
+            </div>
+            <button style={{ background: CARD2, border: `1px solid ${BORDER}`, borderRadius: 9, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: PRI, cursor: 'pointer' }}>
+              Start
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── WORKOUT COMPLETE SCREEN ────────────────────────────────────────────────
+function WorkoutCompleteScreen({ onDone }) {
+  /* DEV: muscle group sets computed from exerciseSets map on completion:
+     1. For each completed set, look up exercise.muscleGroups[]
+     2. Increment set count for each muscle group
+     3. Divide by weeklyTarget (default 20, configurable per muscle in Settings)
+     4. Merge with existing weekly sets from completedWorkouts (last 7 days) for cumulative weekly view
+     Only show muscle groups that appear in this workout. */
+  const [showShare, setShowShare] = useState(false);
+  const stats = [
+    { label: 'Duration',   val: '44 min' }, /* DEV: completedAt - startedAt; store startedAt in WorkoutContext when startWorkout() fires */
+    { label: 'Sets',       val: '24'     }, /* DEV: sum completed sets from exerciseSets map in completeWorkout() */
+    { label: 'Volume',     val: '12,840 lbs' },
+    { label: 'Exercises',  val: '8'      },
+  ];
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', background: BG, paddingBottom: 40 }}>
+      {/* Hero */}
+      <div style={{
+        padding: '80px 20px 32px', textAlign: 'center',
+        background: `linear-gradient(180deg, #1a2200 0%, ${BG} 100%)`,
+        borderBottom: `1px solid ${BORDER}`,
+      }}>
+        {/* Trophy */}
+        <div style={{
+          width: 72, height: 72, borderRadius: 24, margin: '0 auto 16px',
+          background: `linear-gradient(135deg, ${PRI} 0%, #a8cc00 100%)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 32, boxShadow: `0 8px 32px ${PRI}50`,
+        }}>🏆</div>
+        <h1 style={{ fontSize: 26, fontWeight: 900, color: TEXT, letterSpacing: -0.6, marginBottom: 6 }}>Workout Complete!</h1>
+        <p style={{ fontSize: 14, color: MUTED }}>Chest &amp; Triceps · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+
+        {/* Streak badge */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: `${PRI}15`, border: `1px solid ${PRI}40`,
+          borderRadius: 20, padding: '6px 14px', marginTop: 14,
+        }}>
+          <span style={{ fontSize: 16 }}>🔥</span>
+          {/* DEV: streak recalculated after completeWorkout() resolves. Same logic as Home streak. Show encouraging copy based on milestone: 3, 7, 14, 30, 60, 100 days. */}
+          <span style={{ fontSize: 13, fontWeight: 800, color: PRI }}>13 day streak — keep it up!</span>
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div style={{ padding: '20px 16px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {stats.map(s => (
+          <div key={s.label} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '14px' }}>
+            <p style={{ fontSize: 11, color: MUTED, fontWeight: 500, marginBottom: 6 }}>{s.label}</p>
+            <p style={{ fontSize: 22, fontWeight: 800, color: TEXT, letterSpacing: -0.5 }}>{s.val}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Muscles hit */}
+      <div style={{ padding: '18px 16px 0' }}>
+        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: TEXT }}>Muscles Trained Today</p>
+            <p style={{ fontSize: 10, color: MUTED }}>sets / 20 weekly target</p>
+          </div>
+          {[
+            { name: 'Chest',     sets: 11 },
+            { name: 'Triceps',   sets: 9  },
+            { name: 'Shoulders', sets: 4  },
+          ].map(m => {
+            const pct = Math.min(100, Math.round((m.sets / 20) * 100));
+            return (
+              <div key={m.name} style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: TEXT }}>{m.name}</p>
+                  <p style={{ fontSize: 11, color: MUTED }}>{m.sets}/20 <span style={{ color: pct >= 100 ? GREEN : MUTED2 }}>({pct}%)</span></p>
+                </div>
+                <div style={{ height: 5, background: BORDER2, borderRadius: 3 }}>
+                  <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? GREEN : PRI, borderRadius: 3, boxShadow: `0 0 8px ${pct >= 100 ? GREEN : PRI}50` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Personal best callout */}
+      <div style={{ padding: '12px 16px 0' }}>
+        <div style={{ background: `${GREEN}12`, border: `1px solid ${GREEN}35`, borderRadius: 14, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 24 }}>⭐</span>
+          <div>
+            {/* DEV: detect PR by comparing each completed set against historical max for that exercise.
+         Query: MAX(weight) WHERE exerciseId = X AND completed = true from all completedWorkouts.
+         If any set in this workout beats the historical max → show PR callout.
+         If multiple PRs, show the most impressive one (highest weight improvement). */}
+            <p style={{ fontSize: 13, fontWeight: 800, color: GREEN }}>New Personal Best!</p>
+            <p style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>Bench Press — 70 kg × 8 reps</p>
+          </div>
+        </div>
+      </div>
+
+      {/* CTAs */}
+      <div style={{ padding: '20px 16px 0' }}>
+        <button onClick={onDone} style={{
+          width: '100%', background: PRI, color: PRI_FG, border: 'none',
+          borderRadius: 14, padding: '15px 0', fontSize: 15, fontWeight: 800,
+          cursor: 'pointer', marginBottom: 10, boxShadow: `0 4px 20px ${PRI}40`,
+        }}>
+          Done
+        </button>
+        <button onClick={() => setShowShare(true)} style={
+          {width: '100%', background: 'none', border: `1px solid ${BORDER}`,
+          borderRadius: 14, padding: '14px 0', fontSize: 14, fontWeight: 600,
+          color: MUTED, cursor: 'pointer'}
+        }>
+          Share Workout
+        </button>
+      </div>
+      {showShare && <ShareCardModal onClose={() => setShowShare(false)} />}
+    </div>
+  );
+}
+
+// ─── SHARE CARD MODAL ───────────────────────────────────────────────────────
+/* DEV: Share card generated as a Canvas/html-to-image snapshot of the card div below.
+   On "Instagram" tap: use Web Share API (navigator.share({ files: [imageFile] })) or download + prompt user to share.
+   On "WhatsApp" tap: open whatsapp://send?text=... with plain text fallback.
+   On "Copy Link" tap: navigator.clipboard.writeText(summaryText).
+   Image generation: use html2canvas or a server-side Puppeteer screenshot of a dedicated /share-card route. */
+function ShareCardModal({ onClose }) {
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 100,
+      background: 'rgba(0,0,0,0.85)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end',
+      padding: '0 0 40px',
+    }}>
+      <div style={{ width: '100%', background: CARD, borderRadius: '24px 24px 0 0', padding: '20px 20px 10px' }}>
+        <div style={{ width: 36, height: 4, borderRadius: 2, background: BORDER2, margin: '0 auto 20px' }} />
+        <p style={{ fontSize: 13, fontWeight: 700, color: MUTED, textAlign: 'center', marginBottom: 16, letterSpacing: '0.05em', textTransform: 'uppercase' }}>Share Workout</p>
+
+        {/* Share card */}
+        <div style={{
+          borderRadius: 20, overflow: 'hidden',
+          background: `linear-gradient(145deg, #1a2200 0%, #0d1500 60%, #0a1000 100%)`,
+          border: `1px solid ${PRI}30`, padding: '22px 20px 20px',
+          marginBottom: 16, position: 'relative',
+        }}>
+          <div style={{ position: 'absolute', inset: 0, opacity: 0.05, backgroundImage: 'linear-gradient(rgba(229,255,0,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(229,255,0,.6) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+          <div style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: 50, background: `${PRI}20`, filter: 'blur(30px)' }} />
+
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            {/* App badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <div style={{ width: 26, height: 26, borderRadius: 7, background: PRI, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13 }}>💪</div>
+              <span style={{ fontSize: 11, fontWeight: 800, color: PRI, letterSpacing: 0.8 }}>FIT YEAR</span>
+            </div>
+
+            {/* Workout name + date */}
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: TEXT, letterSpacing: -0.5, marginBottom: 3 }}>Chest &amp; Triceps</h2>
+            <p style={{ fontSize: 11, color: `${TEXT}55`, marginBottom: 16 }}>
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+
+            {/* Stats */}
+            <div style={{ display: 'flex', gap: 0, marginBottom: 14 }}>
+              {[
+                { val: '44', unit: 'min', border: false },
+                { val: '24', unit: 'sets', border: true },
+                { val: '12.8k', unit: 'lbs', border: true },
+                { val: '8', unit: 'exercises', border: true },
+              ].map((s) => (
+                <div key={s.unit} style={{ flex: 1, borderLeft: s.border ? `1px solid ${BORDER}` : 'none', paddingLeft: s.border ? 12 : 0 }}>
+                  <p style={{ fontSize: 20, fontWeight: 900, color: PRI, letterSpacing: -0.5, lineHeight: 1 }}>{s.val}</p>
+                  <p style={{ fontSize: 9, color: MUTED, marginTop: 3 }}>{s.unit}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Muscles */}
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 12 }}>
+              {['Chest', 'Triceps', 'Shoulders'].map(m => (
+                <span key={m} style={{ fontSize: 10, fontWeight: 700, color: `${TEXT}80`, background: `${TEXT}10`, border: `1px solid ${TEXT}15`, borderRadius: 6, padding: '3px 8px' }}>{m}</span>
+              ))}
+            </div>
+
+            {/* PR + Streak row */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: `${PRI}15`, border: `1px solid ${PRI}30`, borderRadius: 9, padding: '5px 10px' }}>
+                <span style={{ fontSize: 12 }}>🏆</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: PRI }}>New PR</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: `${TEXT}08`, border: `1px solid ${TEXT}12`, borderRadius: 9, padding: '5px 10px' }}>
+                <span style={{ fontSize: 12 }}>🔥</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: `${TEXT}80` }}>13 day streak</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Share buttons — all dark, on-brand */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+          {[
+            { label: 'Instagram', icon: '📸' },
+            { label: 'WhatsApp',  icon: '💬' },
+            { label: 'Copy',      icon: '🔗' },
+          ].map(s => (
+            <button key={s.label} style={{
+              flex: 1, background: CARD2, border: `1px solid ${BORDER}`,
+              borderRadius: 14, padding: '11px 4px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+              cursor: 'pointer',
+            }}>
+              <span style={{ fontSize: 20 }}>{s.icon}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: MUTED }}>{s.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <button onClick={onClose} style={{ width: '100%', background: 'none', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 600, color: MUTED, cursor: 'pointer' }}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ROOT ───────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "navLabels": true,
+  "elevatedTrack": true,
+  "personalizedHeader": true,
+  "streakStrip": true,
+  "activeSetGlow": true,
+  "integratedTimer": true,
+  "emptyState": false
+}/*EDITMODE-END*/;
+
+function App() {
+  const [tweaks, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+  const [screen, setScreen] = useState('home');
+  const [workoutDone, setWorkoutDone] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showAIBuilder, setShowAIBuilder] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [userGoals, setUserGoals] = useState(null); // { daysPerWeek, programLength }
+
+  const handleOnboardingComplete = (goals) => {
+    setUserGoals(goals);
+    setShowOnboarding(false);
+  };
+
+  const handleOnboardingSkip = () => {
+    setShowOnboarding(false);
+  };
+
+  const screens = {
+    home:      <HomeScreen personalizedHeader={tweaks.personalizedHeader} streakStrip={tweaks.streakStrip} emptyState={tweaks.emptyState} userGoals={userGoals} onOpenAIBuilder={() => setShowAIBuilder(true)} onOpenSettings={() => setShowSettings(true)} />,
+    track:     <TrackScreen activeSetGlow={tweaks.activeSetGlow} integratedTimer={tweaks.integratedTimer} onWorkoutComplete={() => setWorkoutDone(true)} onEndWorkout={() => setWorkoutDone(true)} />,
+    exercises: <ExercisesScreen />,
+    routines:  <RoutinesScreen onOpenAIBuilder={() => setShowAIBuilder(true)} />,
+    history:   <HistoryScreenFull />,
+  };
+
+  return (
+    <>
+      <IOSDevice dark={true}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: BG, fontFamily: "'DM Sans', sans-serif", overflow: 'hidden', position: 'relative' }}>
+          {showOnboarding
+            ? <OnboardingScreen
+                onComplete={handleOnboardingComplete}
+                onSkip={handleOnboardingSkip}
+                onOpenAIBuilder={() => { setShowOnboarding(false); setShowAIBuilder(true); }}
+              />
+            : showSettings
+            ? <SettingsScreen onBack={() => setShowSettings(false)} />
+            : showAIBuilder
+            ? <AIBuilderScreen onBack={() => setShowAIBuilder(false)} onDone={() => { setShowAIBuilder(false); setScreen('routines'); }} />
+            : workoutDone
+            ? <WorkoutCompleteScreen onDone={() => { setWorkoutDone(false); setScreen('home'); }} />
+            : screens[screen]
+          }
+          {!showOnboarding && !showSettings && !showAIBuilder && !workoutDone && <BottomNav active={screen} onNav={setScreen} navLabels={tweaks.navLabels} elevatedTrack={tweaks.elevatedTrack} />}
+        </div>
+      </IOSDevice>
+
+      <window.TweaksPanel tweaks={tweaks} setTweak={setTweak}>
+        <window.TweakSection label="Navigation" />
+        <window.TweakToggle label="Nav labels" value={tweaks.navLabels} onChange={v => setTweak('navLabels', v)}
+          subtitle="Show text labels under icons" />
+        <window.TweakToggle label="Elevated Track button" value={tweaks.elevatedTrack} onChange={v => setTweak('elevatedTrack', v)}
+          subtitle="Float Track as a primary CTA" />
+        <window.TweakSection label="Home Screen" />
+        <window.TweakToggle label="Personalized greeting" value={tweaks.personalizedHeader} onChange={v => setTweak('personalizedHeader', v)}
+          subtitle="vs. 'Scheduled Workouts' title" />
+        <window.TweakToggle label="Streak & goal strip" value={tweaks.streakStrip} onChange={v => setTweak('streakStrip', v)}
+          subtitle="Quick stats below greeting" />
+        <window.TweakToggle label="Empty / new user state" value={tweaks.emptyState} onChange={v => setTweak('emptyState', v)}
+          subtitle="No workouts or routines scheduled" />
+        <window.TweakButton label="Show Onboarding" onClick={() => setShowOnboarding(true)} />
+        <window.TweakSection label="Track Screen" />
+        <window.TweakToggle label="Active set glow" value={tweaks.activeSetGlow} onChange={v => setTweak('activeSetGlow', v)}
+          subtitle="Yellow highlight on current set" />
+        <window.TweakToggle label="Integrated rest timer" value={tweaks.integratedTimer} onChange={v => setTweak('integratedTimer', v)}
+          subtitle="Visual timer strip with progress bar" />
+      </window.TweaksPanel>
+    </>
+  );
+}
+
+// Export shared tokens + components for new-screens.jsx
+Object.assign(window, { BG, CARD, CARD2, BORDER, BORDER2, PRI, PRI_FG, TEXT, MUTED, MUTED2, GREEN, RED, ACCENT, Ic, DumbbellSvg, Pill });
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+<template id="__bundler_thumbnail">
+<svg viewBox="0 0 80 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="80" height="56" fill="#0F0F0E"/>
+  <rect x="28" y="6" width="24" height="44" rx="4" fill="#1E1E1C" stroke="#2E2E2C" stroke-width="1"/>
+  <rect x="32" y="16" width="16" height="3" rx="1.5" fill="#E5FF00" opacity=".8"/>
+  <rect x="32" y="22" width="12" height="2" rx="1" fill="#4A4A48"/>
+  <rect x="32" y="26" width="12" height="2" rx="1" fill="#4A4A48"/>
+  <rect x="32" y="34" width="16" height="6" rx="2" fill="#E5FF00"/>
+  <circle cx="36" cy="46" r="2" fill="#E5FF00"/>
+  <circle cx="40" cy="46" r="2" fill="#2E2E2C"/>
+  <circle cx="44" cy="46" r="2" fill="#2E2E2C"/>
+</svg>
+</template>
+</body>
+</html>
